@@ -1,0 +1,13 @@
+/* Branded loading screen; hidden automatically when JavaScript is unavailable. */
+.icrc-preloader{display:none;position:fixed;inset:0;z-index:10000;background:#fcfdfb;place-items:center;opacity:1;transition:opacity .3s ease;pointer-events:auto}
+html.icrc-loading{overflow:hidden}
+html.icrc-loading .icrc-preloader,.icrc-preloader.is-leaving{display:grid}
+.icrc-preloader.is-leaving{opacity:0;pointer-events:none}
+.icrc-preloader-inner{text-align:center;padding:24px}
+.icrc-preloader-logo{display:block;object-fit:contain;width:138px;height:127px;margin:0 auto 26px;transform-origin:center;animation:icrc-logo-breathe 1.5s ease-in-out infinite}
+.icrc-preloader-title{margin:0;color:#075332;font:600 10px/1.8 'Manrope',system-ui,sans-serif;letter-spacing:2.3px;text-transform:uppercase}
+.icrc-preloader-status{display:block;margin-top:8px;font-size:11px;line-height:1.6;color:#7c897f;letter-spacing:.25px}
+@keyframes icrc-logo-breathe{0%,100%{transform:scale(.96);opacity:.75;filter:drop-shadow(0 2px 4px #0753320a)}50%{transform:scale(1.035);opacity:1;filter:drop-shadow(0 8px 12px #07533216)}}
+@media(max-width:560px){.icrc-preloader-logo{width:116px;height:107px}.icrc-preloader-title{font-size:9px;letter-spacing:1.8px}}
+@media(prefers-reduced-motion:reduce){.icrc-preloader-logo{animation:none;transform:none;opacity:1;filter:none}.icrc-preloader{transition:none}}
+@media print{.icrc-preloader{display:none!important}html.icrc-loading{overflow:visible}}

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 132 148" fill="none">
+  <defs><linearGradient id="surface" x1="15" y1="12" x2="113" y2="140" gradientUnits="userSpaceOnUse"><stop stop-color="#fff"/><stop offset="1" stop-color="#edf2ed"/></linearGradient><linearGradient id="rim" x1="23" y1="5" x2="112" y2="139" gradientUnits="userSpaceOnUse"><stop stop-color="#fff"/><stop offset="1" stop-color="#d6e0d6"/></linearGradient></defs>
+  <path d="M56 8Q66 2 76 8L116 31Q126 37 126 49V99Q126 111 116 117L76 140Q66 146 56 140L16 117Q6 111 6 99V49Q6 37 16 31Z" fill="url(#surface)" stroke="url(#rim)" stroke-width="2"/>
+  <path d="M57 11Q66 6 75 11L114 34Q122 39 122 50" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

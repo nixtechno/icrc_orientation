@@ -1,0 +1,10 @@
+/* Locally hosted Manrope; shared by every public and authenticated screen. */
+@font-face{
+    font-family:'Manrope';
+    src:url('fonts/manrope/Manrope-variable.ttf') format('truetype');
+    font-style:normal;
+    font-weight:200 800;
+    font-display:swap;
+}
+:root{--font-ui:'Manrope',system-ui,sans-serif;--serif:'Manrope',system-ui,sans-serif}
+html,body,body *{font-family:'Manrope',system-ui,sans-serif!important}

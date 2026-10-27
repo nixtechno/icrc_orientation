@@ -1,0 +1,2 @@
+@extends('layout')
+@section('content')<div class="card"><h1>Daily check-{{ request('mode')==='out'?'out':'in' }}</h1><h2>{{ $day->date->format('l j F Y') }}</h2><p>Signed in as {{ auth()->user()->name }}. One attendance record is permitted for this programme day.</p><form method="post" action="{{ request()->fullUrl() }}">@csrf<button>Confirm daily check-{{ request('mode')==='out'?'out':'in' }}</button></form></div>@endsection

@@ -1,0 +1,5 @@
+@extends('layout')
+@section('content')
+<div class="page-heading"><div><span class="eyebrow">ICRC ORIENTATION PROGRAMME</span><h1>Permanent attendance QR codes</h1><p class="muted">These two links never expire. Scanning opens the attendance page; device and location verification are still required.</p></div><button type="button" onclick="window.print()">Print QR display</button></div>
+<div class="grid cards-2">@foreach(['in'=>'SIGN IN','out'=>'SIGN OUT'] as $mode=>$label)<section class="card" style="text-align:center;break-inside:avoid"><h2>{{ $label }}</h2><div style="max-width:340px;margin:auto">{!! $codes[$mode] !!}</div><p><a href="{{ $links[$mode] }}">{{ $links[$mode] }}</a></p><a href="/attendance/qr/{{ $mode }}.svg" download>Download {{ strtolower($label) }} QR</a><p>Use your own registered device. Enable precise location.</p></section>@endforeach</div><p class="muted">Configure the final public HTTPS attendance origin before printing. Keep that domain throughout the programme.</p>
+@endsection
