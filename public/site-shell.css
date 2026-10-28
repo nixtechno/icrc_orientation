@@ -1,0 +1,23 @@
+/* Shared masthead for all pages. */
+body .institution-bar{background:#063e29;color:#f2f6f1;border-top:4px solid #d6ad68;border-bottom:1px solid #174e37;padding:10px 5.5%;letter-spacing:1.2px;font-size:9px;position:relative}
+body .institution-bar>span:first-child{gap:14px}
+body .institution-bar>span:first-child::before{content:'';display:block;width:22px;height:15px;flex-shrink:0;background:linear-gradient(90deg,#075332 33.33%,#fff 33.33%,#fff 66.66%,#075332 66.66%);border:1px solid #e2e9e3;border-radius:2px}
+body .institution-bar i{height:13px;background:#d6ad68}
+body .institution-edition{background:#ffffff0c;border:1px solid #ffffff25;color:#e4c68e;border-radius:20px;padding:5px 12px;font-size:8px;letter-spacing:1.2px}
+body .header{background:#f3f6f0;backdrop-filter:none;box-shadow:none;border-bottom:1px solid #dfe7dc;min-height:100px;padding-top:12px;padding-bottom:12px}
+body .header nav>.button{background:#075332;color:#fff;border:1px solid #075332;border-radius:30px;padding:13px 22px}
+body .header nav>.button:hover{background:#063e27}
+@media(max-width:800px){
+body .institution-bar{font-size:7px;letter-spacing:.6px;padding-block:8px}
+body .institution-edition{font-size:7px;padding:4px 8px}
+body .header{min-height:84px}
+}
+@media(max-width:560px){
+body .institution-bar>span:first-child{gap:7px;flex-wrap:wrap;line-height:1.6}
+body .institution-bar{font-size:6px;letter-spacing:.3px;gap:8px}
+body .institution-bar>span:first-child::before{width:16px;height:11px}
+body .institution-bar i{height:10px}
+body .institution-edition{font-size:6px;letter-spacing:.4px;padding:4px 7px}
+body .header{min-height:78px}
+}
+body.login-page, .login-page .app-shell, .login-page .public-main{background:#fff}

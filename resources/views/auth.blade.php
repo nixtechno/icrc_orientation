@@ -1,4 +1,5 @@
 @extends('layout')
+@section('body-class', $mode === 'login' ? 'login-page' : '')
 @section('content')<div class="auth-panel"><div class="eyebrow">ICRC · 2026 ORIENTATION</div><h1 style="margin-top:18px">{{ ['login'=>'Welcome back','forgot'=>'Reset your password','reset'=>'Choose a new password','invite'=>'Activate your account'][$mode] }}</h1><p class="muted">{{ $mode==='login'?'Sign in to continue your learning journey.':'Use a password of at least 12 characters with upper and lower case letters and a number.' }}</p>
 <form method="post" action="{{ ['login'=>'/login','forgot'=>'/forgot-password','reset'=>'/reset-password','invite'=>'/invitation/'.($token??'')][$mode] }}">@csrf
 @if($mode==='invite')<p>Invitation for {{ $inviteUser->email }}</p><label>Full name<input name="name" value="{{ old('name',$inviteUser->name) }}" required autocomplete="name"></label>@else<label>Email address<input type="email" name="email" value="{{ old('email',request('email')) }}" required autocomplete="email"></label>@endif

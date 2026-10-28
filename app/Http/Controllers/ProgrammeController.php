@@ -22,11 +22,29 @@ class ProgrammeController extends Controller
         $u = auth()->user();
         $sessions = ProgrammeSession::with('day')->where('status', 'published')->whereDate('starts_at', today())->orderBy('starts_at')->get();
         $next = ProgrammeSession::where('status', 'published')->where('starts_at', '>', now())->orderBy('starts_at')->first();
-        $summary = app(AttendanceService::class)->summary($u);
+        $summary = $u->role === 'staff' ? app(AttendanceService::class)->summary($u) : null;
         $staff = Access::staff();
         $stats = ['Participants' => $staff->count(), 'Active accounts' => (clone $staff)->where('active', true)->count(), 'Awaiting activation' => (clone $staff)->where('active', false)->count(), 'Entries to review' => ProgrammeSession::where('reviewed', false)->where('warnings', '!=', '[]')->count()];
 
-        return view('dashboard', compact('p', 'u', 'sessions', 'next', 'summary', 'stats'));
+        $operations = [];
+        if ($u->role !== 'staff') {
+            $programmeSessions = ProgrammeSession::whereHas('day.week', fn ($q) => $q->where('programme_id', $p->id));
+            if ($u->canManage('schedule')) {
+                $operations[] = ['Timetable entries to review', '/timetable?review=1', $stats['Entries to review'], 'Resolve source warnings before confirming session details.'];
+                $operations[] = ['Draft sessions', '/timetable', (clone $programmeSessions)->where('status', 'draft')->count(), 'Review and publish sessions when details are confirmed.'];
+            }
+            if ($u->canManage('staff')) {
+                $operations[] = ['Accounts awaiting activation', '/manage/staff', $stats['Awaiting activation'], 'Follow up on staff invitations and account activation.'];
+            }
+            if ($u->canManage('assessments')) {
+                $operations[] = ['Submissions awaiting grading', '/activities', \App\Models\Submission::whereHas('activity', fn ($q) => $q->where('programme_id', $p->id))->whereNotNull('submitted_at')->whereNull('score')->count(), 'Review submitted work that has no recorded score.'];
+            }
+            if ($u->canManage('qa')) {
+                $operations[] = ['Questions awaiting moderation', '/qa', \App\Models\SessionQuestion::whereHas('session.day.week', fn ($q) => $q->where('programme_id', $p->id))->where('published', false)->where('hidden', false)->count(), 'Review questions before making them visible to participants.'];
+            }
+        }
+
+        return view('dashboard', compact('p', 'u', 'sessions', 'next', 'summary', 'stats', 'operations'));
     }
 
     public function schedule(Request $r)

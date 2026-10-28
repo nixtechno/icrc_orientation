@@ -1,0 +1,45 @@
+/* A shared form language: quiet surfaces, clear hierarchy and deliberate states. */
+:is(.portal-body .workspace,.guest-body .auth-panel){--field-border:#dce4dc;--field-ink:#253e2e;--field-muted:#7c897e;--field-focus:#287653;--field-radius:11px}
+:is(.portal-body .workspace,.guest-body .auth-panel) label{font-size:12px;font-weight:650;color:#465b4b;line-height:1.65;letter-spacing:.05px;margin-bottom:22px}
+:is(.portal-body .workspace,.guest-body .auth-panel) :is(input,select,textarea){color:var(--field-ink);font-size:13px;font-weight:450;line-height:1.55;border:1px solid var(--field-border);border-radius:var(--field-radius);background:#fbfcfa;box-shadow:0 1px 2px #203c2803;transition:border-color .18s,background .18s,box-shadow .18s;max-width:100%;margin-top:8px;padding:13px 15px;min-height:47px}
+:is(.portal-body .workspace,.guest-body .auth-panel) :is(input,textarea)::placeholder{color:#929e92;font-weight:400;opacity:1}
+:is(.portal-body .workspace,.guest-body .auth-panel) :is(input,select,textarea):hover:not(:disabled):not([readonly]){border-color:#afc3b0;background:#fff}
+:is(.portal-body .workspace,.guest-body .auth-panel) :is(input,select,textarea):focus{outline:none;border-color:var(--field-focus);background:#fff;box-shadow:0 0 0 4px #28765312}
+:is(.portal-body .workspace,.guest-body .auth-panel) :is(input,textarea)[readonly]{background:#f1f4ef;border-color:#e8ece4;color:#7b877a;box-shadow:none;cursor:default}
+:is(.portal-body .workspace,.guest-body .auth-panel) :is(input,select,textarea):disabled{background:#f1f3ef;border-color:#e6eae2;color:#8b9588;cursor:not-allowed;opacity:.85}
+:is(.portal-body .workspace,.guest-body .auth-panel) :is(input,select,textarea)[aria-invalid=true]{border-color:#c77969;background:#fffcfb}
+@supports selector(input:user-invalid){:is(.portal-body .workspace,.guest-body .auth-panel) :is(input,select,textarea):user-invalid{border-color:#c77969;box-shadow:0 0 0 3px #be645410}}
+:is(.portal-body .workspace,.guest-body .auth-panel) textarea{resize:vertical;min-height:128px;line-height:1.85}
+:is(.portal-body .workspace,.guest-body .auth-panel) select:not([multiple]){appearance:none;padding-right:43px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m5 6.5 3 3 3-3' stroke='%23647d67' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 15px center;cursor:pointer}
+:is(.portal-body .workspace,.guest-body .auth-panel) select[multiple]{min-height:156px;padding:7px}
+:is(.portal-body .workspace,.guest-body .auth-panel) select[multiple] option{padding:8px 10px;border-radius:5px}
+:is(.portal-body .workspace,.guest-body .auth-panel) input:is([type=date],[type=time],[type=datetime-local]){color-scheme:light;font-variant-numeric:tabular-nums;min-width:0}
+:is(.portal-body .workspace,.guest-body .auth-panel) input::-webkit-calendar-picker-indicator{opacity:.55;cursor:pointer;padding:4px;border-radius:5px}
+:is(.portal-body .workspace,.guest-body .auth-panel) input::-webkit-calendar-picker-indicator:hover{background:#eaf1e6;opacity:1}
+:is(.portal-body .workspace,.guest-body .auth-panel) input:is([type=checkbox],[type=radio]){appearance:auto;display:inline-block;accent-color:#176b45;width:17px;height:17px;min-height:0;padding:0;margin:0 9px 2px 0;border-radius:4px;vertical-align:middle;box-shadow:none;cursor:pointer;flex-shrink:0}
+:is(.portal-body .workspace,.guest-body .auth-panel) label:has(>input:is([type=checkbox],[type=radio])){font-size:12px;font-weight:500;line-height:1.9;padding:12px 15px;border:1px solid #e6ece2;border-radius:10px;background:#fafcf8;margin-bottom:12px;cursor:pointer}
+:is(.portal-body .workspace,.guest-body .auth-panel) label:has(>input:checked){border-color:#c9ddc8;background:#f2f7ef;color:#275637}
+:is(.portal-body .workspace,.guest-body .auth-panel) input[type=file]{padding:17px;background:#f8fbf6;border:1px dashed #bdceba;color:#7a8877;font-size:11px;min-height:76px;cursor:pointer}
+:is(.portal-body .workspace,.guest-body .auth-panel) input[type=file]::file-selector-button{border:1px solid #d8e3d2;border-radius:8px;padding:10px 15px;margin-right:15px;background:#fff;color:#3d6244;font:600 11px 'Manrope',sans-serif;cursor:pointer;box-shadow:0 2px 4px #1c3d2205;transition:background .18s}
+:is(.portal-body .workspace,.guest-body .auth-panel) input[type=file]::file-selector-button:hover{background:#eaf3e5}
+.portal-body .workspace .form-grid{column-gap:25px;row-gap:0;align-items:start}
+.portal-body .workspace fieldset{min-width:0;margin:28px 0;padding:26px 0 8px;border:0;border-top:1px solid #e8ede4}
+.portal-body .workspace fieldset:first-of-type{margin-top:6px}
+.portal-body .workspace legend{float:left;width:100%;padding:0;margin-bottom:23px;color:#26472f;font-size:14px;font-weight:750;letter-spacing:-.2px;line-height:1.6}
+.portal-body .workspace legend+*{clear:both}
+.portal-body .workspace fieldset>p{font-size:12px;line-height:1.85;color:#7b897b}
+:is(.portal-body .workspace,.guest-body .auth-panel) label>small{display:block;font-size:10px;font-weight:400;line-height:1.8;color:#8a9685;margin-top:7px}
+.portal-body .workspace form.card{padding:30px 32px;border-color:#e8ede3;background:#fff;border-radius:19px}
+.portal-body .workspace form.card>button:last-child{margin-top:12px;padding:13px 24px;border-radius:10px;min-height:46px;box-shadow:0 4px 10px #14553612}
+.portal-body .workspace .filters{align-items:end;gap:16px;padding:20px;border-radius:15px}
+.portal-body .workspace .filters label{font-size:11px;margin-bottom:0}
+.portal-body .workspace .filters :is(input,select){min-height:42px;padding-block:10px;font-size:12px}
+.portal-body .workspace .filters button{min-height:42px;border-radius:10px}
+.portal-body .workspace td :is(input,select,textarea){font-size:12px;padding:10px 12px;min-height:40px}
+.portal-body .workspace details form{padding:20px;margin-top:15px;background:#f8faf6;border:1px solid #e5ece0;border-radius:13px}
+.guest-body .auth-panel{border-color:#e8ede3;border-radius:20px;padding:38px;box-shadow:0 10px 45px #23472b06}
+.guest-body .auth-panel form>button{min-height:47px;border-radius:11px}
+@media(max-width:650px){.portal-body .workspace form.card{padding:24px 19px}.portal-body .workspace .form-grid{grid-template-columns:minmax(0,1fr);gap:0}.portal-body .workspace fieldset{margin:22px 0;padding-top:23px}.portal-body .workspace legend{font-size:13px;margin-bottom:20px}:is(.portal-body .workspace,.guest-body .auth-panel) label{font-size:12px;margin-bottom:19px}:is(.portal-body .workspace,.guest-body .auth-panel) :is(input,select,textarea){font-size:16px}:is(.portal-body .workspace,.guest-body .auth-panel) input[type=file]{font-size:10px;padding:12px}:is(.portal-body .workspace,.guest-body .auth-panel) input[type=file]::file-selector-button{padding:9px 11px;margin-right:9px}.guest-body .auth-panel{padding:29px 24px}}
+@media(prefers-reduced-motion:reduce){:is(.portal-body .workspace,.guest-body .auth-panel) :is(input,select,textarea){transition:none}}
+@media(forced-colors:active){:is(.portal-body .workspace,.guest-body .auth-panel) :is(input,select,textarea):focus{outline:2px solid Highlight}:is(.portal-body .workspace,.guest-body .auth-panel) select:not([multiple]){appearance:auto}}
+@media print{.portal-body .workspace form.card{padding:0;border:0;box-shadow:none}:is(.portal-body .workspace,.guest-body .auth-panel) :is(input,select,textarea){box-shadow:none;background:#fff}.portal-body .workspace fieldset{break-inside:avoid}}

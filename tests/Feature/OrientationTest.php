@@ -66,16 +66,19 @@ class OrientationTest extends TestCase
         $this->get('/login')->assertOk();
         $staff = $this->account();
         $this->actingAs($staff);
+        $this->get('/dashboard')->assertOk()->assertSee('Your six-week journey')->assertSee('My progress')->assertDontSee('Action centre');
         foreach (['/dashboard', '/timetable', '/attendance', '/activities', '/resources', '/announcements', '/profile'] as $path) {
-            $this->get($path)->assertOk();
+            $this->get($path)->assertOk()->assertSee('portal-frame', false)->assertSee('portal-navigation', false)->assertDontSee('class="site-footer"', false)->assertDontSee('class="institution-bar"', false);
         }foreach (['/manage/staff', '/settings', '/audit', '/reports', '/facilitators'] as $path) {
             $this->get($path)->assertForbidden();
         }$super = $this->account('supervisor', ['schedule', 'facilitators']);
         $this->actingAs($super)->get('/facilitators')->assertOk();
+        $this->get('/dashboard')->assertOk()->assertSee('Management dashboard')->assertSee('Timetable entries to review')->assertDontSee('Submissions awaiting grading')->assertDontSee('Your six-week journey')->assertDontSee('My progress');
         $this->get('/manage/staff')->assertForbidden();
         $this->get('/settings')->assertForbidden();
         $admin = $this->account('admin');
         $this->actingAs($admin);
+        $this->get('/dashboard')->assertOk()->assertSee('Admin Dashboard')->assertSee('Action centre')->assertSee('Submissions awaiting grading')->assertSeeInOrder(['Participants','Active accounts','Awaiting activation','Entries to review','Live daily attendance','Action centre'])->assertDontSee('UPCOMING')->assertDontSee(chr(239).chr(191).chr(189))->assertDontSee('Your six-week journey')->assertDontSee('My progress')->assertDontSee('Attendance overview');
         foreach (['/manage/staff', '/settings', '/audit', '/reports', '/facilitators'] as $path) {
             $this->get($path)->assertOk();
         }
