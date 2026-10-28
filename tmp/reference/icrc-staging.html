@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICRC | Infrastructure Concession Regulatory Commission</title>
+    <meta name="description" content="Regulating Nigeria's Public-Private Partnerships for sustainable infrastructure development. The engine room of Nigeria's infrastructure revolution.">
+    
+    <!-- TAILWIND CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FONTS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+    
+    <!-- ICONS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+						sovereign: {
+							950: '#002616', // Nigerian Green (Deep)
+							900: '#064E3B',
+							800: '#065F46',
+							700: '#047857', // lighter but still strong
+							600: '#059669', // fresh, vibrant green
+                            500: '#10B981',
+                            400: '#34D399',
+
+						},
+                        gold: {
+                            300: '#F0E68C',
+                            400: '#D4AF37', // Metallic Gold
+                            500: '#B8860B',
+                            600: '#996515',
+                        },
+                        surface: {
+                            50: '#F9FAFB',
+                            100: '#F3F4F6',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        serif: ['"Cormorant Garamond"', 'serif'],
+                    },
+                    animation: {
+                        'float': 'float 8s ease-in-out infinite',
+                        'reveal': 'reveal 1s cubic-bezier(0.2, 1, 0.3, 1) forwards',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        reveal: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    },
+                    backgroundImage: {
+                        'noise': "url('https://www.transparenttextures.com/patterns/stardust.png')",
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #002616; }
+        ::-webkit-scrollbar-thumb { background: #D4AF37; border-radius: 3px; }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .reveal-on-scroll {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 1s cubic-bezier(0.2, 1, 0.3, 1);
+        }
+        .reveal-on-scroll.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .slide {
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out;
+            z-index: 0;
+        }
+        .slide.active {
+            opacity: 1;
+            z-index: 10;
+        }
+        .slide.active img {
+            animation: kenBurns 12s ease-out forwards;
+        }
+        @keyframes kenBurns {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.15); }
+        }
+        
+        .slide-content > * { opacity: 0; transform: translateY(20px); transition: all 0.8s ease-out; }
+        .slide.active .slide-content > *:nth-child(1) { opacity: 1; transform: translateY(0); transition-delay: 0.3s; }
+        .slide.active .slide-content > *:nth-child(2) { opacity: 1; transform: translateY(0); transition-delay: 0.5s; }
+        .slide.active .slide-content > *:nth-child(3) { opacity: 1; transform: translateY(0); transition-delay: 0.7s; }
+    </style>
+</head>
+<body class="font-sans text-slate-800 bg-surface-50">
+
+    <!-- PRELOADER -->
+    <div id="preloader" class="fixed inset-0 bg-sovereign-600 z-[9999] flex items-center justify-center transition-opacity duration-700">
+        <div class="flex flex-col items-center">
+            <div class="relative w-24 h-24">
+                <div class="absolute inset-0 border-t-2 border-gold-400 rounded-full animate-spin"></div>
+                <div class="absolute inset-2 border-r-2 border-sovereign-800 rounded-full animate-spin" style="animation-direction: reverse;"></div>
+            </div>
+            <p class="mt-4 text-gold-400 text-xs font-bold tracking-[0.3em] animate-pulse">ICRC NIGERIA</p>
+        </div>
+    </div>
+
+    <!-- TOP STRIP -->
+    <div class="bg-sovereign-600 text-white/80 py-2 text-[10px] font-bold tracking-widest border-b border-white/5 hidden md:block">
+        <div class="max-w-[1400px] mx-auto px-6 flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <span class="flex items-center gap-2"><i class="fas fa-certificate text-gold-400"></i> ISO 9001:2015 CERTIFIED</span>
+            </div>
+            <div class="flex items-center gap-6">
+                <a href="#" class="hover:text-gold-400 transition-colors">OPTS LOGIN</a>
+                <a href="#" class="hover:text-gold-400 transition-colors">FOI PORTAL</a>
+                <a href="#" class="hover:text-gold-400 transition-colors flex items-center gap-2"><i class="fas fa-lock"></i> STAFF LOGIN</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- NAVIGATION -->
+    <nav id="navbar" class="sticky top-0 z-50 transition-all duration-300 glass-panel shadow-sm">
+        <div class="max-w-[1400px] mx-auto px-6">
+            <div class="flex justify-between items-center h-24">
+                
+                <!-- Logo -->
+                <a href="#" class="flex items-center gap-3 group">
+                    <img src="logo.png" alt="Coat of Arms" class="w-14 h-14 object-contain group-hover:scale-105 transition-transform duration-500">
+                    <div class="flex flex-col border-l border-gray-300 pl-3">
+                        <span class="text-sovereign-950 font-serif font-bold text-2xl leading-none">ICRC</span>
+                        <span class="text-[9px] text-gold-500 font-bold uppercase tracking-[0.25em] mt-1">Presidency</span>
+                    </div>
+                </a>
+
+                <!-- Menu -->
+                <div class="hidden lg:flex items-center gap-10 h-full">
+                    
+                    <!-- 1. The Commission (Dropdown) -->
+                    <div class="relative group h-full flex items-center">
+                        <!-- Trigger -->
+                        <button class="flex items-center gap-2 text-xs font-bold text-sovereign-950 uppercase tracking-widest hover:text-gold-500 transition-colors focus:outline-none py-4">
+                            The Commission
+                            <i class="fas fa-chevron-down text-[8px] text-gold-400 group-hover:rotate-180 transition-transform duration-300"></i>
+                        </button>
+
+                        <!-- Dropdown Body -->
+                        <div class="absolute top-[70%] left-0 pt-6 w-72 hidden group-hover:block transition-all duration-300 z-50">
+                            <div class="bg-white shadow-2xl border-t-4 border-gold-400 rounded-b-sm overflow-hidden flex flex-col">
+                                
+                                <!-- Item: Structure -->
+                                <a href="who-we-are.html" class="group/item block px-6 py-4 border-b border-gray-100 hover:bg-surface-50 transition-colors">
+                                    <span class="block text-sm font-bold text-sovereign-950 group-hover/item:text-gold-600 transition-colors">Governance Structure</span>
+                                    <span class="text-[10px] text-gray-400">Institutional Framework & Depts</span>
+                                </a>
+
+                                <!-- Item: Governing Board -->
+                                <a href="governing-board.html" class="group/item block px-6 py-4 border-b border-gray-100 hover:bg-surface-50 transition-colors">
+                                    <span class="block text-sm font-bold text-sovereign-950 group-hover/item:text-gold-600 transition-colors">ICRC Governing Board</span>
+                                    <span class="text-[10px] text-gray-400">Statutory Members & Chairman</span>
+                                </a>
+
+                                <!-- Item: Management Team -->
+                                <a href="management-team.html" class="group/item block px-6 py-4 border-b border-gray-100 hover:bg-surface-50 transition-colors">
+                                    <span class="block text-sm font-bold text-sovereign-950 group-hover/item:text-gold-600 transition-colors">ICRC Management Team</span>
+                                    <span class="text-[10px] text-gray-400">DG, Directors & Heads</span>
+                                </a>
+
+                                <!-- Item: Milestones -->
+                                <a href="milestones.html" class="group/item block px-6 py-4 hover:bg-surface-50 transition-colors">
+                                    <span class="block text-sm font-bold text-sovereign-950 group-hover/item:text-gold-600 transition-colors">Milestones</span>
+                                    <span class="text-[10px] text-gray-400">History of Progress</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Other Links -->
+                    <a href="regulation.html" class="text-xs font-bold text-sovereign-950 uppercase tracking-widest hover:text-gold-500 transition-colors">Regulations</a>
+                    <a href="ppp.html" class="text-xs font-bold text-sovereign-950 uppercase tracking-widest hover:text-gold-500 transition-colors">PPP Framework</a>
+                    <a href="project.html" class="text-xs font-bold text-sovereign-950 uppercase tracking-widest hover:text-gold-500 transition-colors">Projects</a>
+                    <a href="media.html" class="text-xs font-bold text-sovereign-950 uppercase tracking-widest hover:text-gold-500 transition-colors">Media</a>
+                </div>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <section class="relative h-[90vh] min-h-[700px] overflow-hidden bg-sovereign-600">
+        
+        <!-- Slider Wrapper -->
+        <div id="hero-slider" class="absolute inset-0">
+            
+            <!-- Slide 1: Renewed Hope Agenda Focus -->
+            <div class="slide absolute inset-0 active">
+                <div class="absolute inset-0 bg-gradient-to-r from-sovereign-950 via-sovereign-950/70 to-transparent z-10"></div>
+                <!-- Real Image Context: Lekki Deep Sea Port or Coastal Highway -->
+                <img src="asset/WVS_4189.jpg" class="w-full h-full object-cover" alt="Lekki Deep Sea Port">
+                <div class="absolute inset-0 z-20 flex items-center">
+                    <div class="max-w-[1400px] mx-auto px-6 w-full slide-content">
+                        <span class="text-gold-400 font-bold uppercase tracking-[0.3em] text-xs mb-4 block flex items-center gap-2">
+                            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Renewed Hope Agenda
+                        </span>
+                        <h1 class="text-5xl lg:text-7xl font-serif font-bold text-white leading-[1.1] mb-6">
+                            The Engine Room of <br/>
+                            <span class="italic text-gold-400">Infrastructure Revolution.</span>
+                        </h1>
+                        <p class="text-gray-300 text-lg max-w-xl mb-10 font-light leading-relaxed">
+                            Driving Nigeria's economic transformation through strategic, bankable, and transparent Public-Private Partnerships.
+                        </p>
+                        <div class="flex gap-4">
+                            <button class="px-8 py-4 bg-gold-500 text-sovereign-950 font-bold uppercase text-xs tracking-widest hover:bg-white transition-colors">
+                                View Pipeline
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 2: 2025 Summit/Future Focus -->
+            <div class="slide absolute inset-0">
+                <div class="absolute inset-0 bg-gradient-to-r from-sovereign-950 via-sovereign-950/70 to-transparent z-10"></div>
+                <img src="dam.png" class="w-full h-full object-cover" alt="2nd Niger Bridge">
+                <div class="absolute inset-0 z-20 flex items-center">
+                    <div class="max-w-[1400px] mx-auto px-6 w-full slide-content">
+                        <span class="text-gold-400 font-bold uppercase tracking-[0.3em] text-xs mb-4 block">Vision 2025</span>
+                        <h1 class="text-5xl lg:text-7xl font-serif font-bold text-white leading-[1.1] mb-6">
+                            Unlocking Nigeria's <br/>
+                            <span class="italic text-gold-400">Potential.</span>
+                        </h1>
+                        <p class="text-gray-300 text-lg max-w-xl mb-10 font-light leading-relaxed">
+                            Bridging the infrastructure deficit by facilitating private capital into Energy, Transport, and Agricultural logistics.
+                        </p>
+                        <button class="px-8 py-4 border border-gold-400 text-gold-400 hover:bg-gold-400 hover:text-sovereign-950 transition-all font-bold uppercase text-xs tracking-widest">
+                            Read 2025 Outlook
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Controls -->
+        <div class="absolute bottom-12 left-0 w-full z-30">
+            <div class="max-w-[1400px] mx-auto px-6 flex items-center justify-between border-t border-white/10 pt-8">
+                <div class="flex gap-4">
+                    <button onclick="prevSlide()" class="text-white hover:text-gold-400 transition-colors"><i class="fas fa-arrow-left"></i> PREV</button>
+                    <button onclick="nextSlide()" class="text-white hover:text-gold-400 transition-colors">NEXT <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- DG & MANDATE SECTION (Updated with Real Data) -->
+    <section id="about" class="py-32 bg-surface-50 relative overflow-hidden">
+        <!-- Watermark -->
+        <div class="absolute top-0 right-0 opacity-[0.03] w-[600px] pointer-events-none">
+            <img src="logo.png" class="w-full">
+        </div>
+
+        <div class="max-w-[1400px] mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-20 items-center relative z-10">
+            
+            <!-- Image Side -->
+            <div class="lg:col-span-5 reveal-on-scroll">
+                <div class="relative">
+                    <div class="absolute -top-4 -left-4 w-full h-full border border-gold-400/50 z-0"></div>
+                    <div class="relative z-10 h-[600px] bg-sovereign-600 overflow-hidden shadow-2xl">
+                        <!-- Placeholder for DG Image -->
+                        <img src="https://staging.icrc.gov.ng/wp-content/uploads/2025/08/icrc_dg2.png?q=80&w=2670" alt="Dr. Jobson Oseodion Ewalefoh" class="w-full h-full object-cover object-top grayscale hover:grayscale-0 transition-all duration-1000">
+                        <div class="absolute bottom-0 left-0 w-full bg-sovereign-600/90 backdrop-blur p-8 border-t border-gold-400/30">
+                            <h3 class="text-white font-serif text-2xl italic">Dr. Jobson Oseodion Ewalefoh</h3>
+                            <p class="text-gold-400 text-[10px] font-bold uppercase tracking-widest mt-2">Director General / CEO</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Side -->
+            <div class="lg:col-span-7 reveal-on-scroll">
+                <span class="text-gold-500 font-bold uppercase tracking-widest text-xs mb-4 block">Executive Mandate</span>
+                <h2 class="text-4xl md:text-5xl font-serif text-sovereign-950 mb-8 leading-tight">
+                    "We have shifted from mere regulation to <span class="italic text-gold-500 decoration-1 underline decoration-gold-300 underline-offset-4">active facilitation</span>."
+                </h2>
+                
+                <div class="prose prose-lg text-gray-600 mb-10 space-y-6">
+                    <p>
+                        The Infrastructure Concession Regulatory Commission (ICRC) was established by the <strong>ICRC Act, 2005</strong>, with a clear mandate to regulate the Public-Private Partnership (PPP) endeavours of the Federal Government aimed at addressing Nigeria’s physical infrastructure deficit which hampers economic development.
+                    </p>
+                    <p>
+                        Under the "Renewed Hope" agenda, our mission has evolved. We are not just a regulator; we are an enabler. We are committed to de-risking projects and ensuring efficient infrastructure service provision to achieve Value for Money, Public Interest, Transparency, and Competition.
+                    </p>
+                </div>
+
+                <div class="flex flex-wrap gap-6 items-center border-t border-gray-200 pt-8">
+                    <!-- Added id="openMandateBtn" -->
+                    <button id="openMandateBtn" class="bg-sovereign-600 text-white px-8 py-4 text-xs font-bold uppercase tracking-widest hover:bg-gold-500 hover:text-sovereign-950 transition-colors shadow-lg">
+                        Read Full Address
+                    </button>
+                    <button class="flex items-center gap-2 text-sovereign-950 font-bold text-xs uppercase tracking-widest group">
+                        Download Act 2005 <i class="fas fa-download group-hover:translate-y-1 transition-transform"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- LIVE DATABASE DASHBOARD (Real Estimates) -->
+    <section class="py-24 bg-sovereign-600 text-white relative">
+        <div class="absolute inset-0 bg-noise opacity-10"></div>
+        
+        <div class="max-w-[1400px] mx-auto px-6 relative z-10">
+            <div class="grid grid-cols-1 md:grid-cols-12">
+                
+                <!-- Title -->
+                <div class="md:col-span-3 py-12 md:border-r border-white/10 reveal-on-scroll">
+                    <span class="text-gold-400 font-bold uppercase tracking-widest text-[10px] block mb-2 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> Live Database
+                    </span>
+                    <h2 class="text-3xl font-serif leading-tight">Performance <br><span class="italic text-white/60">Metrics</span></h2>
+                </div>
+
+                <!-- Stats Grid (Based on recent reports) -->
+                <div class="md:col-span-9 grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-white/10">
+                    
+                    <!-- OBC -->
+                    <div class="p-12 hover:bg-white/5 transition-colors group reveal-on-scroll delay-100">
+                        <span class="block text-white/60 text-xs font-bold uppercase tracking-widest mb-4">Development Phase</span>
+                        <div class="flex items-baseline gap-2">
+                            <!-- Est. Cumulative OBCs -->
+                            <span class="block text-6xl font-serif text-white mb-2 counter" data-target="175">0</span>
+                            <span class="text-xs text-gold-400 font-bold">OBCs Issued</span>
+                        </div>
+                        <p class="text-[10px] text-gray-400 mt-2">Outline Business Case Compliance</p>
+                    </div>
+
+                    <!-- FBC -->
+                    <div class="p-12 hover:bg-white/5 transition-colors group reveal-on-scroll delay-200">
+                        <span class="block text-white/60 text-xs font-bold uppercase tracking-widest mb-4">Procurement Phase</span>
+                        <div class="flex items-baseline gap-2">
+                            <!-- Est. Cumulative FBCs -->
+                            <span class="block text-6xl font-serif text-gold-400 mb-2 counter" data-target="68">0</span>
+                            <span class="text-xs text-white font-bold">FBCs Issued</span>
+                        </div>
+                        <p class="text-[10px] text-gray-400 mt-2">Full Business Case Compliance</p>
+                    </div>
+
+                    <!-- Implementation -->
+                    <div class="p-12 hover:bg-white/5 transition-colors group reveal-on-scroll delay-300">
+                        <span class="block text-white/60 text-xs font-bold uppercase tracking-widest mb-4">Execution Phase</span>
+                        <div class="flex items-baseline gap-2">
+                            <span class="block text-6xl font-serif text-white mb-2 counter" data-target="103">0</span>
+                            <span class="text-xs text-gold-400 font-bold">Projects</span>
+                        </div>
+                        <p class="text-[10px] text-gray-400 mt-2">Under Implementation/Custody</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+<!-- MILESTONES: THE GOLDEN HANGER TIMELINE -->
+    <section id="milestones" class="py-32 relative overflow-hidden bg-surface-50">
+        <!-- Background Elements -->
+        <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-40 pointer-events-none"></div>
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[300px] bg-gradient-to-b from-white to-transparent z-0"></div>
+
+        <div class="max-w-[1400px] mx-auto px-6 relative z-10">
+            
+            <!-- Section Header -->
+            <div class="text-center mb-16 reveal-on-scroll">
+                <span class="flex items-center justify-center gap-3 mb-4">
+                    <span class="h-px w-8 bg-gold-400"></span>
+                    <span class="text-gold-500 font-bold uppercase tracking-[0.3em] text-xs">Our Heritage</span>
+                    <span class="h-px w-8 bg-gold-400"></span>
+                </span>
+                <h2 class="text-3xl md:text-5xl font-serif text-sovereign-950 leading-tight">
+                    The Road We’ve Traveled & <br>
+                    <span class="italic text-gold-600">The Horizons We Seek</span>
+                </h2>
+            </div>
+
+            <!-- THE HANGER SYSTEM -->
+            <div class="relative pt-10 pb-10">
+                
+                <!-- 1. THE GOLDEN RAIL (Desktop) -->
+                <div class="hidden md:block absolute top-0 left-0 right-0 h-3 rounded-full bg-gradient-to-r from-sovereign-950 via-gold-300 to-sovereign-950 shadow-xl border-b border-sovereign-900 z-10">
+                    <!-- Shine Effect on Rail -->
+                    <div class="absolute top-0 left-0 w-full h-[1px] bg-white/50"></div>
+                </div>
+
+                <!-- 2. HANGING CARDS CONTAINER -->
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-8 md:gap-4 relative">
+                    
+                    <!-- Vertical Line for Mobile (Hidden on Desktop) -->
+                    <div class="md:hidden absolute top-0 left-6 w-1 h-full bg-gold-300 z-0"></div>
+
+                    <!-- MILESTONE 1: 2005 -->
+                    <div class="group relative flex md:flex-col items-center reveal-on-scroll delay-100">
+                        <!-- The Thread/Connector (Desktop) -->
+                        <div class="hidden md:flex flex-col items-center absolute -top-10 left-1/2 -translate-x-1/2 w-full h-10 z-0">
+                            <!-- The Hook on Rail -->
+                            <div class="w-4 h-4 rounded-full bg-gold-500 border-2 border-sovereign-950 -mt-2 shadow-sm"></div>
+                            <!-- The String -->
+                            <div class="w-[2px] h-full bg-gray-300 group-hover:bg-gold-500 transition-colors duration-500"></div>
+                        </div>
+
+                        <!-- Mobile Connector -->
+                        <div class="md:hidden absolute left-6 w-4 h-4 rounded-full bg-gold-500 border-2 border-white -translate-x-1/2 z-10"></div>
+
+                        <!-- THE HANGING CARD -->
+                        <div class="hanging-card relative w-full ml-12 md:ml-0 bg-white p-1 rounded-sm shadow-sm hover:shadow-2xl transition-all duration-500 border-t-4 border-sovereign-950 group-hover:border-gold-500 origin-top transform group-hover:rotate-1">
+                            <!-- Inner Border -->
+                            <div class="border border-gray-100 p-6 h-full flex flex-col items-center text-center relative overflow-hidden">
+                                <!-- Watermark -->
+                                <span class="absolute -bottom-4 -right-4 text-8xl font-serif text-gray-50 opacity-50 z-0 select-none">05</span>
+                                
+                                <div class="relative z-10">
+                                    <div class="bg-sovereign-50 text-sovereign-800 font-bold text-[10px] px-2 py-1 uppercase tracking-widest inline-block mb-3 rounded-sm">Genesis</div>
+                                    <h3 class="text-4xl font-serif text-sovereign-950 font-bold mb-2">2005</h3>
+                                    <div class="h-px w-12 bg-gold-400 mx-auto mb-4"></div>
+                                    <p class="text-sm font-bold text-gray-800 mb-1">ICRC Act Signed</p>
+                                    <p class="text-xs text-gray-500 leading-relaxed">Establishment of the legal & regulatory framework.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MILESTONE 2: 2008 -->
+                    <div class="group relative flex md:flex-col items-center reveal-on-scroll delay-200">
+                        <!-- Thread -->
+                        <div class="hidden md:flex flex-col items-center absolute -top-10 left-1/2 -translate-x-1/2 w-full h-16 z-0">
+                            <div class="w-4 h-4 rounded-full bg-gold-500 border-2 border-sovereign-950 -mt-2 shadow-sm"></div>
+                            <div class="w-[2px] h-full bg-gray-300 group-hover:bg-gold-500 transition-colors duration-500"></div>
+                        </div>
+                        <div class="md:hidden absolute left-6 w-4 h-4 rounded-full bg-gold-500 border-2 border-white -translate-x-1/2 z-10"></div>
+
+                        <!-- Card (Added top margin for varying string length effect) -->
+                        <div class="hanging-card relative w-full ml-12 md:ml-0 md:mt-6 bg-white p-1 rounded-sm shadow-sm hover:shadow-2xl transition-all duration-500 border-t-4 border-sovereign-950 group-hover:border-gold-500 origin-top transform group-hover:-rotate-1">
+                            <div class="border border-gray-100 p-6 h-full flex flex-col items-center text-center relative overflow-hidden">
+                                <span class="absolute -bottom-4 -right-4 text-8xl font-serif text-gray-50 opacity-50 z-0 select-none">08</span>
+                                <div class="relative z-10">
+                                    <div class="bg-sovereign-50 text-sovereign-800 font-bold text-[10px] px-2 py-1 uppercase tracking-widest inline-block mb-3 rounded-sm">Launch</div>
+                                    <h3 class="text-4xl font-serif text-sovereign-950 font-bold mb-2">2008</h3>
+                                    <div class="h-px w-12 bg-gold-400 mx-auto mb-4"></div>
+                                    <p class="text-sm font-bold text-gray-800 mb-1">Inauguration</p>
+                                    <p class="text-xs text-gray-500 leading-relaxed">Formal commencement of Commission operations.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MILESTONE 3: 2012 -->
+                    <div class="group relative flex md:flex-col items-center reveal-on-scroll delay-300">
+                        <!-- Thread -->
+                        <div class="hidden md:flex flex-col items-center absolute -top-10 left-1/2 -translate-x-1/2 w-full h-10 z-0">
+                            <div class="w-4 h-4 rounded-full bg-gold-500 border-2 border-sovereign-950 -mt-2 shadow-sm"></div>
+                            <div class="w-[2px] h-full bg-gray-300 group-hover:bg-gold-500 transition-colors duration-500"></div>
+                        </div>
+                        <div class="md:hidden absolute left-6 w-4 h-4 rounded-full bg-gold-500 border-2 border-white -translate-x-1/2 z-10"></div>
+
+                        <!-- Card -->
+                        <div class="hanging-card relative w-full ml-12 md:ml-0 bg-white p-1 rounded-sm shadow-sm hover:shadow-2xl transition-all duration-500 border-t-4 border-sovereign-950 group-hover:border-gold-500 origin-top transform group-hover:rotate-1">
+                            <div class="border border-gray-100 p-6 h-full flex flex-col items-center text-center relative overflow-hidden">
+                                <span class="absolute -bottom-4 -right-4 text-8xl font-serif text-gray-50 opacity-50 z-0 select-none">12</span>
+                                <div class="relative z-10">
+                                    <div class="bg-sovereign-50 text-sovereign-800 font-bold text-[10px] px-2 py-1 uppercase tracking-widest inline-block mb-3 rounded-sm">Standard</div>
+                                    <h3 class="text-4xl font-serif text-sovereign-950 font-bold mb-2">2012</h3>
+                                    <div class="h-px w-12 bg-gold-400 mx-auto mb-4"></div>
+                                    <p class="text-sm font-bold text-gray-800 mb-1">Prep Framework</p>
+                                    <p class="text-xs text-gray-500 leading-relaxed">Launch of National Project Preparation Guidelines.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MILESTONE 4: 2014 -->
+                    <div class="group relative flex md:flex-col items-center reveal-on-scroll delay-400">
+                        <!-- Thread -->
+                        <div class="hidden md:flex flex-col items-center absolute -top-10 left-1/2 -translate-x-1/2 w-full h-24 z-0">
+                            <div class="w-4 h-4 rounded-full bg-gold-500 border-2 border-sovereign-950 -mt-2 shadow-sm"></div>
+                            <div class="w-[2px] h-full bg-gray-300 group-hover:bg-gold-500 transition-colors duration-500"></div>
+                        </div>
+                        <div class="md:hidden absolute left-6 w-4 h-4 rounded-full bg-gold-500 border-2 border-white -translate-x-1/2 z-10"></div>
+
+                        <!-- Card (Longer drop) -->
+                        <div class="hanging-card relative w-full ml-12 md:ml-0 md:mt-14 bg-white p-1 rounded-sm shadow-sm hover:shadow-2xl transition-all duration-500 border-t-4 border-sovereign-950 group-hover:border-gold-500 origin-top transform group-hover:-rotate-1">
+                            <div class="border border-gray-100 p-6 h-full flex flex-col items-center text-center relative overflow-hidden">
+                                <span class="absolute -bottom-4 -right-4 text-8xl font-serif text-gray-50 opacity-50 z-0 select-none">14</span>
+                                <div class="relative z-10">
+                                    <div class="bg-sovereign-50 text-sovereign-800 font-bold text-[10px] px-2 py-1 uppercase tracking-widest inline-block mb-3 rounded-sm">Policy</div>
+                                    <h3 class="text-4xl font-serif text-sovereign-950 font-bold mb-2">2014</h3>
+                                    <div class="h-px w-12 bg-gold-400 mx-auto mb-4"></div>
+                                    <p class="text-sm font-bold text-gray-800 mb-1">PPP Regulations</p>
+                                    <p class="text-xs text-gray-500 leading-relaxed">Official Gazetting of National PPP Regulations.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MILESTONE 5: 2025 (Highlighted) -->
+                    <div class="group relative flex md:flex-col items-center reveal-on-scroll delay-500">
+                        <!-- Thread -->
+                        <div class="hidden md:flex flex-col items-center absolute -top-10 left-1/2 -translate-x-1/2 w-full h-10 z-0">
+                            <div class="w-4 h-4 rounded-full bg-sovereign-600 border-2 border-gold-400 -mt-2 shadow-sm animate-pulse"></div>
+                            <div class="w-[2px] h-full bg-gold-400"></div>
+                        </div>
+                        <div class="md:hidden absolute left-6 w-4 h-4 rounded-full bg-sovereign-600 border-2 border-gold-400 -translate-x-1/2 z-10"></div>
+
+                        <!-- Card (Gold Theme) -->
+                        <div class="hanging-card relative w-full ml-12 md:ml-0 bg-sovereign-950 p-1 rounded-sm shadow-2xl hover:scale-105 transition-all duration-500 border-t-4 border-gold-500 origin-top">
+                            <div class="border border-sovereign-800 p-6 h-full flex flex-col items-center text-center relative overflow-hidden">
+                                <!-- Shine Effect -->
+                                <div class="absolute inset-0 bg-gradient-to-tr from-gold-500/10 to-transparent opacity-50"></div>
+                                <span class="absolute -bottom-4 -right-4 text-8xl font-serif text-gold-500 opacity-10 z-0 select-none">25</span>
+                                
+                                <div class="relative z-10">
+                                    <div class="bg-gold-500 text-sovereign-950 font-bold text-[10px] px-2 py-1 uppercase tracking-widest inline-block mb-3 rounded-sm">Future</div>
+                                    <h3 class="text-4xl font-serif text-white font-bold mb-2">2025</h3>
+                                    <div class="h-px w-12 bg-white/20 mx-auto mb-4"></div>
+                                    <p class="text-sm font-bold text-gold-400 mb-1">New Thresholds</p>
+                                    <p class="text-xs text-gray-400 leading-relaxed">Implementation of new approval limits for speed.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Footer Quote -->
+            <div class="text-center mt-16 reveal-on-scroll delay-700">
+                <p class="text-xs text-gray-400 uppercase tracking-widest font-light">"Building the Nation's Future, One Project at a Time."</p>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- REAL NEWS HEADLINES -->
+    <section id="news" class="py-32 bg-surface-50 border-t border-gray-200">
+        <div class="max-w-[1400px] mx-auto px-6">
+            
+            <div class="flex justify-between items-end mb-12 reveal-on-scroll">
+                <h2 class="text-4xl font-serif text-sovereign-950">Government <span class="italic text-gray-500">Communiqué</span></h2>
+                <a href="#" class="text-xs font-bold text-sovereign-950 border-b border-gold-500 pb-1 hover:text-gold-500 transition-colors">VIEW NEWSROOM</a>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-24 reveal-on-scroll">
+                <!-- Featured News (Lagos Calabar or Summit) -->
+                <div class="lg:col-span-2 group cursor-pointer">
+                    <div class="h-[450px] overflow-hidden bg-sovereign-600 relative">
+                        <!-- Use a generic infrastructure image or specific if available -->
+                        <img src="picx.jpg" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700">
+                        <div class="absolute bottom-0 left-0 w-full p-8 bg-gradient-to-t from-sovereign-950 via-sovereign-950/80 to-transparent">
+                            <span class="bg-gold-500 text-sovereign-950 text-[10px] font-bold px-2 py-1 uppercase mb-3 inline-block">Major Policy</span>
+                            <h3 class="text-2xl md:text-3xl font-bold text-white leading-tight mb-2">FG declares all PPP agreements outside ICRC Act as illegal</h3>
+                            <p class="text-gray-300 text-sm line-clamp-2">The Federal Government mandates all Ministries, Departments, and Agencies (MDAs) to strictly adhere to the 2005 ICRC Act for all partnership arrangements.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Side News List -->
+                <div class="bg-white p-8 border border-gray-200 h-[450px] flex flex-col justify-between">
+                    <div>
+                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-6">Latest Updates</span>
+                        <div class="space-y-8">
+                            <a href="#" class="block group">
+                                <span class="text-gold-500 text-[10px] font-bold">UPCOMING</span>
+                                <h4 class="text-sovereign-950 font-bold text-sm mt-1 group-hover:text-gold-600 transition-colors">Nigeria PPP Summit 2025: Unlocking Nigeria's Potential</h4>
+                            </a>
+                            <a href="#" class="block group">
+                                <span class="text-gold-500 text-[10px] font-bold">POLICY</span>
+                                <h4 class="text-sovereign-950 font-bold text-sm mt-1 group-hover:text-gold-600 transition-colors">ICRC & NAICOM collaborate to enforce insurance cover for all FG PPP assets</h4>
+                            </a>
+                            <a href="#" class="block group">
+                                <span class="text-gold-500 text-[10px] font-bold">PROJECTS</span>
+                                <h4 class="text-sovereign-950 font-bold text-sm mt-1 group-hover:text-gold-600 transition-colors">FG empowers ICRC to implement approval thresholds for PPP projects</h4>
+                            </a>
+                        </div>
+                    </div>
+                    <a href="#" class="text-xs font-bold text-sovereign-950 flex items-center gap-2 hover:gap-3 transition-all">Archive <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+   <!-- GALLERY: VISUAL EVIDENCE -->
+    <section id="gallery" class="py-32 relative overflow-hidden bg-[#FDFCF8]">
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-radial-gradient from-gold-100/30 to-transparent opacity-60 pointer-events-none"></div>
+
+        <div class="max-w-[1400px] mx-auto px-6 relative z-10">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-16 reveal-on-scroll">
+                <div class="max-w-xl">
+                    <div class="flex items-center gap-3 mb-4">
+                        <span class="h-px w-12 bg-gold-500"></span>
+                        <span class="text-gold-600 font-bold uppercase tracking-[0.3em] text-xs">Portfolio</span>
+                    </div>
+                    <h2 class="text-4xl md:text-6xl font-serif text-sovereign-950 leading-tight">
+                        Visual <span class="italic text-gold-600">Evidence</span>
+                    </h2>
+                </div>
+            </div>
+
+            <!-- Mosaic Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-6 h-auto md:h-[800px]">
+                
+                <!-- Main Item: Lekki Port (Completed Success) -->
+                <div class="md:col-span-8 md:row-span-2 relative group overflow-hidden rounded-sm cursor-zoom-in reveal-on-scroll shadow-lg border border-gold-100/50"
+                    onclick="openLightbox('img/lekki.jpg', 'Lekki Deep Sea Port', 'Maritime Infrastructure')">
+                    
+                    <img src="img/lekki.jpg" 
+                        class="w-full h-full object-cover grayscale transition-all duration-1000 group-hover:grayscale-0 group-hover:scale-105"
+                        alt="Lekki Port">
+                    <div class="absolute inset-0 bg-gradient-to-t from-sovereign-950/90 via-transparent to-transparent"></div>
+                    <div class="absolute bottom-0 left-0 w-full p-8 md:p-12">
+                        <span class="text-gold-400 text-[10px] font-bold uppercase tracking-widest mb-2 block">Maritime</span>
+                        <h3 class="text-3xl md:text-4xl font-serif text-white">Lekki Deep Sea Port</h3>
+                    </div>
+                </div>
+
+                <!-- Item 2: Kashimbila Airport (Recent) -->
+                <div class="md:col-span-4 relative group overflow-hidden rounded-sm cursor-zoom-in reveal-on-scroll delay-100 shadow-lg border border-gold-100/50"
+                     onclick="openLightbox('factory.png', 'Kashimbila Cargo Airport', 'Aviation')">
+                    <img src="factory.png" 
+                        class="w-full h-full object-cover grayscale transition-all duration-1000 group-hover:grayscale-0 group-hover:scale-110" alt="Airport">
+                    <div class="absolute bottom-0 left-0 p-8 w-full bg-gradient-to-t from-sovereign-950/90 to-transparent">
+                        <span class="text-gold-400 text-[10px] uppercase font-bold tracking-wider mb-1 block">Industrial</span>
+                        <h3 class="text-xl font-serif text-white">Factory</h3>
+                    </div>
+                </div>
+
+                <!-- Item 3: Rail/Industrial -->
+                <div class="md:col-span-4 relative group overflow-hidden rounded-sm cursor-zoom-in reveal-on-scroll delay-200 shadow-lg border border-gold-100/50"
+                     onclick="openLightbox('dam.png', 'Kajola Rail Factory', 'Industrial')">
+                    <img src="dam.png" 
+                        class="w-full h-full object-cover grayscale transition-all duration-1000 group-hover:grayscale-0 group-hover:scale-110" alt="Rail">
+                    <div class="absolute bottom-0 left-0 p-8 w-full bg-gradient-to-t from-sovereign-950/90 to-transparent">
+                        <span class="text-gold-400 text-[10px] uppercase font-bold tracking-wider mb-1 block">Industrial</span>
+                        <h3 class="text-xl font-serif text-white">Dam Project</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- LIGHTBOX (Hidden by default) -->
+    <div id="lightbox" class="fixed inset-0 z-[100] hidden bg-sovereign-800/95 backdrop-blur-md transition-opacity duration-300 opacity-0 flex items-center justify-center">
+        <button onclick="closeLightbox()" class="absolute top-8 right-8 text-white hover:text-gold-400"><i class="fas fa-times text-3xl"></i></button>
+        <div class="max-w-6xl w-full p-4">
+            <img id="lightbox-img" src="" class="w-full max-h-[80vh] object-contain shadow-2xl rounded-sm">
+            <div class="mt-4 text-white">
+                <span id="lightbox-category" class="text-gold-400 text-xs font-bold uppercase"></span>
+                <h3 id="lightbox-title" class="text-2xl font-serif"></h3>
+            </div>
+        </div>
+    </div>
+    <!-- PARTNERS -->
+    <section class="py-20 bg-white border-t border-gray-100">
+        <div class="max-w-[1400px] mx-auto px-6 text-center">
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-[0.2em] mb-12">Strategic Development Partners</p>
+            
+            <div class="flex flex-wrap justify-center items-center gap-10 lg:gap-20">
+                
+                <!-- 1. THE WORLD BANK -->
+                <a href="#" class="group transition-transform hover:-translate-y-1 duration-300">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/The_World_Bank_logo.svg/2560px-The_World_Bank_logo.svg.png" 
+                         alt="The World Bank" 
+                         class="h-10 lg:h-12 w-auto object-contain grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500">
+                </a>
+
+                <!-- 2. AfDB (African Development Bank) - Updated Link -->
+                <a href="#" class="group transition-transform hover:-translate-y-1 duration-300">
+                    <img src="afdb.png" 
+                         alt="AfDB" 
+                         class="h-12 lg:h-14 w-auto object-contain grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500">
+                </a>
+
+                <!-- 3. AFC (Africa Finance Corporation) - Updated Link -->
+                <a href="#" class="group transition-transform hover:-translate-y-1 duration-300">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Logo-afc-new.svg" 
+                         alt="AFC" 
+                         class="h-10 lg:h-12 w-auto object-contain grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500">
+                </a>
+
+                <!-- 4. NSIA (Nigeria Sovereign Investment Authority) -->
+                <!-- Note: NSIA does not have a reliable public hotlink. I have used a placeholder below. 
+                     Please download the logo and change src to: "img/nsia.png" -->
+                <a href="#" class="group transition-transform hover:-translate-y-1 duration-300">
+                    <img src="nsia.svg" 
+                         alt="NSIA" 
+                         class="h-12 lg:h-14 w-auto object-contain grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500 border border-gray-100">
+                </a>
+
+                <!-- 5. UKNAIF / UK AID - Updated Link -->
+                <a href="#" class="group transition-transform hover:-translate-y-1 duration-300">
+                    <img src="UKNAIF.jpeg" 
+                         alt="UKNAIF" 
+                         class="h-14 lg:h-16 w-auto object-contain grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500">
+                </a>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER (Updated Address) -->
+    <footer class="bg-[#FDFCF8] text-dark pt-32 pb-12 relative overflow-hidden font-sans">
+        <div class="absolute -top-20 -right-20 w-[800px] h-[800px] opacity-[0.03] pointer-events-none grayscale rotate-12">
+             <img src="logo.png" class="w-full h-full object-contain">
+        </div>
+        <div class="absolute inset-0 bg-noise opacity-5 pointer-events-none"></div>
+
+        <div class="max-w-[1400px] mx-auto px-6 relative z-10">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-16 border-b border-dark/5 pb-20">
+                
+                <!-- Brand -->
+                <div class="lg:col-span-4">
+                    <div class="flex items-center gap-4 mb-8">
+                        <img src="logo.png" class="w-16 h-16 object-contain">
+                        <div>
+                            <h3 class="text-2xl font-serif font-bold tracking-wide text-dark">ICRC NIGERIA</h3>
+                            <p class="text-[10px] text-gold-400 uppercase tracking-[0.2em] font-bold mt-1">The Presidency</p>
+                        </div>
+                    </div>
+                    <div class="space-y-6 text-gray-400 text-sm leading-relaxed">
+                        <p>The Infrastructure Concession Regulatory Commission is the apex regulatory body for PPPs in Nigeria.</p>
+                        <div class="pt-4 border-t border-white/10 mt-4">
+                            <p class="text-[10px] font-bold text-gold-500 uppercase tracking-widest mb-2">Headquarters</p>
+                            <!-- CORRECT ADDRESS -->
+                            <p class="text-gray-400">Plot 1270 Ayangba Street,<br>Near FCDA Headquarters,<br>Area 11, Garki, Abuja - FCT.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Links -->
+                <div class="lg:col-span-2 lg:col-start-6">
+                    <h4 class="text-xs font-bold text-gold-500 uppercase tracking-widest mb-8 flex items-center gap-2"><span class="w-2 h-2 bg-gold-500 rounded-full"></span> Commission</h4>
+                    <ul class="space-y-4 text-sm text-gray-400">
+                        <li><a href="#" class="hover:text-gold-400">About Us</a></li>
+                        <li><a href="#" class="hover:text-gold-400">Our Mandate</a></li>
+                        <li><a href="#" class="hover:text-gold-400">Governing Board</a></li>
+                        <li><a href="#" class="hover:text-gold-400">Management Team</a></li>
+                    </ul>
+                </div>
+
+                <!-- Contact -->
+                <div class="lg:col-span-3 lg:col-start-9">
+                    <h4 class="text-xs font-bold text-gold-500 uppercase tracking-widest mb-8">Contact</h4>
+                    <a href="tel:+234094604900" class="block text-2xl font-serif text-gray-400 hover:text-gold-400 transition-colors mb-2">+234 (0) 9 460 4900</a>
+                    <a href="mailto:info@icrc.gov.ng" class="text-sm text-gray-400 hover:text-gold-400 transition-colors">info@icrc.gov.ng</a>
+                </div>
+            </div>
+
+            <div class="pt-8 flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="text-xs text-gray-500">
+                    <p>&copy; 2025 Infrastructure Concession Regulatory Commission. All Rights Reserved.</p>
+                </div>
+                <div class="flex gap-4">
+                    <a href="#" class="text-gray-400 hover:text-gold-400"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="text-gray-400 hover:text-gold-400"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#" class="text-gray-400 hover:text-gold-400"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- MODAL: WELCOME ADDRESS -->
+    <div id="welcomeModal" class="fixed inset-0 z-[9999] hidden flex items-center justify-center p-4">
+        
+        <!-- Dark Backdrop with Blur -->
+        <div id="welcomeBackdrop" class="absolute inset-0 bg-sovereign-800/90 backdrop-blur-md transition-opacity duration-500 opacity-0"></div>
+        
+        <!-- Modal Content -->
+        <div id="welcomeContent" class="relative bg-white w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl transform scale-95 opacity-0 transition-all duration-500 rounded-sm overflow-hidden">
+            
+            <!-- Header (Sticky) -->
+            <div class="bg-surface-50 px-8 py-6 border-b border-gray-200 flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-4">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/b/bc/Coat_of_arms_of_Nigeria.svg" alt="Coat of Arms" class="w-12 h-12 object-contain">
+                    <div>
+                        <h3 class="font-serif font-bold text-2xl text-sovereign-950 leading-none">Director General's Charge</h3>
+                        <span class="text-[10px] font-bold text-gold-600 uppercase tracking-widest">Office of the Managing Director</span>
+                    </div>
+                </div>
+                <button id="closeWelcomeBtn" class="w-10 h-10 rounded-full border border-gray-300 hover:bg-gold-500 hover:border-gold-500 hover:text-white flex items-center justify-center transition-all duration-300">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Scrollable Body -->
+            <div class="p-8 md:p-12 overflow-y-auto custom-scrollbar bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
+                <div class="prose prose-lg max-w-none text-gray-700 font-light leading-relaxed">
+                    
+                    <p class="text-xl font-serif text-sovereign-950 italic mb-8 border-l-4 border-gold-500 pl-6">
+                        "We have moved from the era of strict regulation to the era of active facilitation. The infrastructure deficit is too large for the government to handle alone; the private sector is not just a partner, but the engine of our future."
+                    </p>
+
+                    <p><strong>Fellow Nigerians and Global Partners,</strong></p>
+
+                    <p>I warmly welcome you to the official platform of the Infrastructure Concession Regulatory Commission (ICRC). This website serves as a window into Nigeria’s dynamic Public-Private Partnership (PPP) ecosystem—a sector that is currently undergoing a radical transformation under the <strong>Renewed Hope Agenda</strong> of President Bola Ahmed Tinubu.</p>
+
+                    <p>The Commission was established by the <strong>ICRC Act, 2005</strong>, with a mandate to regulate PPP endeavours aimed at addressing Nigeria’s physical infrastructure deficit. However, regulation without results is bureaucracy. That is why my leadership is focused on <strong>speed, efficiency, and bankability</strong>.</p>
+
+                    <h4 class="text-sovereign-950 font-bold mt-8 mb-4">Our Strategic Direction</h4>
+                    <p>We are streamlining the PPP procurement process to ensure that projects do not languish in the pipeline. We are introducing strict timelines for Outline Business Case (OBC) and Full Business Case (FBC) compliance. If a project is not viable, we will say so immediately. If it is viable, we will move heaven and earth to see it to financial close.</p>
+
+                    <p>To our investors: We are strengthening our legal frameworks to ensure the sanctity of contracts. We understand that capital goes where it is safe. The ICRC is committed to being the guardian of that safety, ensuring that agreements made are agreements kept.</p>
+
+                    <p>We invite you to explore our <strong>Disclosure Portal</strong>, view our pipeline of projects in Energy, Transport, Aviation, and Agriculture, and join us in building the infrastructure that will power Africa's largest economy.</p>
+
+                    <p class="mt-8">Welcome to a new era of infrastructure delivery.</p>
+                </div>
+
+                <!-- Signature -->
+                <div class="mt-12 pt-8 border-t border-gray-200 flex flex-col items-end">
+                    <div class="text-right">
+                        <!-- Signature Font Style -->
+                        <p class="font-serif text-3xl text-sovereign-950 italic mb-2" style="font-family: 'Cormorant Garamond', serif;">Dr. Jobson Oseodion Ewalefoh</p>
+                        <p class="text-[10px] font-bold uppercase text-gold-500 tracking-[0.2em]">Director General / CEO</p>
+                        <p class="text-[10px] font-bold uppercase text-gray-400 tracking-widest">ICRC Nigeria</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COOKIE CONSENT POPUP -->
+<div id="cookie-popup" class="fixed bottom-6 right-6 z-[9000] w-full max-w-sm transform translate-y-20 opacity-0 transition-all duration-700 pointer-events-none">
+    <div class="bg-white border-l-4 border-gold-500 shadow-2xl p-6 relative rounded-r-sm">
+        
+        <!-- Header -->
+        <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-surface-100 rounded-full flex items-center justify-center text-sovereign-600">
+                    <i class="fas fa-cookie-bite"></i>
+                </div>
+                <h4 class="font-serif font-bold text-sovereign-950 text-lg">Cookie Policy</h4>
+            </div>
+            <button onclick="acceptCookies()" class="text-gray-400 hover:text-red-500 transition-colors pointer-events-auto">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Text -->
+        <p class="text-xs text-gray-500 leading-relaxed mb-5 font-light">
+            We use cookies to improve your experience on the ICRC portal and to analyze web traffic in line with the 
+            <a href="#" class="text-sovereign-600 underline decoration-gold-400 underline-offset-2 hover:text-sovereign-800">NDPR guidelines</a>.
+        </p>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-3 pointer-events-auto">
+            <button onclick="acceptCookies()" class="flex-1 bg-sovereign-600 text-white text-[10px] font-bold uppercase tracking-widest py-3 px-4 hover:bg-sovereign-800 transition-colors shadow-lg shadow-sovereign-900/10">
+                Accept All
+            </button>
+            <button onclick="acceptCookies()" class="px-4 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest hover:text-sovereign-600 transition-colors border border-transparent hover:border-gray-200">
+                Preferences
+            </button>
+        </div>
+    </div>
+</div>
+
+    <!-- SCRIPTS -->
+    <script>
+        // 1. Preloader
+        window.addEventListener('load', () => {
+            const preloader = document.getElementById('preloader');
+            preloader.style.opacity = '0';
+            setTimeout(() => { preloader.style.display = 'none'; }, 700);
+        });
+
+        // 2. Slider Logic
+        const slides = document.querySelectorAll('.slide');
+        let currentSlide = 0;
+        function nextSlide() {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (currentSlide + 1) % slides.length;
+            slides[currentSlide].classList.add('active');
+        }
+        function prevSlide() {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+            slides[currentSlide].classList.add('active');
+        }
+        setInterval(nextSlide, 8000);
+
+        // 3. Reveal on Scroll & Counters
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    if(entry.target.querySelector('.counter')) startCounters(entry.target);
+                }
+            });
+        }, { threshold: 0.15 });
+        document.querySelectorAll('.reveal-on-scroll').forEach(el => observer.observe(el));
+
+        function startCounters(container) {
+            container.querySelectorAll('.counter').forEach(counter => {
+                const target = +counter.getAttribute('data-target');
+                const increment = target / 40;
+                let current = 0;
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= target) { counter.innerText = target; clearInterval(timer); }
+                    else { counter.innerText = Math.ceil(current); }
+                }, 40);
+            });
+        }
+
+        // 4. Lightbox Logic
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const lightboxTitle = document.getElementById('lightbox-title');
+        const lightboxCat = document.getElementById('lightbox-category');
+
+        function openLightbox(src, title, cat) {
+            lightboxImg.src = src;
+            lightboxTitle.innerText = title;
+            lightboxCat.innerText = cat;
+            lightbox.classList.remove('hidden');
+            setTimeout(() => lightbox.classList.remove('opacity-0'), 10);
+            document.body.style.overflow = 'hidden';
+        }
+        function closeLightbox() {
+            lightbox.classList.add('opacity-0');
+            setTimeout(() => { lightbox.classList.add('hidden'); document.body.style.overflow = ''; }, 300);
+        }
+
+        // --- MODAL LOGIC ---
+        const modal = document.getElementById('welcomeModal');
+        const backdrop = document.getElementById('welcomeBackdrop');
+        const content = document.getElementById('welcomeContent');
+        const openBtn = document.getElementById('openMandateBtn');
+        const closeBtn = document.getElementById('closeWelcomeBtn');
+
+        function toggleModal(show) {
+            if(show) {
+                // 1. Unhide the container
+                modal.classList.remove('hidden');
+                // 2. Lock body scroll
+                document.body.style.overflow = 'hidden';
+                
+                // 3. Small delay to allow CSS transitions to render
+                setTimeout(() => {
+                    backdrop.classList.remove('opacity-0');
+                    content.classList.remove('opacity-0', 'scale-95');
+                    content.classList.add('scale-100');
+                }, 10);
+            } else {
+                // 1. Fade out
+                backdrop.classList.add('opacity-0');
+                content.classList.remove('scale-100');
+                content.classList.add('opacity-0', 'scale-95');
+                
+                // 2. Unlock body scroll
+                document.body.style.overflow = '';
+
+                // 3. Hide container after transition finishes
+                setTimeout(() => { modal.classList.add('hidden'); }, 500);
+            }
+        }
+
+        // Event Listeners
+        if(openBtn) openBtn.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent jump to top
+            toggleModal(true);
+        });
+
+        if(closeBtn) closeBtn.addEventListener('click', () => toggleModal(false));
+        
+        // Close when clicking the dark background
+        if(backdrop) backdrop.addEventListener('click', () => toggleModal(false));
+
+        // Close on Escape Key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+                toggleModal(false);
+            }
+        });
+
+
+      // --- COOKIE POPUP LOGIC ---
+		const cookiePopup = document.getElementById('cookie-popup');
+
+		// Check if user has already accepted
+		if (!localStorage.getItem('icrc_cookies_accepted')) {
+			// Wait for preloader to finish (approx 2.5s) before showing popup
+			setTimeout(() => {
+				cookiePopup.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+			}, 2500); 
+		}
+
+		function acceptCookies() {
+			// 1. Animate out
+			cookiePopup.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+
+			// 2. Save preference to browser storage
+			localStorage.setItem('icrc_cookies_accepted', 'true');
+
+			// 3. Optional: Remove from DOM after transition
+			setTimeout(() => {
+				cookiePopup.style.display = 'none';
+			}, 700);
+		}
+    </script>
+</body>
+</html>

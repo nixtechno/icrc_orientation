@@ -62,3 +62,13 @@ Unified the opening into a shared scene: atmosphere, programme kicker, welcome, 
 ## ICRC logo preloader
 
 Added preloader.css and preloader.js to the shared layout. The supplied ICRC logo breathes/pulses on an off-white loading screen. The overlay fades away after page readiness with a short 650 ms minimum display; a four-second timeout prevents a stalled resource from trapping the page. Interaction beneath the overlay is temporarily inert and restored on dismissal. No-JavaScript mode does not show the loader; reduced-motion mode shows a static logo and removes the fade. The hero scene waits for icrcPageReady so its entrance is visible after dismissal. Back/forward-cache restoration dismisses any stale overlay. JavaScript syntax, normal/timeout interaction-release checks, Blade compilation and live markup checks passed; no browser visual review was performed.
+
+## Director General welcome section
+
+Added resources/views/partials/dg-welcome.blade.php immediately after the programme countdown and before Welcome to the Commission. Uses the supplied storage/app/public/Images/icrc_dg.png without alteration, copied to public/brand/icrc-dg-orientation-v1.png for reliable public delivery. Portrait and name/title appear on the left on desktop; the formal address is on the right, stacked responsively on mobile. Section background is white, with a restrained portrait frame, green/gold typography details and staggered image/caption/paragraph entrances. Reduced-motion mode remains static.
+
+The welcome address is newly drafted for the user's review and has not been represented as a previously published or approved DG statement. Name/title confirmed against the official ICRC profile: https://www.icrc.gov.ng/profile-of-the-director-general/. No signature image, quotation attribution or endorsement claim was fabricated. Blade compilation, live section ordering, portrait delivery and content checks passed; browser visual review was not performed.
+
+## DG welcome editorial refinement - 28 October 2026
+
+Moved the heading into a full-width header row so Welcome to a new chapter of service. appears on one line on desktop. Narrow phones retain natural wrapping for readability. Refined the portrait into a formal framed image with a deep-green nameplate, reduced unnecessary framing, and improved article spacing and typographic hierarchy. Corrected two U+FFFD replacement characters in Nigeria's and Commission's by rewriting the partial as UTF-8 through Node rather than passing smart apostrophes through the shell's default file encoding. Blade compilation and live markup checks passed. Reviewed in Chrome desktop: single-row title, portrait/nameplate and repaired text confirmed.
