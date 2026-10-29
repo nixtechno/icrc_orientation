@@ -38,23 +38,37 @@ class DailyAttendanceController extends Controller
     public function live(Request $r)
     {
         Access::manage('attendance');
-        $r->validate(['date' => 'nullable|date', 'department' => 'nullable|string|max:255', 'name' => 'nullable|string|max:255', 'status' => 'nullable|in:present,late,absent,excused,pending,in,out']);
-        $date = $r->input('date', now('Africa/Lagos')->toDateString());
+        $r->validate(['date' => 'nullable|date', 'department' => 'nullable|string|max:255', 'name' => 'nullable|string|max:255', 'status' => 'nullable|in:present,late,absent,excused,pending,in,out', 'per_page' => 'sometimes|integer|in:10,25,50,100', 'attendance_page' => 'sometimes|integer|min:1', 'sort' => 'sometimes|in:name,department,status,signin', 'direction' => 'sometimes|in:asc,desc']);
+        $date = $r->input('date') ?: now('Africa/Lagos')->toDateString();
         $day = app(AttendanceService::class)->days()->whereDate('date', $date)->first();
         $q = Access::staff()->where('active', true)->whereHas('programmes', fn ($q) => $q->where('programmes.id', Access::programme()->id)->where(fn ($q) => $q->whereNull('enrolments.created_at')->orWhereDate('enrolments.created_at', '<=', $date)));
         if ($r->filled('department')) {
             $q->where('department', $r->department);
         }
         if ($r->filled('name')) {
-            $q->where('name', 'like', '%'.$r->name.'%');
+            $q->where(fn ($query) => $query->where('users.name', 'like', '%'.$r->name.'%')->orWhere('users.staff_number', 'like', '%'.$r->name.'%')->orWhere('users.department', 'like', '%'.$r->name.'%'));
         }
-        $staff = $q->orderBy('name')->get();
+        $q->leftJoin('daily_attendance as live_record', function ($join) use ($day) {
+            $join->on('live_record.user_id', '=', 'users.id')->where('live_record.programme_id', Access::programme()->id)->where('live_record.programme_day_id', $day?->id ?? 0);
+        });
+        $totals = (clone $q)->toBase()->selectRaw("COUNT(users.id) as staff_count, SUM(CASE WHEN live_record.checked_in_at IS NOT NULL THEN 1 ELSE 0 END) as signed_in, SUM(CASE WHEN live_record.checked_out_at IS NOT NULL THEN 1 ELSE 0 END) as signed_out, SUM(CASE WHEN live_record.status = 'present' THEN 1 ELSE 0 END) as on_time, SUM(CASE WHEN live_record.status = 'late' THEN 1 ELSE 0 END) as late")->first();
+        $expected = $day?->attendance_required && ! $day->cancelled && $date >= Access::programme()->starts_on->toDateString() && $date <= Access::programme()->ends_on->toDateString() ? (int) $totals->staff_count : 0;
+        $present = (int) $totals->signed_in;
+        $out = (int) $totals->signed_out;
+        $counts = ['Expected' => $expected, 'Present' => $present, 'Not yet signed in' => max(0, $expected - $present), 'On time' => (int) $totals->on_time, 'Late' => (int) $totals->late, 'Currently signed in' => $present - $out, 'Signed out' => $out, 'Attendance %' => $expected ? round(100 * $present / $expected, 1).'%' : 'N/A'];
+        if ($r->filled('status')) {
+            match ($r->status) {
+                'pending' => $q->where(fn ($query) => $query->whereNull('live_record.status')->orWhere('live_record.status', 'pending')),
+                'in' => $q->whereNotNull('live_record.checked_in_at')->whereNull('live_record.checked_out_at'),
+                'out' => $q->whereNotNull('live_record.checked_out_at'),
+                default => $q->where('live_record.status', $r->status),
+            };
+        }
+        $sorts = ['name' => 'users.name', 'department' => 'users.department', 'status' => 'live_record.status', 'signin' => 'live_record.checked_in_at'];
+        $q->orderBy($sorts[$r->input('sort', 'name')], $r->input('direction', 'asc'))->orderBy('users.id');
+        $staff = $q->select('users.*')->paginate($r->integer('per_page', 10), ['users.*'], 'attendance_page')->withQueryString();
+        if ($staff->currentPage() > $staff->lastPage()) $staff = $q->paginate($r->integer('per_page', 10), ['users.*'], 'attendance_page', $staff->lastPage())->withQueryString();
         $records = $day ? DailyAttendance::where('programme_id', Access::programme()->id)->where('programme_day_id', $day->id)->whereIn('user_id', $staff->pluck('id'))->get()->keyBy('user_id') : collect();
-        $expected = $day?->attendance_required && ! $day->cancelled && $date >= Access::programme()->starts_on->toDateString() && $date <= Access::programme()->ends_on->toDateString() ? $staff->count() : 0;
-        $present = $records->whereNotNull('checked_in_at')->count();
-        $out = $records->whereNotNull('checked_out_at')->count();
-        $counts = ['Expected' => $expected, 'Present' => $present, 'Not yet signed in' => max(0, $expected - $present), 'On time' => $records->where('status', 'present')->count(), 'Late' => $records->where('status', 'late')->count(), 'Currently signed in' => $present - $out, 'Signed out' => $out, 'Attendance %' => $expected ? round(100 * $present / $expected, 1).'%' : 'N/A'];
-
         return response()->view('daily.live', compact('day', 'staff', 'records', 'counts'))->header('Cache-Control', 'private, no-store');
     }
 
