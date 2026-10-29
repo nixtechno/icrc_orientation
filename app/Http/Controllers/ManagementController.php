@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\ProgrammeSession;
+use App\Models\Resource;
+use App\Models\Announcement;
 use App\Notifications\ProgrammeUpdate;
 use App\Services\Access;
 use Carbon\Carbon;
@@ -17,7 +19,7 @@ class ManagementController extends Controller
     public function resources(Request $r)
     {
         $manager = $r->user()->canManage('resources');
-        $q = DB::table('resources')->where('programme_id', Access::programme()->id);
+        $q = Resource::where('programme_id', Access::programme()->id);
         if (! $manager) {
             $q->where('published', true);
         }if ($r->filled('week')) {
@@ -34,25 +36,28 @@ return view('resources', ['items' => $q->latest()->get(), 'manager' => $manager]
         Access::manage('resources');
         $v = $r->validate(['title' => 'required|string|max:255', 'category' => 'nullable|string|max:100', 'week' => 'nullable|integer|between:1,6', 'url' => 'nullable|url:http,https|max:2000', 'file' => 'required_without:url|nullable|file|mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,csv,jpg,jpeg,png|max:10240']);
         $path = $r->file('file')?->store('resources', 'local');
-        DB::table('resources')->insert(['programme_id' => Access::programme()->id, 'uploaded_by' => auth()->id(), 'title' => $v['title'], 'category' => $v['category'] ?? null, 'week' => $v['week'] ?? null, 'url' => $v['url'] ?? null, 'path' => $path, 'filename' => $r->file('file')?->getClientOriginalName(), 'published' => $r->boolean('published'), 'created_at' => now(), 'updated_at' => now()]);
+        Resource::create(['programme_id' => Access::programme()->id, 'uploaded_by' => auth()->id(), 'title' => $v['title'], 'category' => $v['category'] ?? null, 'week' => $v['week'] ?? null, 'url' => $v['url'] ?? null, 'path' => $path, 'filename' => $r->file('file')?->getClientOriginalName(), 'published' => $r->boolean('published')]);
         Access::audit('resource.create', $v['title']);
 
         return back()->with('success', 'Resource saved.');
     }
 
-    public function downloadResource(int $id)
+    public function downloadResource(Resource $resource)
     {
-        $item = DB::table('resources')->where('programme_id', Access::programme()->id)->find($id);
+        $item = $resource;
+        abort_unless($item->programme_id === Access::programme()->id, 403);
         abort_unless($item && ($item->published || auth()->user()->canManage('resources')), 403);
         abort_unless($item->path, 404);
 
         return Storage::disk('local')->download($item->path, $item->filename, ['X-Content-Type-Options' => 'nosniff']);
     }
 
-    public function toggleResource(int $id)
+    public function toggleResource(Resource $resource)
     {
         Access::manage('resources');
-        $item = DB::table('resources')->where('programme_id', Access::programme()->id)->find($id);
+        $item = $resource;
+        $id = $item->id;
+        abort_unless($item->programme_id === Access::programme()->id, 404);
         abort_unless($item, 404);
         DB::table('resources')->where('id', $id)->update(['published' => ! $item->published, 'updated_at' => now()]);
         Access::audit('resource.publication', (string) $id);
@@ -63,7 +68,7 @@ return view('resources', ['items' => $q->latest()->get(), 'manager' => $manager]
     public function announcements()
     {
         $manager = auth()->user()->canManage('announcements');
-        $q = DB::table('announcements')->where('programme_id', Access::programme()->id);
+        $q = Announcement::where('programme_id', Access::programme()->id);
         if (! $manager) {
             $q->where('archived', false)->where('published_at', '<=', now())->where(fn ($q) => $q->whereNull('department')->orWhere('department', auth()->user()->department))->where(fn ($q) => $q->whereNull('group_name')->orWhere('group_name', auth()->user()->group_name));
         }
@@ -75,7 +80,7 @@ return view('announcements', ['items' => $q->latest()->get(), 'manager' => $mana
     {
         Access::manage('announcements');
         $v = $r->validate(['title' => 'required|string|max:255', 'body' => 'required|string|max:20000', 'department' => 'nullable|string|max:255', 'group_name' => 'nullable|string|max:255', 'published_at' => 'nullable|date']);
-        $id = DB::table('announcements')->insertGetId([...$v, 'programme_id' => Access::programme()->id, 'created_at' => now(), 'updated_at' => now()]);
+        $id = Announcement::create([...$v, 'programme_id' => Access::programme()->id])->id;
         Access::audit('announcement.create', (string) $id);
         if (! empty($v['published_at'])) {
             $q = Access::staff()->where('active', true);
@@ -93,9 +98,11 @@ return view('announcements', ['items' => $q->latest()->get(), 'manager' => $mana
 return back()->with('success', 'Announcement saved.');
     }
 
-    public function archiveAnnouncement(int $id)
+    public function archiveAnnouncement(Announcement $announcement)
     {
         Access::manage('announcements');
+        abort_unless($announcement->programme_id === Access::programme()->id, 404);
+        $id = $announcement->id;
         DB::table('announcements')->where('programme_id', Access::programme()->id)->where('id', $id)->update(['archived' => true, 'updated_at' => now()]);
         Access::audit('announcement.archive', (string) $id);
 

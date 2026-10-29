@@ -3,7 +3,7 @@
  $programmeId=$p->id;
  $allPeople=\App\Models\User::whereHas('programmes',fn($q)=>$q->where('programmes.id',$programmeId));
  $areas=[
- ['People & invitations','/manage/staff',(clone $allPeople)->count(),'All staff, supervisors and authorised accounts'],
+ ['People & invitations','/manage/staff',(clone $allPeople)->count(),'All staff, facilitators and authorised accounts'],
  ['Facilitator profiles','/facilitators',\App\Models\Facilitator::where('programme_id',$programmeId)->count(),'Profiles, photographs and session assignments'],
  ['Assessments & work','/activities',\App\Models\Activity::where('programme_id',$programmeId)->count(),'Quizzes, assignments, presentations and reviews'],
  ['Session Q&A','/qa',\App\Models\SessionQuestion::whereHas('session.day.week',fn($q)=>$q->where('programme_id',$programmeId))->count(),'Questions, answers and moderation'],

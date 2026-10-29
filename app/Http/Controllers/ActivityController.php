@@ -85,11 +85,17 @@ return view('activities', ['items' => $q->withCount('submissions')->latest()->ge
         Access::manage('assessments');
         $this->scope($activity);
         abort_if($activity->published || $activity->submissions()->exists(), 422, 'Questions are locked after publication or an attempt.');
-        $v = $r->validate(['type' => 'required|in:multiple_choice,true_false,short_answer,long_answer', 'prompt' => 'required|string|max:10000', 'options' => 'nullable|string|max:10000', 'correct_answer' => 'nullable|string|max:5000', 'points' => 'required|integer|between:1,100']);
-        $options = $v['type'] === 'true_false' ? ['True', 'False'] : array_values(array_filter(array_map('trim', explode("\n", $v['options'] ?? ''))));
+        $v = $r->validate(['type' => 'required|in:multiple_choice,multiple_answers,true_false,short_answer,long_answer', 'prompt' => 'required|string|max:10000', 'options' => 'nullable|string|max:10000', 'correct_answer' => 'nullable|string|max:5000', 'points' => 'required|integer|between:1,100']);
+        $options = $v['type'] === 'true_false' ? ['True', 'False'] : array_values(array_unique(array_filter(array_map('trim', explode("\n", $v['options'] ?? '')), fn ($option) => $option !== '')));
         if (in_array($v['type'], ['multiple_choice', 'true_false'])) {
-            abort_unless(count($options) >= 2 && in_array($v['correct_answer'], $options, true), 422, 'Provide at least two options and an exact matching correct answer.');
-        }Question::create([...$v, 'activity_id' => $activity->id, 'options' => $options]);
+            abort_unless(count($options) >= 2 && in_array($v['correct_answer'] ?? null, $options, true), 422, 'Provide at least two options and an exact matching correct answer.');
+        }
+        if ($v['type'] === 'multiple_answers') {
+            $correct = array_values(array_unique(array_filter(array_map('trim', explode("\n", $v['correct_answer'] ?? '')), fn ($value) => $value !== '')));
+            abort_unless(count(array_unique($options)) >= 2 && count($correct) >= 2 && ! array_diff($correct, $options), 422, 'Provide at least two options and two correct answers, one exact option per line.');
+            $v['correct_answer'] = json_encode($correct, JSON_THROW_ON_ERROR);
+        }
+        Question::create([...$v, 'activity_id' => $activity->id, 'options' => $options]);
         Access::audit('question.create', (string) $activity->id);
 
         return back()->with('success', 'Question added.');
@@ -122,7 +128,7 @@ return view('activities', ['items' => $q->withCount('submissions')->latest()->ge
             return Submission::create(['activity_id' => $activity->id, 'user_id' => auth()->id(), 'attempt' => $q->count() + 1, 'started_at' => now()]);
         });
 
-        return redirect('/submissions/'.$submission->id.'/complete');
+        return redirect('/submissions/'.$submission->getRouteKey().'/complete');
     }
 
     private function owns(Submission $s): void
@@ -134,7 +140,9 @@ return view('activities', ['items' => $q->withCount('submissions')->latest()->ge
     public function complete(Submission $submission)
     {
         $this->owns($submission);
-        abort_if($submission->submitted_at, 409);
+        if ($submission->submitted_at) {
+            return redirect('/activities/'.$submission->activity->getRouteKey())->with('success', 'This attempt has already been submitted. Your saved answers have not changed.');
+        }
 
         return view('complete', ['submission' => $submission, 'activity' => $submission->activity->load('questions')]);
     }
@@ -143,8 +151,19 @@ return view('activities', ['items' => $q->withCount('submissions')->latest()->ge
     {
         $this->owns($submission);
         $a = $submission->activity;
+        if ($submission->submitted_at) {
+            return redirect('/activities/'.$a->getRouteKey())->with('success', 'This attempt has already been submitted. Your saved answers have not changed.');
+        }
         abort_if(now()->gt($a->due_at) || ($a->time_limit && now()->gt($submission->started_at->copy()->addMinutes($a->time_limit))), 422, 'The submission deadline or time limit has passed.');
-        $v = $r->validate(['body' => 'nullable|string|max:50000', 'answers' => 'nullable|array', 'answers.*' => 'nullable|string|max:10000', 'file' => 'nullable|file|mimes:pdf,doc,docx,ppt,pptx,jpg,jpeg,png|max:10240']);
+        $answerRules = ['body' => 'nullable|string|max:50000', 'answers' => 'nullable|array', 'file' => 'nullable|file|mimes:pdf,doc,docx,ppt,pptx,jpg,jpeg,png|max:10240'];
+        foreach ($a->questions as $question) {
+            $key = 'answers.'.$question->id;
+            $answerRules[$key] = $question->type === 'multiple_answers' ? 'nullable|array|max:100' : 'nullable|string|max:10000';
+            if ($question->type === 'multiple_answers') {
+                $answerRules[$key.'.*'] = ['required', 'string', 'distinct', \Illuminate\Validation\Rule::in($question->options ?? [])];
+            }
+        }
+        $v = $r->validate($answerRules);
         if ($a->kind !== 'quiz' && ! $r->filled('body') && ! $r->hasFile('file')) {
             return back()->withErrors(['body' => 'Submit text or a permitted file.']);
         }$answers = $v['answers'] ?? [];
@@ -153,17 +172,27 @@ return view('activities', ['items' => $q->withCount('submissions')->latest()->ge
         foreach ($a->questions as $q) {
             if (in_array($q->type, ['short_answer', 'long_answer'])) {
                 $written = true;
+            } elseif ($q->type === 'multiple_answers') {
+                $selected = $answers[$q->id] ?? [];
+                $correct = $q->correctAnswers();
+                sort($selected); sort($correct);
+                if ($correct && $selected === $correct) $score += $q->points;
             } elseif (isset($answers[$q->id]) && hash_equals($q->correct_answer ?? '', (string) $answers[$q->id])) {
                 $score += $q->points;
             }
-        }DB::transaction(function () use ($submission, $a, $v, $answers, $score, $written, $r) {
+        }$saved = DB::transaction(function () use ($submission, $a, $v, $answers, $score, $written, $r) {
             $s = Submission::whereKey($submission->id)->lockForUpdate()->firstOrFail();
-            abort_if($s->submitted_at, 409, 'Already submitted.');
+            if ($s->submitted_at) {
+                return false;
+            }
             $s->update(['body' => $v['body'] ?? null, 'answers' => collect($answers)->only($a->questions->pluck('id')->all())->all(), 'path' => $r->file('file')?->store('submissions', 'local'), 'filename' => $r->file('file')?->getClientOriginalName(), 'score' => $a->kind === 'quiz' && ! $written ? $score : null, 'submitted_at' => now()]);
             Access::audit('submission.submit', (string) $s->id);
+            return true;
         });
 
-        return redirect('/activities/'.$a->id)->with('success', 'Work submitted. Results remain private until released.');
+        return redirect('/activities/'.$a->getRouteKey())->with('success', $saved
+            ? 'Work submitted. Results remain private until released.'
+            : 'This attempt has already been submitted. Your saved answers have not changed.');
     }
 
     public function review(Request $r, Submission $submission)

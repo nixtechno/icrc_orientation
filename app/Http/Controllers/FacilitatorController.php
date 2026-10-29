@@ -31,13 +31,17 @@ class FacilitatorController extends Controller
         Access::manage('facilitators');
         if ($facilitator) {
             abort_unless($facilitator->programme_id === Access::programme()->id, 403);
-        }$v = $r->validate(['name' => 'required|string|max:255', 'organisation' => 'nullable|string|max:255', 'job_title' => 'nullable|string|max:255', 'email' => 'nullable|email|max:255', 'phone' => 'nullable|string|max:40', 'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048', 'sessions' => 'nullable|array', 'sessions.*' => 'integer', 'user_id' => 'nullable|integer']);
+        }$v = $r->validate(['name' => 'required|string|max:255', 'organisation' => 'nullable|string|max:255', 'department' => 'nullable|string|max:255', 'job_title' => 'nullable|string|max:255', 'email' => 'nullable|email|max:255', 'phone' => 'nullable|string|max:40', 'alternative_phone' => 'nullable|string|max:40', 'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048', 'sessions' => 'nullable|array', 'sessions.*' => 'integer', 'user_id' => 'nullable|integer']);
         $ids = ProgrammeSession::whereHas('day.week', fn ($q) => $q->where('programme_id', Access::programme()->id))->whereIn('id', $v['sessions'] ?? [])->pluck('id');
         abort_unless($ids->count() === count(array_unique($v['sessions'] ?? [])), 422);
         if (! empty($v['user_id'])) {
             abort_unless(auth()->user()->role === 'admin', 403);
             abort_unless(User::whereKey($v['user_id'])->whereHas('programmes', fn ($q) => $q->where('programmes.id', Access::programme()->id))->exists(), 422);
-        }DB::transaction(function () use ($r, $v, $ids, &$facilitator) {
+        }
+        $linkedAccount = ! empty($v['user_id']) && auth()->user()->role === 'admin' ? User::find($v['user_id']) : $facilitator?->user;
+        $invitedAccount = $linkedAccount ?? ($facilitator?->email ? User::where('email', $facilitator->email)->first() : null);
+        if ($invitedAccount?->hasLockedInvitationEmail()) $v['email'] = $invitedAccount->email;
+        DB::transaction(function () use ($r, $v, $ids, &$facilitator) {
             $before = $facilitator?->toArray();
             $facilitator ??= new Facilitator(['programme_id' => Access::programme()->id]);
             $fields = collect($v)->except(['sessions', 'photo'])->all();
@@ -47,6 +51,15 @@ class FacilitatorController extends Controller
             if ($r->hasFile('photo')) {
                 $facilitator->photo_path = $r->file('photo')->store('facilitator-photos', 'local');
             }$facilitator->save();
+            $facilitator->unsetRelation('user');
+            if ($facilitator->user?->role === 'facilitator') {
+                $contact = [];
+                foreach (['organisation' => 'organisation', 'department' => 'department', 'job_title' => 'designation', 'phone' => 'phone', 'alternative_phone' => 'alternative_phone'] as $field => $target) {
+                    if (array_key_exists($field, $v)) $contact[$target] = $v[$field];
+                }
+                app(\App\Services\ProfileService::class)->assign($facilitator->user, $contact, false);
+                $facilitator->user->save();
+            }
             $facilitator->sessions()->sync($ids);
             Access::audit('facilitator.save', (string) $facilitator->id, $before, $facilitator->toArray());
         });

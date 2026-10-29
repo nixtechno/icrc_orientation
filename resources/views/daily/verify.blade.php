@@ -5,7 +5,7 @@
 <section class="card" style="max-width:760px;margin:auto" data-attendance-verification data-purpose="{{ $mode==='device'?'register':($mode==='sign-in'?'in':'out') }}">
 @if($mode==='device')
 <h2>One account. One authorized credential.</h2><p>Register on the device you will bring each day. Your device must offer a non-synchronized platform credential with fingerprint, face recognition or device PIN verification. Biometric data and PINs stay on your device.</p>
-@if($device)<p class="badge">Registered: {{ $device->label }}</p><p>Request supervisor approval from My attendance if this device needs replacing.</p>@else
+@if($device)<p class="badge">Registered: {{ $device->label }}</p><p>Request approval from an authorised attendance manager from My attendance if this device needs replacing.</p>@else
 <label>Device label<input id="attendance-device-label" maxlength="100" required placeholder="e.g. My work phone"></label><label>Confirm your account password<input id="attendance-password" type="password" autocomplete="current-password" required></label><button type="button" data-verify>Register this device</button>
 @endif
 @else

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ProgrammeDay extends Model
 {
+    use Concerns\HasPublicSlug;
     protected $guarded = [];
 
     protected function casts(): array

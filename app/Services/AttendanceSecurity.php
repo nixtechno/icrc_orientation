@@ -101,7 +101,7 @@ class AttendanceSecurity
     {
         abort_if(AttendanceDevice::where('active_user_id', $u->id)->exists(), 409, 'You already have an authorized attendance device.');
         $approval = AttendanceDeviceRequest::where('user_id', $u->id)->where('status', 'approved')->whereNull('enrolled_at')->latest('id')->first();
-        abort_if(AttendanceDevice::where('user_id', $u->id)->exists() && ! $approval, 403, 'A supervisor must approve device replacement before registration.');
+        abort_if(AttendanceDevice::where('user_id', $u->id)->exists() && ! $approval, 403, 'An authorised attendance manager must approve device replacement before registration.');
 
         return $approval;
     }

@@ -1,6 +1,10 @@
-﻿# ICRC Orientation Programme Management System
+# ICRC Orientation Programme Management System
 
 Laravel application for the ICRC Orientation Programme for the 2026 Recruited Staff, 2 November–11 December 2026. Programme times use Africa/Lagos. MySQL/MariaDB is the application database.
+
+## Demo data
+
+Run `php scripts/setup-demo.php --staff=200`, then `php artisan serve --env=demo --host=127.0.0.1 --port=8001` for an isolated, populated local demo. See [demo accounts, dataset and scaling instructions](docs/demo-data.md). Demo data is never installed by the normal database seeder.
 
 ## Requirements
 
@@ -24,7 +28,7 @@ php artisan icrc:create-admin
 php artisan serve
 ```
 
-The administrator command prompts privately for a chosen password. No production account or default password is seeded. New passwords require at least 12 characters with uppercase, lowercase and a number. Serve the `public` directory, never the project root. Use `php artisan storage:link` if uploading a replacement branding image through settings; supplied logo copies already work from public/brand.
+The administrator command prompts privately for a chosen password. No production account or default password is seeded. New passwords require at least 8 characters. Serve the `public` directory, never the project root. Use `php artisan storage:link` if uploading a replacement branding image through settings; supplied logo copies already work from public/brand.
 
 The default local URL is http://127.0.0.1:8000. Account types share `/login`; permissions determine management access. Run `php artisan config:clear` after editing environment settings.
 
@@ -36,15 +40,19 @@ Old session attendance is retained in `legacy_session_attendance` for administra
 
 ## Application flow and roles
 
+The only account roles are **Admin, Facilitator and Staff**. Facilitators receive `assessments`, `resources`, `announcements` and `qa_answer` permissions by default; administrators can grant or revoke individual permissions. Assigning `assessments` covers quizzes, assignments, presentations and grading. Programme settings, registration policy, audit logs and badge administration remain admin-only.
+
+The role-consolidation migration converts legacy supervisor accounts to facilitators, preserves existing permissions and account data, and adds the teaching defaults to existing facilitators. The original roles and permission changes are retained in the audit trail.
+
 1. Administrator creates the first account, configures registration/privacy policy and programme settings, and reviews timetable ambiguities.
-2. Add staff and supervisors manually, by individual invitation, or by validated bulk import. Assign supervisor responsibilities and permissions explicitly.
+2. Add staff and facilitators manually, by individual invitation, or by validated bulk import. Assign facilitator responsibilities and permissions explicitly.
 3. Invitees complete missing profile information, acknowledge the configured privacy notice, set a password and activate their assigned account type. The invitation cannot change the role or overwrite preconfirmed employment fields.
 4. Staff access their own profile, daily attendance, assigned assessments/work, released feedback and published programme content.
-5. Supervisors manage only modules permitted to their role. The administrator has complete oversight, including unpublished content, profile management, badges, reports, policy settings and audit logs.
+5. Facilitators manage only modules permitted to their role. The administrator has complete oversight, including unpublished content, profile management, badges, reports, policy settings and audit logs.
 6. Authorised personnel configure applicable attendance days, publish activities/resources, moderate session Q&A, review work and release results.
 7. Administrators generate and print badges; authorised reporting users export filtered CSV, XLSX or PDF reports.
 
-The administrator dashboard links to all management areas and shows live daily attendance. Supervisors with `attendance` permission also receive the live view. Other permissions include staff, schedule, facilitators, resources, announcements, assessments, qa and reports. `qa_answer` is an explicit permission for an account linked to a facilitator's assigned sessions; it does not grant moderation. Facilitator profiles and badges do not create accounts or grant access.
+The administrator dashboard links to all management areas and shows live daily attendance. Facilitators with `attendance` permission also receive the live view. Other permissions include staff, schedule, facilitators, resources, announcements, assessments, qa and reports. `qa_answer` is an explicit permission for an account linked to a facilitator's assigned sessions; it does not grant moderation. Facilitator profiles and badges do not create accounts or grant access.
 
 ## Registration, invitations and imports
 
@@ -52,13 +60,15 @@ Open **People & invitations** (`/manage/staff`). Manual forms collect personal/c
 
 The individual-invitation form needs an assigned role, full name and email. Invitations expire after three days, are single use, and can be resent or revoked. Statuses are Pending, Sent, Activated, Expired and Revoked. Passwords and invitation tokens are not displayed in management lists or audit data.
 
-For bulk registration, select Staff or Supervisor, download its CSV or XLSX template, and upload the completed file. Templates use identical profile fields: first_name, middle_name, surname, preferred_name, email, phone, staff_number, department, designation, resumption_date, duty_location, group_name. Use YYYY-MM-DD for dates. Partial employment/contact profiles are allowed; first name, surname and email are required on each imported row. Maximum 1,000 rows / 2 MB per upload.
+For bulk registration, select Staff or Facilitator, download its CSV or XLSX template, and upload the completed file. Staff columns are first_name, middle_name, surname, preferred_name, email, phone, staff_number, department, designation, resumption_date, duty_location, group_name. Facilitator columns are first_name, middle_name, surname, preferred_name, email, phone, alternative_phone, organisation, department, designation (Title). Facilitator forms contain only personal/contact details; invited facilitator email addresses remain locked. Use YYYY-MM-DD for staff dates. Partial profiles are allowed; first name, surname and email are required on each imported row. Maximum 1,000 rows / 2 MB per upload.
 
-Preview shows spreadsheet row numbers, invalid values, existing matches and within-file duplicates. Correct and re-upload, or explicitly confirm valid rows. Confirmation revalidates against current records, never overwrites accounts, and reports created/skipped/failed totals. An import can only be confirmed once by its creator. Optionally send invitations after creation. Bulk supervisor accounts start with no permissions; the administrator assigns those separately.
+Preview shows spreadsheet row numbers, invalid values, existing matches and within-file duplicates. Correct and re-upload, or explicitly confirm valid rows. Confirmation revalidates against current records, never overwrites accounts, and reports created/skipped/failed totals. An import can only be confirmed once by its creator. Optionally send invitations after creation. Facilitator accounts start with assessment, resource, announcement and assigned-session Q&A answering permissions; the administrator can adjust them.
 
 Registration policy at `/settings/registration` controls additional required activation fields, the programme-specific information label, and the privacy notice. Emergency contact fields are optional unless selected there. Staff may update permitted personal details and photos; official employment fields require an authorised manager. Activation may complete missing official fields but cannot replace already confirmed values.
 
 ## Programme timetable and source review
+
+Record links use stable, readable public slugs for accounts, activities, attempts, sessions, files and related management actions. Slugs are assigned when records are created and preserved when names/titles change. Existing records are backfilled by migration; legacy numeric browser links redirect after the normal access checks. Numeric IDs remain internal for database relationships and existing integrations. Invitation and password-reset tokens are unchanged.
 
 `php artisan icrc:import-timetable` is idempotent: it imports six weeks, 30 days and 187 original entries without overwriting edits. The exact original table text is stored in database/data/source-tables.json and each session's source metadata. Blank titles/facilitators remain unconfirmed. No venue or facilitator identity has been invented.
 
@@ -74,7 +84,7 @@ In `/attendance`, enable attendance explicitly for applicable days and set openi
 
 Authorised manual entry/corrections require a reason and audit the actor, time, before and after values. Timestamps must fall on the relevant day and cannot be in the future. Absence cannot be recorded before the check-in window closes. Missing records remain Pending; the system does not invent absence decisions.
 
-The live supervisor table refreshes every 15 seconds and reports connection status and last update time. Date, department and status filters are available. Polling pauses in hidden tabs and resumes when visible.
+The live facilitator table refreshes every 15 seconds and reports connection status and last update time. Date, department and status filters are available. Polling pauses in hidden tabs and resumes when visible.
 
 Formula: **(Present days + Late days) / eligible elapsed days × 100**. Eligible days require attendance, are not cancelled, apply after enrolment, and have a closed check-in window. Future/non-required days do not count. Settings control whether Excused days remain in the denominator. Screens show numerator, denominator, percentage and pending decisions together.
 
@@ -84,11 +94,11 @@ QR codes alone do not establish physical presence. This update implements signed
 
 Assessments support multiple-choice, true/false, short-answer and long-answer questions, availability/deadlines, attempts, time limits, all-staff/group/individual assignment and optional week/session links. Objective responses can be scored automatically; written work remains pending manual review. Scores and feedback are visible to staff only after release. Assignments and presentations use the same private submission/review workflow.
 
-Session Q&A at `/qa` is separate. Staff submit questions for moderation. Unpublished questions are visible only to their author and moderators; hidden questions are not shown to participants. Published, non-hidden questions/answers are available to enrolled participants. Supervisors with qa permission can answer and publish/hide content with an audited reason. Explicitly authorised facilitators may answer only their assigned sessions; facilitator responses await moderation. Published answers notify the question author. Answered status uses published, non-hidden answers.
+Session Q&A at `/qa` is separate. Staff submit questions for moderation. Unpublished questions are visible only to their author and moderators; hidden questions are not shown to participants. Published, non-hidden questions/answers are available to enrolled participants. Facilitators with qa permission can answer and publish/hide content with an audited reason. Explicitly authorised facilitators may answer only their assigned sessions; facilitator responses await moderation. Published answers notify the question author. Answered status uses published, non-hidden answers.
 
 ## Badges and printing
 
-Administrators use `/badges` to select existing staff, supervisors or facilitator profiles. Generation stores a profile snapshot and category, tracks versions and resets print status after regeneration. Missing photos use an initial. Category bands distinguish Staff, Supervisor and Facilitator. Badges contain no invitation or attendance tokens and no badge verification QR is included.
+Administrators use `/badges` to select existing staff, facilitator accounts or facilitator profiles. Generation stores a profile snapshot and category, tracks versions and resets print status after regeneration. Missing photos use an initial. Category bands distinguish Staff and Facilitator. Badges contain no invitation or attendance tokens and no badge verification QR is included.
 
 Configure programme label, footer, staff accent and badge dimensions (default 86 × 110 mm). Preview individual or batch badges (maximum 100), open the PDF and print at actual size / 100% scale. Each badge has its own PDF page at the configured dimensions. Confirm printing explicitly; a PDF download is not treated as proof that printing occurred. Regenerate after authorised profile changes. Check long names and chosen dimensions before a print run.
 
@@ -126,3 +136,7 @@ The MySQL test configuration uses local XAMPP credentials; adjust it for another
 ## Remaining operational decisions
 
 Supply/confirm the privacy notice, real mail service, confirmed timetable changes, daily attendance windows, required profile fields, badge print dimensions and retention policy. Overall programme completion weighting and certificates are not implemented; progress measures are displayed separately without an invented overall percentage. Future programme accounts/enrolments are supported relationally, but the current management interface targets the ICRC 2026 programme.
+
+Invitation activation supports Google reCAPTCHA v2 (the checkbox widget). Set RECAPTCHA_SITE_KEY and RECAPTCHA_SECRET_KEY in .env for the activation site's domain, then run php artisan config:clear (or rebuild the deployment config cache). Verification turns on automatically when a site key is present, and is required by default in production. Set RECAPTCHA_ENABLED=true to require it explicitly in another environment. Both keys are required; failed or unavailable Google verification leaves the account inactive. Local/demo environments without keys keep activation available for development. Tests fake Google responses and never use live credentials.
+
+Quizzes support Multiple Choice Multiple Answers: enter options and correct answers one per line. At least two correct options are required. Grading awards the question's full points only for the exact correct set, independent of selection order; partial or extra selections receive zero. Existing single-answer and manually reviewed types remain available. Admin and facilitator dashboards include an aggregate attendance graph for the last ten elapsed, required, non-cancelled programme days, counting enrolled staff with present/late records separately.

@@ -53,6 +53,9 @@ class AttendanceAuthenticator
     public function register(array $options, int $flags = 0x45, string $origin = 'https://orientation.example.test'): array
     {
         $ec = openssl_pkey_get_details($this->key)['ec'];
+        // OpenSSL can omit a leading zero; COSE P-256 coordinates must each be exactly 32 bytes.
+        $ec['x'] = str_pad($ec['x'], 32, "\0", STR_PAD_LEFT);
+        $ec['y'] = str_pad($ec['y'], 32, "\0", STR_PAD_LEFT);
         $cose = chr(0xA5).$this->num(1).$this->num(2).$this->num(3).$this->num(-7).$this->num(-1).$this->num(1).$this->num(-2).$this->bytes($ec['x']).$this->num(-3).$this->bytes($ec['y']);
         $auth = hash('sha256', 'orientation.example.test', true).chr($flags).pack('N', 0).str_repeat(chr(0), 16).pack('n', strlen($this->id)).$this->id.$cose;
         $att = chr(0xA3).$this->text('fmt').$this->text('none').$this->text('attStmt').chr(0xA0).$this->text('authData').$this->bytes($auth);

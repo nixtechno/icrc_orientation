@@ -27,14 +27,14 @@ class ReportController extends Controller
     public function export(Request $r)
     {
         Access::manage($r->input('report') === 'attendance' ? 'attendance' : 'reports');
-        $v = $r->validate(['report' => 'required|in:staff,attendance,assessments,progress,schedule,activation', 'format' => 'nullable|in:csv,xlsx,pdf', 'from' => 'nullable|date', 'to' => 'nullable|date|after_or_equal:from', 'week' => 'nullable|integer|between:1,6', 'department' => 'nullable|string|max:255', 'group_name' => 'nullable|string|max:255', 'staff' => 'nullable|integer', 'status' => 'nullable|string|max:30', 'attendance_mode' => 'nullable|in:daily,individual,department,late,incomplete,summary']);
+        $v = $r->validate(['report' => 'required|in:staff,attendance,assessments,progress,schedule,activation', 'format' => 'nullable|in:csv,xlsx,pdf', 'from' => 'nullable|date', 'to' => 'nullable|date|after_or_equal:from', 'week' => 'nullable|integer|between:1,6', 'department' => 'nullable|string|max:255', 'group_name' => 'nullable|string|max:255', 'staff' => 'nullable|string|max:120', 'status' => 'nullable|string|max:30', 'attendance_mode' => 'nullable|in:daily,individual,department,late,incomplete,summary']);
         $staff = Access::staff();
         foreach (['department', 'group_name'] as $key) {
             if (! empty($v[$key])) {
                 $staff->where($key, $v[$key]);
             }
         }if (! empty($v['staff'])) {
-            $staff->whereKey($v['staff']);
+            ctype_digit((string) $v['staff']) ? $staff->whereKey($v['staff']) : $staff->where('slug', $v['staff']);
         }$users = $staff->get();
         $rows = [];
         $headers = [];

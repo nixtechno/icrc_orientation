@@ -71,9 +71,9 @@ class OrientationTest extends TestCase
             $this->get($path)->assertOk()->assertSee('portal-frame', false)->assertSee('portal-navigation', false)->assertDontSee('class="site-footer"', false)->assertDontSee('class="institution-bar"', false);
         }foreach (['/manage/staff', '/settings', '/audit', '/reports', '/facilitators'] as $path) {
             $this->get($path)->assertForbidden();
-        }$super = $this->account('supervisor', ['schedule', 'facilitators']);
+        }$super = $this->account('facilitator', ['schedule', 'facilitators']);
         $this->actingAs($super)->get('/facilitators')->assertOk();
-        $this->get('/dashboard')->assertOk()->assertSee('Management dashboard')->assertSee('Timetable entries to review')->assertDontSee('Submissions awaiting grading')->assertDontSee('Your six-week journey')->assertDontSee('My progress');
+        $this->get('/dashboard')->assertOk()->assertSee('Facilitator Dashboard')->assertSee('Timetable entries to review')->assertDontSee('Submissions awaiting grading')->assertDontSee('Your six-week journey')->assertDontSee('My progress');
         $this->get('/manage/staff')->assertForbidden();
         $this->get('/settings')->assertForbidden();
         $admin = $this->account('admin');

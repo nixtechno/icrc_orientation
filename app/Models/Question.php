@@ -10,6 +10,11 @@ class Question extends Model
 
     protected $hidden = ['correct_answer'];
 
+    public function correctAnswers(): array
+    {
+        return $this->type === 'multiple_answers' ? (json_decode($this->correct_answer ?? '[]', true) ?: []) : [];
+    }
+
     protected function casts(): array
     {
         return ['options' => 'array'];

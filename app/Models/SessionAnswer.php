@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class SessionAnswer extends Model
 {
+    use Concerns\HasPublicSlug;
     protected $guarded = [];
 
     public function question()

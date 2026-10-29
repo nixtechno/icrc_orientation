@@ -2,6 +2,7 @@
  $user=auth()->user();
  $links=[['/dashboard','Dashboard','grid'],['/timetable','Programme timetable','calendar'],['/attendance','Daily attendance','check'],['/activities?kind=quiz','Assessments','file'],['/activities?kind=assignment','Assignments','file'],['/activities?kind=presentation','Presentations','screen'],['/resources','Learning materials','book'],['/announcements','Announcements','bell'],['/qa','Session Q&A','chat']];
  $management=[];
+ if($user->role==='facilitator' && !$user->canManage('attendance')) $links=array_values(array_filter($links,fn($item)=>$item[0]!=='/attendance'));
  foreach(['staff'=>['/manage/staff','Staff management','people'],'facilitators'=>['/facilitators','Facilitators','people'],'reports'=>['/reports','Reports & exports','chart']] as $permission=>$item){if($user->canManage($permission))$management[]=$item;}
  if($user->role==='admin')$management=array_merge($management,[['/settings','Programme settings','settings'],['/settings/registration','Registration policy','file'],['/badges','Badges & printing','badge'],['/audit','Audit trail','chart']]);
  $initials=collect(explode(' ',$user->name))->filter()->take(2)->map(fn($part)=>mb_substr($part,0,1))->implode('');

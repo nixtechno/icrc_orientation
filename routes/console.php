@@ -6,6 +6,18 @@ use App\Services\SupplementImporter;
 use App\Services\TimetableImporter;
 use Illuminate\Support\Facades\Artisan;
 
+Artisan::command('icrc:seed-demo {--staff=200 : Number of synthetic staff (10-5000)}', function () {
+    $count = filter_var($this->option('staff'), FILTER_VALIDATE_INT);
+    if ($count === false || $count < 10 || $count > 5000) {
+        $this->error('Choose --staff=10 through --staff=5000.');
+        return 1;
+    }
+    $seeder = app(\Database\Seeders\DemoSeeder::class);
+    $seeder->staffCount = $count;
+    $seeder->setCommand($this);
+    $seeder->run();
+});
+
 Artisan::command('attendance:retention-report', function () {
     $p = Access::programme();
     $s = $p->settings['attendance_security'] ?? [];
@@ -26,8 +38,8 @@ Artisan::command('icrc:import-timetable', function () {
 Artisan::command('icrc:create-admin', function () {
     $name = $this->ask('Administrator name');
     $email = $this->ask('Administrator email');
-    $password = $this->secret('Password (12+ characters, mixed case and number)');
-    if (! filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($password) < 12 || ! preg_match('/[a-z]/', $password) || ! preg_match('/[A-Z]/', $password) || ! preg_match('/[0-9]/', $password)) {
+    $password = $this->secret('Password (8+ characters)');
+    if (! filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($password) < 8) {
         $this->error('Invalid email or weak password.');
 
         return 1;

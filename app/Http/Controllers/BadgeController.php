@@ -27,7 +27,7 @@ class BadgeController extends Controller
     public function index(Request $r)
     {
         $this->admin();
-        $users = User::whereIn('role', ['staff', 'supervisor', 'facilitator'])->whereHas('programmes', fn ($q) => $q->where('programmes.id', Access::programme()->id));
+        $users = User::whereIn('role', ['staff', 'facilitator'])->whereHas('programmes', fn ($q) => $q->where('programmes.id', Access::programme()->id));
         $facilitators = Facilitator::where('programme_id', Access::programme()->id);
         if ($r->filled('q')) {
             $users->where('name', 'like', '%'.$r->q.'%');
@@ -56,7 +56,7 @@ return view('badges.index', ['users' => $users->orderBy('name')->get(), 'facilit
             $ids = [];
             foreach (array_unique($r->subjects) as $key) {
                 [$type,$id] = explode(':', $key);
-                $person = $type === 'u' ? User::whereIn('role', ['staff', 'supervisor', 'facilitator'])->whereHas('programmes', fn ($q) => $q->where('programmes.id', Access::programme()->id))->findOrFail($id) : Facilitator::where('programme_id', Access::programme()->id)->findOrFail($id);
+                $person = $type === 'u' ? User::whereIn('role', ['staff', 'facilitator'])->whereHas('programmes', fn ($q) => $q->where('programmes.id', Access::programme()->id))->findOrFail($id) : Facilitator::where('programme_id', Access::programme()->id)->findOrFail($id);
                 $category = $type === 'f' ? 'facilitator' : $person->role;
                 $snapshot = ['name' => $person->name, 'department' => $type === 'f' ? $person->organisation : $person->department, 'photo_path' => $person->photo_path, 'category' => $category, 'programme' => Access::programme()->title];
                 $badge = Badge::where('programme_id', Access::programme()->id)->where('subject_key', $key)->lockForUpdate()->first();
@@ -64,7 +64,7 @@ return view('badges.index', ['users' => $users->orderBy('name')->get(), 'facilit
                 $badge ??= new Badge(['programme_id' => Access::programme()->id, 'subject_key' => $key, 'version' => 0]);
                 $badge->fill(['user_id' => $type === 'u' ? $person->id : null, 'facilitator_id' => $type === 'f' ? $person->id : null, 'category' => $category, 'snapshot' => $snapshot, 'version' => $badge->version + 1, 'generated_at' => now(), 'printed_at' => null, 'generated_by' => auth()->id()])->save();
                 Access::audit('badge.generate', (string) $badge->id, $before, ['category' => $category, 'version' => $badge->version]);
-                $ids[] = $badge->id;
+                $ids[] = $badge->getRouteKey();
             }
 
 return $ids;
@@ -90,8 +90,10 @@ return $ids;
     public function batch(Request $r)
     {
         $this->admin();
-        $r->validate(['ids' => 'required|array|min:1|max:100', 'ids.*' => 'integer']);
-        $badges = Badge::where('programme_id', Access::programme()->id)->whereIn('id', $r->ids)->get();
+        $r->validate(['ids' => 'required|array|min:1|max:100', 'ids.*' => 'required|string|max:120']);
+        $badges = Badge::where('programme_id', Access::programme()->id)->where(function ($query) use ($r) {
+            $query->whereIn('slug', $r->ids)->orWhereIn('id', array_filter($r->ids, fn ($key) => ctype_digit((string) $key)));
+        })->get();
         abort_unless($badges->count() === count(array_unique($r->ids)), 404);
         if ($r->boolean('pdf')) {
             $data = $this->data($badges);

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ProgrammeSession extends Model
 {
+    use Concerns\HasPublicSlug;
     protected $table = 'programme_sessions';
 
     protected $guarded = [];

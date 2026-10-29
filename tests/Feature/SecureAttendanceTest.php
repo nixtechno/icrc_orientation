@@ -193,9 +193,9 @@ class SecureAttendanceTest extends TestCase
         $this->post('/attendance/device/replacement', ['reason' => 'My phone has been damaged'])->assertRedirect();
         $row = AttendanceDeviceRequest::firstOrFail();
         $this->post('/attendance/device/replacement/'.$row->id, ['decision' => 'approved', 'decision_reason' => 'Replacement identity reviewed'])->assertForbidden();
-        $unauthorized = $this->user('supervisor');
+        $unauthorized = $this->user('facilitator');
         $this->actingAs($unauthorized)->post('/attendance/device/replacement/'.$row->id, ['decision' => 'approved', 'decision_reason' => 'Replacement identity reviewed'])->assertForbidden();
-        $manager = $this->user('supervisor', ['attendance']);
+        $manager = $this->user('facilitator', ['attendance']);
         $this->actingAs($manager)->post('/attendance/device/replacement/'.$row->id, ['decision' => 'approved', 'decision_reason' => 'Replacement identity reviewed'])->assertRedirect();
         $this->assertNotNull(AttendanceDevice::first()->revoked_at);
         $this->assertSame($manager->id, $row->fresh()->approved_by);
@@ -226,7 +226,7 @@ class SecureAttendanceTest extends TestCase
     {
         $a = $this->enroll();
         $this->verify($a, 'in')->assertOk();
-        $manager = $this->user('supervisor', ['attendance']);
+        $manager = $this->user('facilitator', ['attendance']);
         $this->actingAs($manager);
         $qr = $this->get('/attendance/qr')->assertOk()->assertSee('https://orientation.example.test/attendance/sign-in')->getContent();
         $this->travelTo(now()->addMinutes(6));
@@ -255,7 +255,7 @@ class SecureAttendanceTest extends TestCase
         $this->assertSame(1, $summary['denominator']);
         $this->assertSame(100.0, $summary['percentage']);
         $this->assertSame(0, $summary['absent']);
-        $this->actingAs($this->user('supervisor', ['attendance']));
+        $this->actingAs($this->user('facilitator', ['attendance']));
         $response = $this->get('/reports/export?report=attendance&attendance_mode=summary&format=csv')->assertOk();
         $csv = $response->streamedContent();
         $lines = array_values(array_filter(explode("\n", trim($csv))));
@@ -273,7 +273,7 @@ class SecureAttendanceTest extends TestCase
     {
         $values = ['venue_name' => 'Approved venue', 'latitude' => 9, 'longitude' => 7, 'radius' => 200, 'max_accuracy' => 20, 'max_age_seconds' => 45, 'location_retention_days' => 90, 'audit_retention_days' => 365, 'starts_on' => '2026-11-02', 'ends_on' => '2026-12-11'];
         $this->post('/attendance/security/settings', $values)->assertForbidden();
-        $this->actingAs($this->user('supervisor', ['attendance']));
+        $this->actingAs($this->user('facilitator', ['attendance']));
         $this->postJson('/attendance/security/settings', [...$values, 'max_accuracy' => 300])->assertUnprocessable();
         $this->post('/attendance/security/settings', $values)->assertRedirect();
         $this->assertSame('Approved venue', Programme::first()->settings['attendance_security']['venue_name']);

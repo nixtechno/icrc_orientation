@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class TimetableProposal extends Model
 {
+    use Concerns\HasPublicSlug;
     protected $guarded = [];
 
     protected function casts(): array

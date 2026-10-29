@@ -10,6 +10,10 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
+    use Concerns\HasPublicSlug;
+    public const ROLES = ['admin', 'facilitator', 'staff'];
+
+    public const FACILITATOR_DEFAULT_PERMISSIONS = ['assessments', 'resources', 'announcements', 'qa_answer'];
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
@@ -55,7 +59,13 @@ class User extends Authenticatable
 
     public function canManage(string $permission): bool
     {
-        return $this->active && ($this->role === 'admin' || ($this->role === 'supervisor' && in_array($permission, $this->permissions ?? [], true)));
+        return $this->active && ($this->role === 'admin' || ($this->role === 'facilitator' && in_array($permission, $this->permissions ?? [], true)));
+    }
+
+    public function hasLockedInvitationEmail(): bool
+    {
+        return $this->exists && $this->role === 'facilitator'
+            && \Illuminate\Support\Facades\DB::table('invitations')->where('user_id', $this->id)->exists();
     }
 
     public function canAnswerSession(ProgrammeSession $session): bool

@@ -20,15 +20,15 @@ class ProgrammeController extends Controller
     {
         $p = Access::programme();
         $u = auth()->user();
-        $sessions = ProgrammeSession::with('day')->where('status', 'published')->whereDate('starts_at', today())->orderBy('starts_at')->get();
-        $next = ProgrammeSession::where('status', 'published')->where('starts_at', '>', now())->orderBy('starts_at')->first();
+        $programmeSessions = ProgrammeSession::whereHas('day.week', fn ($q) => $q->where('programme_id', $p->id));
+        $sessions = (clone $programmeSessions)->with('day')->where('status', 'published')->whereDate('starts_at', today($p->timezone))->orderBy('starts_at')->get();
+        $next = (clone $programmeSessions)->where('status', 'published')->where('starts_at', '>', now())->orderBy('starts_at')->first();
         $summary = $u->role === 'staff' ? app(AttendanceService::class)->summary($u) : null;
         $staff = Access::staff();
-        $stats = ['Participants' => $staff->count(), 'Active accounts' => (clone $staff)->where('active', true)->count(), 'Awaiting activation' => (clone $staff)->where('active', false)->count(), 'Entries to review' => ProgrammeSession::where('reviewed', false)->where('warnings', '!=', '[]')->count()];
+        $stats = ['Participants' => $staff->count(), 'Active accounts' => (clone $staff)->where('active', true)->count(), 'Awaiting activation' => (clone $staff)->where('active', false)->count(), 'Entries to review' => (clone $programmeSessions)->where('reviewed', false)->where('warnings', '!=', '[]')->count()];
 
         $operations = [];
         if ($u->role !== 'staff') {
-            $programmeSessions = ProgrammeSession::whereHas('day.week', fn ($q) => $q->where('programme_id', $p->id));
             if ($u->canManage('schedule')) {
                 $operations[] = ['Timetable entries to review', '/timetable?review=1', $stats['Entries to review'], 'Resolve source warnings before confirming session details.'];
                 $operations[] = ['Draft sessions', '/timetable', (clone $programmeSessions)->where('status', 'draft')->count(), 'Review and publish sessions when details are confirmed.'];
@@ -44,7 +44,8 @@ class ProgrammeController extends Controller
             }
         }
 
-        return view('dashboard', compact('p', 'u', 'sessions', 'next', 'summary', 'stats', 'operations'));
+        $attendanceTrend = $u->role !== 'staff' ? app(\App\Services\AttendanceTrend::class)->data() : [];
+        return view('dashboard', compact('p', 'u', 'sessions', 'next', 'summary', 'stats', 'operations', 'attendanceTrend'));
     }
 
     public function schedule(Request $r)
@@ -69,6 +70,7 @@ class ProgrammeController extends Controller
     public function editSession(ProgrammeSession $session)
     {
         Access::manage('schedule');
+        abort_unless($session->day->week->programme_id === Access::programme()->id, 404);
 
         return view('session', compact('session'));
     }
@@ -76,11 +78,16 @@ class ProgrammeController extends Controller
     public function saveSession(Request $r, ProgrammeSession $session)
     {
         Access::manage('schedule');
+        abort_unless($session->day->week->programme_id === Access::programme()->id, 404);
         $v = $r->validate(['title' => 'nullable|string|max:4000', 'facilitator' => 'nullable|string|max:2000', 'venue' => 'nullable|string|max:255', 'type' => 'required|in:session,recap,break,lunch,presentation,dinner,free_day', 'starts_at' => 'nullable|date', 'ends_at' => 'nullable|date|after:starts_at', 'status' => 'required|in:published,draft,cancelled,archived', 'reviewed' => 'nullable|boolean']);
         $v['reviewed'] = $r->boolean('reviewed');
         $before = $session->toArray();
         DB::transaction(function () use ($session, $v, $before) {
-            $session->update($v);
+            $session->fill($v);
+            $session->actual_minutes = $session->starts_at && $session->ends_at
+                ? (int) $session->starts_at->diffInMinutes($session->ends_at)
+                : null;
+            $session->save();
             Access::audit('session.update', (string) $session->id, $before, $session->toArray());
         });
         if ($session->status === 'published') {

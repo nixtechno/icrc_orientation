@@ -57,9 +57,10 @@ return view('people.form', compact('user'));
         Access::manage('staff');
         if ($user) {
             $this->allowed($user);
+            if ($user->hasLockedInvitationEmail()) $r->merge(['email' => $user->email]);
         }$quick = $r->boolean('invitation_only') && ! $user;
-        $rules = $profiles->rules($user);
-        $rules['role'] = ['required', Rule::in($r->user()->role === 'admin' ? ['staff', 'supervisor', 'admin', 'facilitator'] : ['staff'])];
+        $rules = $profiles->rules($user, false, is_string($r->input('role')) ? $r->input('role') : null);
+        $rules['role'] = ['required', Rule::in($r->user()->role === 'admin' ? User::ROLES : ['staff'])];
         $rules['permissions'] = 'nullable|array';
         $rules['permissions.*'] = Rule::in(self::PERMISSIONS);
         $rules['responsibilities'] = 'nullable|string|max:5000';
@@ -74,16 +75,17 @@ return view('people.form', compact('user'));
             $user ??= new User;
             $before = $user->exists ? $user->toArray() : null;
             $new = ! $user->exists;
-            $profiles->assign($user, $v);
+            $profiles->assign($user, $v, true, $v['role']);
             $profiles->photo($r, $user);
             $user->role = $v['role'];
             if (auth()->user()->role === 'admin') {
-                $user->permissions = $v['permissions'] ?? [];
+                $user->permissions = $v['permissions'] ?? ($new && $v['role'] === 'facilitator' && ! $r->boolean('permissions_present') ? User::FACILITATOR_DEFAULT_PERMISSIONS : []);
                 $user->responsibilities = $v['responsibilities'] ?? null;
             }$user->active = $new ? false : $r->boolean('active');
             if ($new) {
                 $user->password = Str::random(64);
             }$user->save();
+            $profiles->syncFacilitator($user);
             $user->programmes()->syncWithoutDetaching([Access::programme()->id]);
             Access::audit('user.save', (string) $user->id, $before, $user->toArray());
         });
@@ -118,8 +120,8 @@ return redirect('/manage/staff')->with('success', 'Profile saved'.(($quick || $r
     public function template(Request $r)
     {
         abort_unless($r->user()->role === 'admin', 403);
-        $r->validate(['role' => 'required|in:staff,supervisor', 'format' => 'required|in:csv,xlsx']);
-        $headers = ProfileService::IMPORT_COLUMNS;
+        $r->validate(['role' => 'required|in:staff,facilitator', 'format' => 'required|in:csv,xlsx']);
+        $headers = ProfileService::importColumns($r->role);
         if ($r->format === 'csv') {
             return response()->streamDownload(function () use ($headers) {
                 $h = fopen('php://output', 'w');
@@ -128,8 +130,9 @@ return redirect('/manage/staff')->with('success', 'Profile saved'.(($quick || $r
             }, $r->role.'-template.csv', ['Content-Type' => 'text/csv']);
         }$sheet = new Spreadsheet;
         $sheet->getActiveSheet()->fromArray($headers);
-        $sheet->getActiveSheet()->getStyle('A1:L1')->getFont()->setBold(true);
-        foreach (range('A', 'L') as $column) {
+        $lastColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($headers));
+        $sheet->getActiveSheet()->getStyle('A1:'.$lastColumn.'1')->getFont()->setBold(true);
+        foreach (range('A', $lastColumn) as $column) {
             $sheet->getActiveSheet()->getColumnDimension($column)->setWidth(23);
         }
 
@@ -139,7 +142,7 @@ return response()->streamDownload(fn () => (new Xlsx($sheet))->save('php://outpu
     public function preview(Request $r, ProfileService $profiles)
     {
         abort_unless($r->user()->role === 'admin', 403);
-        $r->validate(['role' => 'required|in:staff,supervisor', 'file' => 'required|file|mimes:csv,txt,xlsx|max:2048']);
+        $r->validate(['role' => 'required|in:staff,facilitator', 'file' => 'required|file|mimes:csv,txt,xlsx|max:2048']);
         $rows = [];
         $issues = [];
         $raw = [];
@@ -160,7 +163,7 @@ return response()->streamDownload(fn () => (new Xlsx($sheet))->save('php://outpu
             }fclose($h);
         }
         $header = array_map(fn ($x) => trim(ltrim((string) $x, "\xEF\xBB\xBF")), array_shift($raw) ?? []);
-        abort_unless($header === ProfileService::IMPORT_COLUMNS, 422, 'Column headers must match the downloaded template exactly.');
+        abort_unless($header === ProfileService::importColumns($r->role) || ($r->role === 'facilitator' && $header === ProfileService::IMPORT_COLUMNS), 422, 'Column headers must match the downloaded template exactly.');
         $seenEmail = [];
         $seenNumber = [];
         foreach ($raw as $i => $row) {
@@ -175,20 +178,20 @@ return response()->streamDownload(fn () => (new Xlsx($sheet))->save('php://outpu
             $data['email'] = strtolower($data['email'] ?? '');
             if (is_numeric($data['resumption_date'] ?? null) && $data['resumption_date'] > 20000 && $data['resumption_date'] < 90000) {
                 $data['resumption_date'] = Date::excelToDateTimeObject((float) $data['resumption_date'])->format('Y-m-d');
-            }$rules = $profiles->rules();
+            }$rules = $profiles->rules(null, false, $r->role);
             unset($rules['photo']);
             $rules['first_name'] = 'required|string|max:100';
             $rules['surname'] = 'required|string|max:100';
             $validator = Validator::make($data, $rules);
             $errors = $validator->errors()->all();
             foreach ($data as $field => $value) {
-                if (is_string($value) && preg_match('/^[=+@]/', $value) && ! ($field === 'phone' && preg_match('/^\+[0-9 ]+$/', $value))) {
+                if (is_string($value) && preg_match('/^[=+@]/', $value) && ! (in_array($field, ['phone', 'alternative_phone'], true) && preg_match('/^\+[0-9 ]+$/', $value))) {
                     $errors[] = 'Formula-like values are not allowed in templates.';
                 }
             }if (isset($seenEmail[$data['email']])) {
                 $errors[] = 'Duplicate email within file; first seen on row '.$seenEmail[$data['email']];
             }$seenEmail[$data['email']] = $number;
-            $staffNumber = strtolower($data['staff_number'] ?? '');
+            $staffNumber = $r->role === 'facilitator' ? '' : strtolower($data['staff_number'] ?? '');
             if ($staffNumber !== '') {
                 if (isset($seenNumber[$staffNumber])) {
                     $errors[] = 'Duplicate staff number within file; first seen on row '.$seenNumber[$staffNumber];
@@ -218,14 +221,14 @@ return response()->streamDownload(fn () => (new Xlsx($sheet))->save('php://outpu
                 if (isset($issues[$row['row']])) {
                     continue;
                 }$data = $row['data'];
-                $v = Validator::make($data, $profiles->rules());
+                $v = Validator::make($data, $profiles->rules(null, false, $job->role));
                 if ($v->fails()) {
                     $summary['skipped']++;
 
                     continue;
                 }$u = new User;
-                $profiles->assign($u, $data);
-                $u->forceFill(['role' => $job->role, 'active' => false, 'permissions' => [], 'password' => Str::random(64)])->save();
+                $profiles->assign($u, $data, true, $job->role);
+                $u->forceFill(['role' => $job->role, 'active' => false, 'permissions' => $job->role === 'facilitator' ? User::FACILITATOR_DEFAULT_PERMISSIONS : [], 'password' => Str::random(64)])->save();
                 $u->programmes()->attach($job->programme_id);
                 $created[] = $u;
                 $summary['created']++;

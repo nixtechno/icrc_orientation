@@ -23,7 +23,7 @@ class DailyAttendanceController extends Controller
         Access::enrolled();
         $manager = $r->user()->canManage('attendance');
         $staff = $manager ? Access::staff()->orderBy('name')->get() : collect([$r->user()]);
-        $selected = $r->filled('staff') ? $staff->firstWhere('id', (int) $r->staff) : $staff->first();
+        $selected = $r->filled('staff') ? $staff->first(fn ($user) => (string) $user->id === (string) $r->staff || $user->getRouteKey() === $r->staff) : $staff->first();
         abort_if($r->filled('staff') && ! $selected, 403);
         $days = $service->days()->with('week')->orderBy('date')->get();
         $records = $selected ? DailyAttendance::where('programme_id', Access::programme()->id)->where('user_id', $selected->id)->get()->keyBy('programme_day_id') : collect();

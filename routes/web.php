@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [ProgrammeController::class, 'landing']);
 Route::get('/login', [AuthController::class, 'form'])->name('login');
+Route::get('/login/csrf-token', [AuthController::class, 'csrfToken']);
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 Route::get('/forgot-password', fn () => view('auth', ['mode' => 'forgot']))->name('password.request');
 Route::post('/forgot-password', [AuthController::class, 'forgot'])->middleware('throttle:3,1')->name('password.email');
@@ -36,11 +37,11 @@ Route::middleware(['auth', ActiveAccount::class])->group(function () {
     Route::post('/manage/sessions/{session}', [ProgrammeController::class, 'saveSession']);
     Route::get('/resources', [ManagementController::class, 'resources']);
     Route::post('/resources', [ManagementController::class, 'saveResource']);
-    Route::get('/resources/{id}/download', [ManagementController::class, 'downloadResource']);
-    Route::post('/resources/{id}/publication', [ManagementController::class, 'toggleResource']);
+    Route::get('/resources/{resource}/download', [ManagementController::class, 'downloadResource']);
+    Route::post('/resources/{resource}/publication', [ManagementController::class, 'toggleResource']);
     Route::get('/announcements', [ManagementController::class, 'announcements']);
     Route::post('/announcements', [ManagementController::class, 'saveAnnouncement']);
-    Route::post('/announcements/{id}/archive', [ManagementController::class, 'archiveAnnouncement']);
+    Route::post('/announcements/{announcement}/archive', [ManagementController::class, 'archiveAnnouncement']);
     Route::get('/settings', [ManagementController::class, 'settings']);
     Route::post('/settings', [ManagementController::class, 'saveSettings']);
     Route::get('/audit', [ManagementController::class, 'audit']);

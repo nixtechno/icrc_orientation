@@ -59,11 +59,11 @@ class SupplementTest extends TestCase
     public function test_schedule_permission_is_required_for_review_and_changes(): void
     {
         $proposal = $this->proposal('Session 1:');
-        foreach ([$this->account('staff'), $this->account('supervisor', ['attendance'])] as $user) {
+        foreach ([$this->account('staff'), $this->account('facilitator', ['attendance'])] as $user) {
             $this->actingAs($user)->get('/manage/supplement')->assertForbidden();
             $this->post('/manage/supplement/'.$proposal->id, ['decision' => 'accept', 'review_note' => 'Test'])->assertForbidden();
         }
-        $this->actingAs($this->account('supervisor', ['schedule']))->get('/manage/supplement')->assertOk()->assertSee('Resolve the Thursday afternoon split');
+        $this->actingAs($this->account('facilitator', ['schedule']))->get('/manage/supplement')->assertOk()->assertSee('Resolve the Thursday afternoon split');
     }
 
     public function test_acceptance_retains_original_source_and_audits_the_change(): void
@@ -97,14 +97,14 @@ class SupplementTest extends TestCase
         $this->assertSame(188, ProgrammeSession::count());
     }
 
-    public function test_supervisor_edits_are_never_silently_overwritten(): void
+    public function test_facilitator_edits_are_never_silently_overwritten(): void
     {
         $this->actingAs($this->account());
         $p = $this->proposal('Session 2:');
-        $p->session->update(['title' => 'Supervisor confirmed title']);
+        $p->session->update(['title' => 'Facilitator confirmed title']);
         $this->post('/manage/supplement/'.$p->id, ['decision' => 'accept', 'review_note' => 'Apply'])->assertStatus(409);
-        $this->assertSame('Supervisor confirmed title', $p->session->fresh()->title);
-        $this->post('/manage/supplement/'.$p->id, ['decision' => 'reject', 'review_note' => 'Retain supervisor title'])->assertRedirect();
+        $this->assertSame('Facilitator confirmed title', $p->session->fresh()->title);
+        $this->post('/manage/supplement/'.$p->id, ['decision' => 'reject', 'review_note' => 'Retain facilitator title'])->assertRedirect();
         $this->assertSame('rejected', $p->fresh()->status);
     }
 }

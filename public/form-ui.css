@@ -43,3 +43,7 @@
 @media(prefers-reduced-motion:reduce){:is(.portal-body .workspace,.guest-body .auth-panel) :is(input,select,textarea){transition:none}}
 @media(forced-colors:active){:is(.portal-body .workspace,.guest-body .auth-panel) :is(input,select,textarea):focus{outline:2px solid Highlight}:is(.portal-body .workspace,.guest-body .auth-panel) select:not([multiple]){appearance:auto}}
 @media print{.portal-body .workspace form.card{padding:0;border:0;box-shadow:none}:is(.portal-body .workspace,.guest-body .auth-panel) :is(input,select,textarea){box-shadow:none;background:#fff}.portal-body .workspace fieldset{break-inside:avoid}}
+/* Hidden role-specific sections must stay hidden even when fieldset/grid styles set display. */
+[data-profile-role-section][hidden]{display:none!important}
+.page-back{margin-bottom:20px}.page-back a{display:inline-flex;align-items:center;gap:8px;font-size:.875rem;font-weight:600;color:#426354;text-decoration:none;padding:6px 0}.page-back a:hover{color:#146b45}.page-back a:focus-visible{outline:2px solid #18754f;outline-offset:5px;border-radius:3px}
+@media print{.page-back{display:none!important}}

@@ -52,7 +52,7 @@ class SessionQaController extends Controller
         Access::audit('qa.question.submit', (string) $question->id);
         $recipients = User::where('active', true)->whereHas('programmes', fn ($q) => $q->where('programmes.id', Access::programme()->id))->get()->filter(fn ($u) => $u->canManage('qa'));
         foreach ($recipients as $u) {
-            $u->notify(new ProgrammeUpdate('Session question awaiting moderation', 'A participant submitted a question for review.', url('/qa/sessions/'.$session->id)));
+            $u->notify(new ProgrammeUpdate('Session question awaiting moderation', 'A participant submitted a question for review.', url('/qa/sessions/'.$session->getRouteKey())));
         }
 
 return back()->with('success', 'Question submitted for moderation.');
@@ -74,11 +74,12 @@ return back()->with('success', 'Question submitted for moderation.');
 return back()->with('success', $published ? 'Answer published.' : 'Answer saved for moderator review.');
     }
 
-    public function moderate(Request $r, string $type, int $id)
+    public function moderate(Request $r, string $type, string $id)
     {
         Access::manage('qa');
         abort_unless(in_array($type, ['question', 'answer']), 404);
-        $item = $type === 'question' ? SessionQuestion::findOrFail($id) : SessionAnswer::findOrFail($id);
+        $item = $type === 'question' ? (new SessionQuestion)->resolveRouteBinding($id) : (new SessionAnswer)->resolveRouteBinding($id);
+        abort_unless($item, 404);
         $question = $type === 'question' ? $item : $item->question;
         $this->scope($question->session);
         $v = $r->validate(['action' => 'required|in:publish,unpublish,hide,unhide', 'reason' => 'required|string|max:2000']);
@@ -96,6 +97,6 @@ return back()->with('success', 'Moderation recorded.');
 
     private function notify(SessionQuestion $q): void
     {
-        $q->user->notify(new ProgrammeUpdate('Your session question has an answer','Open the session Q&A to read the published response.',url('/qa/sessions/'.$q->session_id)));
+        $q->user->notify(new ProgrammeUpdate('Your session question has an answer','Open the session Q&A to read the published response.',url('/qa/sessions/'.$q->session->getRouteKey())));
     }
 }

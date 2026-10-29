@@ -14,7 +14,13 @@ class AuthController extends Controller
 {
     public function form()
     {
-        return view('auth', ['mode' => 'login']);
+        return response()->view('auth', ['mode' => 'login'])->header('Cache-Control', 'no-store, private, max-age=0');
+    }
+
+    public function csrfToken(Request $request)
+    {
+        return response()->json(['token' => $request->session()->token()])
+            ->header('Cache-Control', 'no-store, private, max-age=0');
     }
 
     public function login(Request $r)
@@ -46,7 +52,7 @@ class AuthController extends Controller
 
     public function reset(Request $r)
     {
-        $r->validate(['token' => 'required', 'email' => 'required|email', 'password' => ['required', 'confirmed', PasswordRule::min(12)->mixedCase()->numbers()]]);
+        $r->validate(['token' => 'required', 'email' => 'required|email', 'password' => ['required', 'confirmed', PasswordRule::min(8)]]);
         $status = Password::reset($r->only('email', 'password', 'password_confirmation', 'token'), function (User $u, string $password) {
             $u->password = $password;
             $u->remember_token = Str::random(60);
@@ -70,7 +76,7 @@ class AuthController extends Controller
 
     public function activate(Request $r, string $token)
     {
-        $v = $r->validate(['name' => 'required|string|max:255', 'password' => ['required', 'confirmed', PasswordRule::min(12)->mixedCase()->numbers()]]);
+        $v = $r->validate(['name' => 'required|string|max:255', 'password' => ['required', 'confirmed', PasswordRule::min(8)]]);
         DB::transaction(function () use ($v, $token) {
             $i = DB::table('invitations')->where('token_hash', hash('sha256', $token))->lockForUpdate()->firstOrFail();
             abort_if($i->used_at || $i->revoked_at || now()->gte($i->expires_at), 410, 'Invitation expired or already used.');
@@ -89,7 +95,7 @@ class AuthController extends Controller
 
     public function updateProfile(Request $r)
     {
-        $v = $r->validate(['name' => 'required|string|max:255', 'phone' => 'nullable|string|max:40', 'password' => ['nullable', 'confirmed', PasswordRule::min(12)->mixedCase()->numbers()], 'current_password' => 'required_with:password|current_password']);
+        $v = $r->validate(['name' => 'required|string|max:255', 'phone' => 'nullable|string|max:40', 'password' => ['nullable', 'confirmed', PasswordRule::min(8)], 'current_password' => 'required_with:password|current_password']);
         $u = $r->user();
         $u->name = $v['name'];
         $u->phone = $v['phone'];

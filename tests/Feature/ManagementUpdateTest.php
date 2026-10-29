@@ -76,28 +76,28 @@ class ManagementUpdateTest extends TestCase
         }
     }
 
-    public function test_manual_and_quick_invitation_support_staff_and_supervisors(): void
+    public function test_manual_and_quick_invitation_support_staff_and_facilitators(): void
     {
         $this->actingAs($this->user('admin'));
-        foreach (['staff', 'supervisor'] as $role) {
+        foreach (['staff', 'facilitator'] as $role) {
             $this->post('/manage/staff', ['first_name' => ucfirst($role), 'surname' => 'Example', 'email' => $role.'@example.test', 'role' => $role, 'department' => 'ICT'])->assertRedirect('/manage/staff');
             $u = User::where('email', $role.'@example.test')->firstOrFail();
             $this->assertFalse($u->active);
             $this->assertSame($role, $u->role);
             $this->post('/manage/staff/'.$u->id.'/invite')->assertRedirect();
             $this->get('/manage/staff')->assertSee('Sent');
-        }$this->post('/manage/staff', ['invitation_only' => 1, 'name' => 'Invited Supervisor', 'email' => 'invited@example.test', 'role' => 'supervisor'])->assertRedirect('/manage/staff');
-        $this->assertDatabaseHas('users', ['email' => 'invited@example.test', 'role' => 'supervisor', 'active' => false]);
+        }$this->post('/manage/staff', ['invitation_only' => 1, 'name' => 'Invited Facilitator', 'email' => 'invited@example.test', 'role' => 'facilitator'])->assertRedirect('/manage/staff');
+        $this->assertDatabaseHas('users', ['email' => 'invited@example.test', 'role' => 'facilitator', 'active' => false]);
         $this->assertDatabaseCount('invitations', 3);
     }
 
     public function test_recipient_cannot_change_assigned_role_or_confirmed_official_fields(): void
     {
-        $u = $this->user('supervisor');
+        $u = $this->user('staff');
         $u->forceFill(['active' => false, 'department' => 'Confirmed department'])->save();
         $this->invitation($u);
         $this->post('/invitation/test-invite', [...$this->activation(), 'role' => 'admin', 'department' => 'Forged department', 'permissions' => ['staff']])->assertRedirect('/login');
-        $this->assertSame('supervisor', $u->fresh()->role);
+        $this->assertSame('staff', $u->fresh()->role);
         $this->assertSame('Confirmed department', $u->fresh()->department);
         $this->assertNotNull($u->fresh()->privacy_acknowledged_at);
         $this->assertSame('Participant', $u->fresh()->profile['first_name']);
@@ -149,9 +149,9 @@ class ManagementUpdateTest extends TestCase
     public function test_csv_template_import_supports_both_roles_and_reports_row_errors(): void
     {
         $this->actingAs($this->user('admin'));
-        foreach (['staff', 'supervisor'] as $role) {
+        foreach (['staff', 'facilitator'] as $role) {
             $template = $this->get('/manage/staff/template?role='.$role.'&format=csv')->assertOk()->streamedContent();
-            $row = ['Given', null, 'Surname', null, $role.'import@example.test', null, 'N-'.$role, 'ICT', 'Officer', null, null, 'A'];
+            $row = $role === 'facilitator' ? ['Given', null, 'Surname', null, $role.'import@example.test', null, '08000000001', 'Demo Organisation', 'ICT', 'Facilitator'] : ['Given', null, 'Surname', null, $role.'import@example.test', null, 'N-'.$role, 'ICT', 'Officer', null, null, 'A'];
             $h = fopen('php://temp', 'w+');
             fputcsv($h, $row);
             rewind($h);
@@ -168,21 +168,21 @@ class ManagementUpdateTest extends TestCase
         $this->post('/manage/staff/import', ['role' => 'staff', 'file' => UploadedFile::fake()->createWithContent('invalid.csv', $csv)])->assertOk()->assertSee('Row 3')->assertSee('Duplicate email within file')->assertSee('Duplicate staff number within file');
     }
 
-    public function test_xlsx_templates_round_trip_and_supervisor_permissions_remain_ungranted(): void
+    public function test_xlsx_templates_round_trip_and_facilitators_receive_teaching_permissions(): void
     {
         $this->actingAs($this->user('admin'));
-        $bytes = $this->get('/manage/staff/template?role=supervisor&format=xlsx')->assertOk()->streamedContent();
+        $bytes = $this->get('/manage/staff/template?role=facilitator&format=xlsx')->assertOk()->streamedContent();
         $path = tempnam(sys_get_temp_dir(), 'icrc-xlsx');
         file_put_contents($path, $bytes);
         $book = IOFactory::load($path);
-        $book->getActiveSheet()->fromArray(['Excel', null, 'Supervisor', null, 'excel@example.test', null, 'XLSX-1', 'ICT', 'Officer', null, null, 'A'], null, 'A2');
+        $book->getActiveSheet()->fromArray(['Excel', null, 'Facilitator', null, 'excel@example.test', null, '08000000001', 'Demo Organisation', 'ICT', 'Facilitator'], null, 'A2');
         (new Xlsx($book))->save($path);
-        $file = new UploadedFile($path, 'supervisors.xlsx', null, null, true);
-        $this->post('/manage/staff/import', ['role' => 'supervisor', 'file' => $file])->assertOk()->assertSee('Excel');
+        $file = new UploadedFile($path, 'facilitators.xlsx', null, null, true);
+        $this->post('/manage/staff/import', ['role' => 'facilitator', 'file' => $file])->assertOk()->assertSee('Excel');
         $id = DB::table('participant_imports')->max('id');
         $this->post('/manage/staff/import/confirm', ['import_id' => $id])->assertRedirect();
         $u = User::where('email', 'excel@example.test')->firstOrFail();
-        $this->assertSame([], $u->permissions);
+        $this->assertSame(\App\Models\User::FACILITATOR_DEFAULT_PERMISSIONS, $u->permissions);
         $this->assertFalse($u->active);
         @unlink($path);
     }
@@ -229,14 +229,14 @@ class ManagementUpdateTest extends TestCase
         $this->get('/attendance/live?date=2026-11-02')->assertOk()->assertSee($u->name);
         $this->actingAs($u)->get('/attendance/live')->assertForbidden();
         $this->get('/attendance?staff='.$admin->id)->assertForbidden();
-        $this->actingAs($this->user('supervisor'))->get('/attendance/security/audit')->assertForbidden();
+        $this->actingAs($this->user('facilitator'))->get('/attendance/security/audit')->assertForbidden();
     }
 
     public function test_session_qa_publication_and_moderation_protect_private_content(): void
     {
         $u = $this->user();
         $other = $this->user();
-        $moderator = $this->user('supervisor', ['qa']);
+        $moderator = $this->user('facilitator', ['qa']);
         $session = ProgrammeSession::where('type', 'session')->first();
         $this->actingAs($u)->post('/qa/sessions/'.$session->id.'/questions', ['body' => 'Participant pending question'])->assertRedirect();
         $question = SessionQuestion::first();
@@ -274,10 +274,10 @@ class ManagementUpdateTest extends TestCase
     {
         $admin = $this->user('admin');
         $staff = $this->user();
-        $supervisor = $this->user('supervisor');
+        $facilitator = $this->user('facilitator');
         $fac = Facilitator::create(['programme_id' => Programme::first()->id, 'name' => 'Facilitator Example']);
         $count = User::count();
-        $this->actingAs($admin)->post('/badges/generate', ['subjects' => ['u:'.$staff->id, 'u:'.$supervisor->id, 'f:'.$fac->id]])->assertRedirect();
+        $this->actingAs($admin)->post('/badges/generate', ['subjects' => ['u:'.$staff->id, 'u:'.$facilitator->id, 'f:'.$fac->id]])->assertRedirect();
         $this->assertSame($count, User::count());
         $this->assertDatabaseCount('badges', 3);
         $ids = Badge::pluck('id')->all();
