@@ -36,19 +36,29 @@ class ActivityController extends Controller
             $q->where('kind', $r->kind);
         }
 
-return view('activities', ['items' => $q->withCount('submissions')->latest()->get(), 'manager' => $manager, 'staff' => $manager ? Access::staff()->get() : collect()]);
+return view('activities', ['items' => $q->with('group')->withCount('submissions')->latest()->get(), 'manager' => $manager,
+    'groups' => $manager ? \App\Models\AssessmentGroup::where('programme_id', Access::programme()->id)->withCount('members')->orderBy('name')->get() : collect(),
+    'weeks' => $manager ? Access::programme()->weeks()->with('days.sessions')->get() : collect()]);
     }
 
     public function store(Request $r)
     {
         Access::manage('assessments');
-        $v = $r->validate(['kind' => 'required|in:quiz,assignment,presentation', 'title' => 'required|string|max:255', 'instructions' => 'required|string|max:20000', 'available_at' => 'nullable|date|before:due_at', 'due_at' => 'required|date|after:now', 'attempts' => 'required|integer|between:1,10', 'time_limit' => 'nullable|integer|between:1,240', 'assignment_mode' => 'nullable|in:all,group,selected', 'group_name' => 'nullable|required_if:assignment_mode,group|string|max:255', 'participants' => 'nullable|array', 'participants.*' => 'integer', 'programme_week_id' => 'nullable|integer', 'session_id' => 'nullable|integer']);
-        $mode = $v['assignment_mode'] ?? 'selected';
+        $v = $r->validate(['kind' => 'required|in:quiz,assignment,presentation', 'title' => 'required|string|max:255', 'instructions' => 'required|string|max:20000', 'available_at' => 'nullable|date|before:due_at', 'due_at' => 'required|date|after:now', 'attempts' => 'required|integer|between:1,10', 'time_limit' => 'nullable|integer|between:1,240', 'assignment_mode' => 'nullable|in:all,group,selected', 'group_name' => 'nullable|string|max:255', 'participants' => 'nullable|array', 'participants.*' => 'integer', 'programme_week_id' => 'nullable|integer', 'session_id' => 'nullable|integer']);
+        $r->validate(['programme_week_id' => 'nullable|required_with:session_id|integer', 'assessment_group_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::requiredIf(fn () => $r->input('assignment_mode') === 'group' && ! $r->filled('group_name'))]]);
+        $mode = $v['assignment_mode'] ?? 'all';
         $q = Access::staff();
         if ($mode === 'selected') {
             $q->whereIn('id', $v['participants'] ?? []);
         } elseif ($mode === 'group') {
-            $q->where('group_name', $v['group_name']);
+            if ($r->filled('assessment_group_id')) {
+                $group = \App\Models\AssessmentGroup::where('programme_id', Access::programme()->id)->findOrFail($r->integer('assessment_group_id'));
+                $q->whereIn('users.id', $group->members()->select('users.id'));
+                $v['assessment_group_id'] = $group->id;
+            } else {
+                // Keep earlier programme-group integrations usable.
+                $q->where('group_name', $v['group_name'] ?? null);
+            }
         }$ids = $q->pluck('id');
         abort_unless($ids->count() > 0 && ($mode !== 'selected' || $ids->count() === count(array_unique($v['participants'] ?? []))), 422, 'Select valid participants or a non-empty group.');
         if (! empty($v['programme_week_id'])) {

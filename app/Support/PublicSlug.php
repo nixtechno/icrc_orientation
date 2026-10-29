@@ -11,7 +11,7 @@ class PublicSlug
     public static function make(string $table, array $attributes): string
     {
         $label = match ($table) {
-            'users', 'facilitators' => $attributes['name'] ?? 'profile',
+            'users', 'facilitators', 'assessment_groups' => $attributes['name'] ?? 'profile',
             'activities', 'programme_sessions', 'resources', 'announcements' => $attributes['title'] ?? 'session',
             'programme_days' => 'programme-day-'.($attributes['number'] ?? ''),
             'submissions' => 'attempt',

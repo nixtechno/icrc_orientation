@@ -19,6 +19,11 @@ class Activity extends Model
         return $this->hasMany(Question::class);
     }
 
+    public function group()
+    {
+        return $this->belongsTo(AssessmentGroup::class, 'assessment_group_id');
+    }
+
     public function participants()
     {
         return $this->belongsToMany(User::class, 'activity_assignments');

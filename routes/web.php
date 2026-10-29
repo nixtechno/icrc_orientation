@@ -46,6 +46,10 @@ Route::middleware(['auth', ActiveAccount::class])->group(function () {
     Route::post('/settings', [ManagementController::class, 'saveSettings']);
     Route::get('/audit', [ManagementController::class, 'audit']);
     Route::get('/activities', [ActivityController::class, 'index']);
+    Route::get('/assessment-groups', [\App\Http\Controllers\AssessmentGroupController::class, 'index']);
+    Route::get('/assessment-groups/{group}/edit', [\App\Http\Controllers\AssessmentGroupController::class, 'index']);
+    Route::post('/assessment-groups', [\App\Http\Controllers\AssessmentGroupController::class, 'save']);
+    Route::post('/assessment-groups/{group}', [\App\Http\Controllers\AssessmentGroupController::class, 'save']);
     Route::post('/activities', [ActivityController::class, 'store']);
     Route::get('/activities/{activity}', [ActivityController::class, 'show']);
     Route::post('/activities/{activity}/questions', [ActivityController::class, 'question']);

@@ -4,6 +4,8 @@
  elseif(auth()->check()&&!request()->is('/','dashboard','login')) {
    $backLink=match(true) {
      request()->is('manage/staff/*')=>['/manage/staff','Back to people'],
+     request()->is('assessment-groups')=>['/activities','Back to assessments'],
+     request()->is('assessment-groups/*')=>['/assessment-groups','Back to groups'],
      request()->is('activities/*')=>['/activities','Back to assessments'],
      request()->is('submissions/*/complete')=>['/activities/'.$activity->getRouteKey(),'Back to assessment'],
      request()->is('manage/sessions/*')=>['/timetable','Back to timetable'],
