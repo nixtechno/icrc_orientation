@@ -1,10 +1,10 @@
 <section class="section orientation-purpose-section reveal" id="why-orientation" aria-labelledby="orientation-purpose-title">
     <div class="orientation-purpose-copy">
-        <span class="eyebrow">PREPARED FOR THE WORK AHEAD</span>
-        <h2 id="orientation-purpose-title">Understanding our mandate.<br><em>Finding your purpose.</em></h2>
-        <p class="orientation-purpose-lead">A strong start begins with a shared understanding of the institution you serve.</p>
-        <p>The ICRC orientation programme helps newly recruited staff understand the Commission's mandate, its people and the standards that guide its work. It connects your individual role to the wider responsibility of supporting effective Public-Private Partnerships for Nigeria's infrastructure development.</p>
-        <p>Through guided learning, practical discussions and engagement with colleagues, you will build the knowledge, professional relationships and confidence to contribute with integrity. It is the foundation for informed decisions, effective teamwork and purposeful public service.</p>
+        <span class="eyebrow">BEYOND STAFF ORIENTATION</span>
+        <h2 id="orientation-purpose-title">Investing in people.<br><em>Strengthening the institution.</em></h2>
+        <p class="orientation-purpose-lead">Preparing a new generation of ICRC professionals to contribute with competence and confidence.</p>
+        <p>SCODEX 2026 is a strategic investment in human capital. It brings orientation, onboarding and capacity development together to support the Commission's objectives and Nigeria's infrastructure transformation agenda.</p>
+        <p>Through interactive learning sessions, practical engagements, knowledge-sharing and professional development activities, the programme promotes institutional alignment, teamwork, accountability, innovation and a culture of excellence.</p>
         <a class="orientation-purpose-link" href="#programme">Explore your six-week journey <span aria-hidden="true">&#8599;</span></a>
     </div>
     <figure class="orientation-purpose-photo">

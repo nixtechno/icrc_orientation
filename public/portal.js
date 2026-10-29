@@ -10,7 +10,12 @@
  account?.addEventListener('toggle',()=>accountTrigger.setAttribute('aria-expanded',String(account.open)));
  accountTrigger?.setAttribute('aria-expanded','false');
  document.addEventListener('click',e=>{if(account?.open&&!account.contains(e.target))dismissAccount();});
- account?.addEventListener('focusout',()=>queueMicrotask(()=>{if(!account.contains(document.activeElement))dismissAccount();}));
+ account?.addEventListener('focusout',event=>{
+  if(account.contains(event.relatedTarget))return;
+  // Focus can briefly be on the body between blur and the next control's focus.
+  // Wait until that transition finishes before closing interactive menu content.
+  setTimeout(()=>{if(!account.contains(document.activeElement))dismissAccount();},0);
+ });
  account?.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&account.open){e.preventDefault();e.stopPropagation();dismissAccount(true);return;}
   if(!['ArrowDown','ArrowUp','Home','End'].includes(e.key))return;

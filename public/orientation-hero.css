@@ -623,3 +623,4 @@
 /* Half-height panoramic crop of the team photograph. */
 #icrc-team .team-photo-reveal{position:relative;aspect-ratio:4096/1365}
 #icrc-team .team-photo-image{position:absolute;inset:0;height:100%;object-fit:cover;object-position:center 49%}
+.orientation-hero .hero-lead{margin-bottom:18px}.orientation-hero .scodex-theme{max-width:495px;margin:0 0 26px;padding:0 0 0 16px;border-left:2px solid #d6ad68;color:#365443;font-size:14px;line-height:1.75}.orientation-hero .scodex-theme>span{display:block;font-size:9px;letter-spacing:1.5px;font-weight:700;color:#7b835f;margin-bottom:5px}@media(max-width:560px){.orientation-hero .scodex-theme{font-size:13px;margin-bottom:22px}}

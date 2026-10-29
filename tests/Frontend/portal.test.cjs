@@ -27,7 +27,7 @@ function mount(mobile = false) {
     document.querySelectorAll = () => [];
     document.querySelector = selector => ({'.portal-account': account, '.portal-menu': toggle, '.portal-sidebar': sidebar, '.portal-scrim': scrim, '.portal-search input': search})[selector];
     const media = new Element(); media.matches = mobile;
-    vm.runInNewContext(fs.readFileSync('public/portal.js', 'utf8'), {document, window: {matchMedia: () => media}, queueMicrotask});
+    vm.runInNewContext(fs.readFileSync('public/portal.js', 'utf8'), {document, window: {matchMedia: () => media}, setTimeout});
     return {document, account, trigger, options, toggle, sidebar, scrim, search, navigation, media};
 }
 
@@ -48,7 +48,25 @@ test('outside click and tabbing out dismiss the avatar menu while internal click
     p.document.fire('click', {target: p.options[0]}); assert.equal(p.account.open, true);
     p.document.fire('click', {target: p.search}); assert.equal(p.account.open, false);
     p.account.open = true; p.search.focus(); p.account.fire('focusout');
-    await Promise.resolve(); assert.equal(p.account.open, false);
+    await new Promise(resolve=>setTimeout(resolve,5)); assert.equal(p.account.open, false);
+});
+
+test('moving focus from the avatar trigger to Sign out does not close the menu before the click can submit',async()=>{
+    const p=mount();p.account.open=true;p.trigger.focus();
+    p.document.activeElement=p.document;
+    p.account.fire('focusout',{relatedTarget:p.options.at(-1)});
+    await new Promise(resolve=>setTimeout(resolve,5));
+    assert.equal(p.account.open,true);
+    p.options.at(-1).focus();
+    assert.equal(p.options.at(-1).fire('click').prevented,undefined);
+    assert.equal(p.account.open,true);
+});
+
+test('browsers without a focusout related target get time to settle on a menu control',async()=>{
+    const p=mount();p.account.open=true;p.document.activeElement=p.document;
+    p.account.fire('focusout');p.options.at(-1).focus();
+    await new Promise(resolve=>setTimeout(resolve,5));
+    assert.equal(p.account.open,true);
 });
 
 test('mobile navigation opens accessibly and Escape restores focus without leaving a scrim', () => {
