@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\ProgrammeInvitation;
 use App\Models\User;
 use App\Services\Access;
+use App\Services\InvitationEmail;
 use App\Services\InvitationService;
 use App\Services\ProfileService;
 use Illuminate\Http\Request;
@@ -23,7 +25,12 @@ class PeopleController extends Controller
 
     public function allowed(User $u): void
     {
-        abort_unless($u->programmes()->where('programmes.id', Access::programme()->id)->exists() && (auth()->user()->role === 'admin' || $u->role === 'staff'), 403);
+        abort_unless($this->manages($u), 403);
+    }
+
+    private function manages(User $u): bool
+    {
+        return $u->programmes()->where('programmes.id', Access::programme()->id)->exists() && (auth()->user()->role === 'admin' || $u->role === 'staff');
     }
 
     public function index(Request $r)
@@ -38,8 +45,9 @@ class PeopleController extends Controller
             $q->where('role', $r->role);
         }$people = $q->orderBy('name')->get();
         $invitations = DB::table('invitations')->whereIn('user_id', $people->pluck('id'))->orderByDesc('id')->get()->unique('user_id')->keyBy('user_id');
+        $invitationEmail = ['content' => InvitationEmail::content(Access::programme()), 'defaults' => InvitationEmail::defaults(), 'placeholders' => InvitationEmail::PLACEHOLDERS];
 
-        return view('people.index', compact('people', 'invitations'));
+        return view('people.index', compact('people', 'invitations', 'invitationEmail'));
     }
 
     public function form(?User $user = null)
@@ -70,6 +78,7 @@ return view('people.form', compact('user'));
             $rules['first_name'] = 'required|string|max:100';
             $rules['surname'] = 'required|string|max:100';
         }$v = $r->validate($rules);
+        $content = $r->filled('subject') ? $r->validate(InvitationEmail::rules()) : null;
         abort_if($user?->id === auth()->id() && (! $r->boolean('active') || $v['role'] !== 'admin'), 422, 'You cannot remove your own administrative access.');
         DB::transaction(function () use ($r, $profiles, &$user, $v) {
             $user ??= new User;
@@ -90,10 +99,78 @@ return view('people.form', compact('user'));
             Access::audit('user.save', (string) $user->id, $before, $user->toArray());
         });
         if ($quick || $r->boolean('send_invitation')) {
-            app(InvitationService::class)->send($user);
+            try {
+                app(InvitationService::class)->send($user, $content);
+            } catch (\Throwable $e) {
+                if (! $r->expectsJson()) {
+                    throw $e;
+                }
+                report($e);
+
+                return response()->json(['message' => 'The account was created, but the invitation could not be sent. Use Send / resend in the people list to try again.'], 500);
+            }
+        }
+        $message = 'Profile saved'.(($quick || $r->boolean('send_invitation')) ? ' and activation invitation sent.' : '.');
+        if ($r->expectsJson()) {
+            return response()->json(['message' => $message]);
         }
 
-return redirect('/manage/staff')->with('success', 'Profile saved'.(($quick || $r->boolean('send_invitation')) ? ' and activation invitation sent.' : '.'));
+return redirect('/manage/staff')->with('success', $message);
+    }
+
+    public function invitationPreview(Request $r)
+    {
+        Access::manage('staff');
+        $content = $r->validate(InvitationEmail::rules());
+        $sample = $r->validate(['name' => 'nullable|string|max:255', 'email' => 'nullable|string|max:255', 'role' => ['nullable', Rule::in(User::ROLES)]]);
+        $recipient = (new User)->forceFill(['name' => ($sample['name'] ?? null) ?: 'Sample Recipient', 'email' => ($sample['email'] ?? null) ?: 'recipient@example.org', 'role' => $sample['role'] ?? 'staff']);
+        $programme = Access::programme();
+        $mail = new ProgrammeInvitation($recipient, $programme, url('/invitation/your-personal-activation-link'), now()->addDays(3), $content);
+        $mail->logoSrc = $programme->logoUrl() ?? asset('brand/ICRC_Logo.png');
+
+        return response()->json(['subject' => $mail->subjectLine, 'html' => $mail->render()]);
+    }
+
+    public function sendInvitations(Request $r, InvitationService $invitations)
+    {
+        Access::manage('staff');
+        $content = $r->validate(InvitationEmail::rules());
+        $keys = $r->validate(['users' => 'required|array|min:1|max:25', 'users.*' => 'required|string|max:255'])['users'];
+        $people = User::whereIn((new User)->getRouteKeyName(), $keys)->get()->keyBy(fn (User $u) => (string) $u->getRouteKey());
+        $results = [];
+        foreach (array_unique($keys) as $key) {
+            $u = $people->get($key);
+            $result = match (true) {
+                ! $u || ! $this->manages($u) => ['status' => 'skipped', 'message' => 'Not found or not permitted.'],
+                (bool) $u->active => ['status' => 'skipped', 'message' => 'Already activated.'],
+                default => null,
+            };
+            if (! $result) {
+                try {
+                    $invitations->send($u, $content);
+                    $result = ['status' => 'sent', 'message' => 'Invitation sent.'];
+                } catch (\Throwable $e) {
+                    report($e);
+                    $result = ['status' => 'failed', 'message' => 'Delivery failed. Check the mail settings and try again.'];
+                }
+            }
+            $results[] = ['key' => $key, 'name' => $u?->name, ...$result];
+        }
+
+        return response()->json(['results' => $results]);
+    }
+
+    public function invitationTemplate(Request $r)
+    {
+        Access::manage('staff');
+        abort_unless($r->user()->role === 'admin', 403);
+        $content = $r->validate(InvitationEmail::rules());
+        $programme = Access::programme();
+        $before = InvitationEmail::content($programme);
+        InvitationEmail::save($programme, $content);
+        Access::audit('invitation_email.update', (string) $programme->id, $before, $content);
+
+        return response()->json(['message' => 'Saved as the default invitation email.']);
     }
 
     public function invite(User $user)

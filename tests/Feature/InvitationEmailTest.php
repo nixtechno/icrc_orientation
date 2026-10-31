@@ -29,8 +29,8 @@ class InvitationEmailTest extends TestCase
             $this->assertSame($mail->expiresAt->format('Y-m-d H:i:s'), $record->expires_at);
             $html = $mail->render();
             $this->assertStringContainsString('Amina Example', $html);
-            $this->assertStringContainsString('facilitator', $html);
-            $this->assertStringContainsString('Activate your account', $html);
+            $this->assertStringContainsString('Facilitator', $html);
+            $this->assertStringContainsString('Create your password &amp; sign in', $html);
             $this->assertStringContainsString($mail->activationUrl, $html);
             $this->assertMatchesRegularExpression('/src="(?:cid:|data:image\/)/', $html);
             $this->assertStringNotContainsString("\u{FFFD}", $html);
@@ -50,7 +50,7 @@ class InvitationEmailTest extends TestCase
         $mail = new ProgrammeInvitation($user, $programme, 'https://orientation.example.test/invitation/preview', now()->addDays(3));
         $sent = Mail::mailer('array')->to('preview@example.test')->send($mail);
         $message = $sent->getSymfonySentMessage()->getOriginalMessage();
-        $this->assertStringContainsString('Activate your account', $message->getHtmlBody());
+        $this->assertStringContainsString('Create your password &amp; sign in', $message->getHtmlBody());
         $this->assertStringContainsString('https://orientation.example.test/invitation/preview', $message->getTextBody());
         $this->assertStringContainsString('cid:', $message->getHtmlBody());
         $this->assertCount(1, $message->getAttachments());

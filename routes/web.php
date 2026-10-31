@@ -72,7 +72,10 @@ Route::middleware(['auth', ActiveAccount::class])->group(function () {
     Route::get('/manage/staff/template', [PeopleController::class, 'template']);
     Route::post('/manage/staff/import', [PeopleController::class, 'preview']);
     Route::post('/manage/staff/import/confirm', [PeopleController::class, 'confirm']);
-    Route::get('/manage/staff/{user}', [PeopleController::class, 'form']);
+    Route::post('/manage/staff/invitations/preview', [PeopleController::class, 'invitationPreview']);
+    Route::post('/manage/staff/invitations/send', [PeopleController::class, 'sendInvitations']);
+    Route::post('/manage/staff/invitations/template', [PeopleController::class, 'invitationTemplate']);
+    Route::get('/manage/staff/{user}',[PeopleController::class, 'form']);
     Route::post('/manage/staff/{user}', [PeopleController::class, 'save']);
     Route::post('/manage/staff/{user}/invite', [PeopleController::class, 'invite']);
     Route::post('/manage/staff/{user}/revoke', [PeopleController::class, 'revoke']);
