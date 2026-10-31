@@ -27,6 +27,7 @@ class BadgeService
             'first_name' => $profile['first_name'] ?? $parts[0],
             'last_name' => $profile['surname'] ?? ($parts[1] ?? ''),
             'department' => $person->department,
+            'staff_number' => $type === 'u' ? $person->staff_number : null,
             'designation' => $type === 'u' ? $person->designation : $person->job_title,
             'organisation' => ($type === 'u' ? ($profile['organisation'] ?? null) : $person->organisation) ?: 'Infrastructure Concession Regulatory Commission',
             'photo_path' => $person->photo_path,
@@ -61,6 +62,8 @@ class BadgeService
             // Account badges carry the person's numeric QR ID for attendance scanners; facilitator-only badges keep the verification link.
             $person = $badge->user_id ? $people->get($badge->user_id) : null;
             $qr = 'data:image/svg+xml;base64,'.base64_encode($writer->writeString($person ? $person->qrCode() : $verifyUrl));
+            // Badges made before staff numbers were captured use the account's current number.
+            $snapshot['staff_number'] = ($snapshot['staff_number'] ?? null) ?: $person?->staff_number;
             $photo = ($snapshot['photo_path'] ?? null) ? PdfService::image(Storage::disk('local')->path($snapshot['photo_path'])) : null;
             $colour = match ($badge->category) { 'admin' => '#8b6726', 'facilitator' => '#24536b', default => $settings['accent'] };
             $fit = $sizes;

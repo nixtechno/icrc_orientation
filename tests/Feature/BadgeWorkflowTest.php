@@ -113,4 +113,22 @@ class BadgeWorkflowTest extends TestCase
         $this->assertSame('Director', $person->fresh()->job_title);
         $this->assertSame('Example Institute', $badge->fresh()->snapshot['organisation']);
     }
+
+    public function test_staff_badges_show_the_staff_id_number_under_the_organisation(): void
+    {
+        $this->actingAs($this->user('admin'));
+        $staff = $this->user(); $staff->forceFill(['staff_number' => 'SCODEX2026042'])->save();
+        $badge = $this->badge($staff);
+        $this->assertSame('SCODEX2026042', $badge->snapshot['staff_number']);
+        $this->get('/badges/'.$badge->slug.'/edit')->assertOk()->assertSeeInOrder(['data-badge-field="organisation"', '<div class="badge-staff-id">SCODEX2026042</div>'], false);
+
+        // Older badges without a stored number use the account's current one; people without a number get no line.
+        $badge->update(['snapshot' => collect($badge->snapshot)->except('staff_number')->all()]);
+        $this->get('/badges/'.$badge->slug.'/edit')->assertSee('<div class="badge-staff-id">SCODEX2026042</div>', false);
+        $other = $this->badge($this->user());
+        $this->get('/badges/'.$other->slug.'/edit')->assertOk()->assertDontSee('class="badge-staff-id"', false);
+        $person = Facilitator::create(['programme_id' => Programme::first()->id, 'name' => 'Example Trainer']);
+        $this->post('/badges/generate', ['single_subject' => 'f:'.$person->id])->assertRedirect();
+        $this->get('/badges/'.Badge::where('facilitator_id', $person->id)->firstOrFail()->slug.'/edit')->assertOk()->assertDontSee('class="badge-staff-id"', false);
+    }
 }
