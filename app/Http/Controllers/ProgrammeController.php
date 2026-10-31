@@ -56,15 +56,18 @@ class ProgrammeController extends Controller
             $q->where('status', 'published');
         }if ($r->filled('q')) {
             $q->where(fn ($q) => $q->where('title', 'like', '%'.$r->q.'%')->orWhere('facilitator', 'like', '%'.$r->q.'%'));
-        }if ($r->filled('week')) {
-            $q->whereHas('day.week', fn ($q) => $q->where('number', $r->week));
         }if ($r->filled('date')) {
             $q->whereHas('day', fn ($q) => $q->whereDate('date', $r->date));
         }if ($r->boolean('review') && $manager) {
             $q->where('reviewed', false)->where('warnings', '!=', '[]');
         }$sessions = $q->orderBy('programme_day_id')->orderBy('id')->get();
+        // Each week is a tab. ?week=N opens that tab; otherwise the current or next week with sessions opens.
+        $weeks = $sessions->groupBy(fn ($s) => $s->day->week->number)->sortKeys();
+        $today = now(Access::programme()->timezone)->toDateString();
+        $selectedWeek = $weeks->has((int) $r->week) ? (int) $r->week
+            : ($weeks->keys()->first(fn ($number) => $weeks[$number]->contains(fn ($s) => $s->day->date->toDateString() >= $today)) ?? $weeks->keys()->first());
 
-        return view('schedule', compact('sessions', 'manager'));
+        return view('schedule', compact('sessions', 'manager', 'weeks', 'selectedWeek'));
     }
 
     public function editSession(ProgrammeSession $session)

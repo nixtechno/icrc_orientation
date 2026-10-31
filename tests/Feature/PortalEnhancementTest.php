@@ -37,6 +37,25 @@ class PortalEnhancementTest extends TestCase
         }
     }
 
+    public function test_timetable_groups_sessions_into_week_tabs(): void
+    {
+        $this->actingAs($this->account('admin'));
+        $this->travelTo(\Carbon\Carbon::parse('2026-11-17 09:00', 'Africa/Lagos'));
+        $html = $this->get('/timetable')->assertOk()->assertSee('role="tablist"', false)->assertSee('timetable-tabs.js', false)->getContent();
+        $dom = new \DOMDocument; @$dom->loadHTML($html); $xpath = new \DOMXPath($dom);
+        $this->assertSame(6, $xpath->query('//*[@role="tab"]')->length);
+        $this->assertSame(6, $xpath->query('//*[@role="tabpanel"]')->length);
+        // The current week opens by default; the other weeks are hidden until chosen.
+        $this->assertSame('true', $xpath->query('//*[@id="week-tab-3"]')->item(0)->getAttribute('aria-selected'));
+        $this->assertSame(5, $xpath->query('//*[@role="tabpanel" and @hidden]')->length);
+        $this->assertFalse($xpath->query('//*[@id="week-panel-3"]')->item(0)->hasAttribute('hidden'));
+
+        $dom = new \DOMDocument; @$dom->loadHTML($this->get('/timetable?week=5')->getContent()); $xpath = new \DOMXPath($dom);
+        $this->assertSame('true', $xpath->query('//*[@id="week-tab-5"]')->item(0)->getAttribute('aria-selected'));
+        $this->assertSame(6, $xpath->query('//*[@role="tab"]')->length);
+        $this->get('/timetable?q=no-such-session-anywhere')->assertOk()->assertSee('No entries match these filters.')->assertDontSee('role="tablist"', false);
+    }
+
     public function test_activation_requires_google_verification_and_accepts_an_eight_character_password(): void
     {
         $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
