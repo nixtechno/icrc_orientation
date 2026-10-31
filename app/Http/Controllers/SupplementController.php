@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\ProgrammeDay;
 use App\Models\ProgrammeSession;
 use App\Models\TimetableProposal;
-use App\Notifications\ProgrammeUpdate;
 use App\Services\Access;
 use App\Services\SupplementImporter;
 use Illuminate\Http\Request;
@@ -51,11 +50,6 @@ class SupplementController extends Controller
             $p->fill(['status' => $values['decision'] === 'accept' ? 'accepted' : 'rejected', 'review_note' => $values['review_note'], 'reviewed_by' => auth()->id(), 'reviewed_at' => now()])->save();
             Access::audit('supplement.review', (string) $p->id, null, $p->toArray());
         });
-        if ($values['decision'] === 'accept') {
-            foreach (Access::staff()->where('active', true)->get() as $user) {
-                $user->notify(new ProgrammeUpdate('Timetable updated', $proposal->proposed['title'], url('/timetable'), Access::programme()->settings['email_notifications'] ?? false));
-            }
-        }
 
         return back()->with('success', 'Review recorded. Both document sources have been retained.');
     }

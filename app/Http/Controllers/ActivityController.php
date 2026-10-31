@@ -163,6 +163,10 @@ return view('activities', ['items' => $items, 'manager' => $manager, 'selectedKi
             Access::audit('activity.assignment', (string) $activity->id, ['participants' => $before], ['mode' => $mode, 'participants' => $activity->participants()->pluck('users.id')->sort()->values()->all()]);
         });
         $message = 'Assignment updated: '.$ids->count().' staff assigned.';
+        // Only people newly added to published work are emailed; drafts wait until they are published.
+        if ($emailed = app(\App\Services\ActivityEmails::class)->notifyAssigned($activity->fresh())) {
+            $message .= ' '.$emailed.' newly assigned '.($emailed === 1 ? 'person was' : 'people were').' emailed.';
+        }
         if ($kept->isNotEmpty()) {
             $message .= ' '.$kept->count().' '.($kept->count() === 1 ? 'person who has' : 'people who have').' already started or submitted '.($kept->count() === 1 ? 'stays' : 'stay').' assigned.';
         }
@@ -232,8 +236,9 @@ return view('activities', ['items' => $items, 'manager' => $manager, 'selectedKi
         abort_if(! $activity->published && $activity->kind === 'quiz' && ! $activity->questions()->exists(), 422, 'Add questions first.');
         $activity->update(['published' => ! $activity->published]);
         Access::audit('activity.publication', (string) $activity->id);
+        $emailed = app(\App\Services\ActivityEmails::class)->notifyAssigned($activity);
 
-        return back()->with('success', 'Publication updated.');
+        return back()->with('success', 'Publication updated.'.($emailed ? ' '.$emailed.' assigned staff '.($emailed === 1 ? 'was' : 'were').' emailed.' : ''));
     }
 
     public function start(Request $r, Activity $activity)

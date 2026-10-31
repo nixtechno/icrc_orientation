@@ -38,8 +38,18 @@ return view('resources', ['items' => $q->latest()->get(), 'manager' => $manager]
         $path = $r->file('file')?->store('resources', 'local');
         Resource::create(['programme_id' => Access::programme()->id, 'uploaded_by' => auth()->id(), 'title' => $v['title'], 'category' => $v['category'] ?? null, 'week' => $v['week'] ?? null, 'url' => $v['url'] ?? null, 'path' => $path, 'filename' => $r->file('file')?->getClientOriginalName(), 'published' => $r->boolean('published')]);
         Access::audit('resource.create', $v['title']);
+        // Materials only email when the uploader asks, and only once they are visible to staff.
+        $emailed = 0;
+        if ($r->boolean('published') && $r->boolean('email_staff')) {
+            $body = '"'.$v['title'].'" has been added to Learning materials'.(! empty($v['week']) ? ' for week '.$v['week'] : '').'.';
+            $notification = new ProgrammeUpdate('New learning material: '.$v['title'], $body, url('/resources'), 'View learning materials');
+            foreach (Access::staff()->where('active', true)->get() as $person) {
+                $person->notify($notification);
+                $emailed++;
+            }
+        }
 
-        return back()->with('success', 'Resource saved.');
+        return back()->with('success', 'Resource saved.'.($emailed ? ' '.$emailed.' staff were emailed.' : ''));
     }
 
     public function downloadResource(Resource $resource)
@@ -93,7 +103,7 @@ return view('announcements', ['items' => $items, 'manager' => $manager]);
             }if (! empty($v['group_name'])) {
                 $q->where('group_name', $v['group_name']);
             }foreach ($q->get() as $u) {
-                $notification = new ProgrammeUpdate($v['title'], $v['body'], url('/announcements'), Access::programme()->settings['email_notifications'] ?? false);
+                $notification = new ProgrammeUpdate($v['title'], $v['body'], url('/announcements'), 'Read the announcement');
                 $notification->delay(Carbon::parse($v['published_at']));
                 $u->notify($notification);
             }
@@ -126,7 +136,7 @@ return back()->with('success', 'Announcement saved.');
         $v = $r->validate(['title' => 'required|string|max:255', 'starts_on' => 'required|date', 'ends_on' => 'required|date|after_or_equal:starts_on', 'timezone' => 'required|timezone', 'about' => 'required|string|max:10000', 'contact' => 'nullable|string|max:2000', 'venue' => 'nullable|string|max:255', 'privacy_url' => 'nullable|url:http,https', 'lateness_minutes' => 'required|integer|min:0|max:120', 'window_minutes' => 'required|integer|min:1|max:480', 'logo' => 'nullable|image|mimes:png,jpg,jpeg|max:2048']);
         $p = Access::programme();
         $before = $p->toArray();
-        $settings = [...($p->settings ?? []), ...collect($v)->except(['title', 'starts_on', 'ends_on', 'timezone', 'logo'])->all(), 'excused_in_denominator' => $r->boolean('excused_in_denominator'), 'email_notifications' => $r->boolean('email_notifications')];
+        $settings = [...($p->settings ?? []), ...collect($v)->except(['title', 'starts_on', 'ends_on', 'timezone', 'logo'])->all(), 'excused_in_denominator' => $r->boolean('excused_in_denominator')];
         if ($r->hasFile('logo')) {
             $settings['logo'] = $r->file('logo')->store('branding', 'public');
         }$p->update([...collect($v)->only(['title', 'starts_on', 'ends_on', 'timezone'])->all(), 'settings' => $settings]);

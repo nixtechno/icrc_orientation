@@ -5,8 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\ProgrammeSession;
 use App\Models\SessionAnswer;
 use App\Models\SessionQuestion;
-use App\Models\User;
-use App\Notifications\ProgrammeUpdate;
 use App\Services\Access;
 use Illuminate\Http\Request;
 
@@ -50,10 +48,6 @@ class SessionQaController extends Controller
         $v = $r->validate(['body' => 'required|string|max:5000']);
         $question = SessionQuestion::create(['session_id' => $session->id, 'user_id' => auth()->id(), 'body' => $v['body']]);
         Access::audit('qa.question.submit', (string) $question->id);
-        $recipients = User::where('active', true)->whereHas('programmes', fn ($q) => $q->where('programmes.id', Access::programme()->id))->get()->filter(fn ($u) => $u->canManage('qa'));
-        foreach ($recipients as $u) {
-            $u->notify(new ProgrammeUpdate('Session question awaiting moderation', 'A participant submitted a question for review.', url('/qa/sessions/'.$session->getRouteKey())));
-        }
 
 return back()->with('success', 'Question submitted for moderation.');
     }
@@ -67,9 +61,6 @@ return back()->with('success', 'Question submitted for moderation.');
         $published = $r->user()->canManage('qa') && $r->boolean('published');
         $answer = SessionAnswer::create(['session_question_id' => $question->id, 'user_id' => auth()->id(), 'body' => $v['body'], 'published' => $published]);
         Access::audit('qa.answer.create', (string) $answer->id);
-        if ($published && $question->published && ! $question->hidden) {
-            $this->notify($question);
-        }
 
 return back()->with('success', $published ? 'Answer published.' : 'Answer saved for moderator review.');
     }
@@ -88,15 +79,7 @@ return back()->with('success', $published ? 'Answer published.' : 'Answer saved 
             'publish' => ['published' => true, 'hidden' => false],'unpublish' => ['published' => false],'hide' => ['hidden' => true],'unhide' => ['hidden' => false]
         });
         Access::audit('qa.moderate', $type.':'.$id, $before, ['record' => $item->toArray(), 'reason' => $v['reason']]);
-        if ($type === 'answer' && $v['action'] === 'publish' && $question->published && ! $question->hidden) {
-            $this->notify($question);
-        }
 
 return back()->with('success', 'Moderation recorded.');
-    }
-
-    private function notify(SessionQuestion $q): void
-    {
-        $q->user->notify(new ProgrammeUpdate('Your session question has an answer','Open the session Q&A to read the published response.',url('/qa/sessions/'.$q->session->getRouteKey())));
     }
 }

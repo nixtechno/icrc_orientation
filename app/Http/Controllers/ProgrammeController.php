@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\ProgrammeSession;
-use App\Notifications\ProgrammeUpdate;
 use App\Services\Access;
 use App\Services\AttendanceService;
 use Illuminate\Http\Request;
@@ -93,11 +92,6 @@ class ProgrammeController extends Controller
             $session->save();
             Access::audit('session.update', (string) $session->id, $before, $session->toArray());
         });
-        if ($session->status === 'published') {
-            foreach (Access::staff()->where('active', true)->get() as $u) {
-                $u->notify(new ProgrammeUpdate('Timetable updated', $session->title ?? 'Timetable entry updated', url('/timetable'), Access::programme()->settings['email_notifications'] ?? false));
-            }
-        }
 
 return redirect('/timetable')->with('success','Timetable updated; original source retained.');
     }
