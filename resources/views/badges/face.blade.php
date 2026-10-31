@@ -9,7 +9,7 @@
 </div><div class="badge-motto">{{ $settings['footer'] }}</div><div class="badge-rule"></div>
 <div class="badge-event"><strong>{{ $p->starts_on->format('j M') }} &ndash; {{ $p->ends_on->format('j M Y') }}</strong><small>{{ $p->settings['venue']??'Venue to be confirmed' }}</small></div>
 <div class="badge-role" style="background:{{ $item['colour'] }}">{{ $item['badge']->category }}</div>
-<div class="badge-qr"><img src="{{ $item['qr'] }}" alt="Badge verification QR code"></div>
+<div class="badge-qr"><img src="{{ $item['qr'] }}" alt="Badge QR code"></div>
 <div class="badge-producer">PRODUCERS @if($producer)<img src="{{ $producer }}" alt="Brevity Anderson">@endif</div>
 
 </div>

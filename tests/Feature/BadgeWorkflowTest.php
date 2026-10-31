@@ -36,7 +36,7 @@ class BadgeWorkflowTest extends TestCase
             $count = User::count(); $badge = $this->badge($user);
             $this->assertEquals($count, User::count()); $this->assertSame($user->role, $badge->category);
             $html = $this->get('/badges/'.$badge->slug.'/edit')->assertOk()->assertSee('Edit badge')->assertSee('Print badge')->assertSee('Confirm collection')->assertSee('badge-back')->assertSee($badge->collection_code)->getContent();
-            $this->assertSame(2, substr_count($html, 'alt="Badge verification QR code"'));
+            $this->assertSame(2, substr_count($html, 'alt="Badge QR code"'));
             $this->assertNull($badge->fresh()->printed_at);
             $item = app(BadgeService::class)->data(collect([$badge]))['items']->first();
             $this->assertSame(url('/badges/'.$badge->slug.'/verify'), $item['verifyUrl']);

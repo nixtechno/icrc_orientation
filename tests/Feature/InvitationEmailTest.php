@@ -28,8 +28,17 @@ class InvitationEmailTest extends TestCase
             $this->assertNotNull($record);
             $this->assertSame($mail->expiresAt->format('Y-m-d H:i:s'), $record->expires_at);
             $html = $mail->render();
-            $this->assertStringContainsString('Amina Example', $html);
-            $this->assertStringContainsString('Facilitator', $html);
+            $this->assertStringContainsString('WELCOME TO THE ICRC SCODEX TRAINING PROGRAMME!', $html);
+            $this->assertStringContainsString('CBN, Central Area, Abuja', $html);
+            $this->assertStringContainsString('href="https://icrcscodex.bcommz.com"', $html);
+            $this->assertStringContainsString('amina@example.test', $html);
+            $this->assertStringContainsString('Dear Amina Example,', $html);
+            $this->assertSame(5, substr_count($html, 'Monday, 2nd November 2026')); // Four in the body, one in the inbox preview line.
+            $this->assertStringNotContainsString('{start_date}', $html);
+            $this->assertSame('Welcome to the ICRC SCODEX Training Programme | Activate your account', $mail->subjectLine);
+            $this->assertStringContainsString('Select the <strong style="color:#2d4c34;font-weight:600">Create your password &amp; sign in</strong> button below.', $html);
+            $this->assertSame(1, substr_count($html, 'SCODEX Training Coordination Team'));
+            $this->assertStringNotContainsString('ICRC Programme Team', $html);
             $this->assertStringContainsString('Create your password &amp; sign in', $html);
             $this->assertStringContainsString($mail->activationUrl, $html);
             $this->assertMatchesRegularExpression('/src="(?:cid:|data:image\/)/', $html);
@@ -53,8 +62,11 @@ class InvitationEmailTest extends TestCase
         $this->assertStringContainsString('Create your password &amp; sign in', $message->getHtmlBody());
         $this->assertStringContainsString('https://orientation.example.test/invitation/preview', $message->getTextBody());
         $this->assertStringContainsString('cid:', $message->getHtmlBody());
-        $this->assertCount(1, $message->getAttachments());
-        $this->assertSame('inline', $message->getAttachments()[0]->getDisposition());
-        $this->assertSame('image', $message->getAttachments()[0]->getMediaType());
+        // Inline logo and badge printing QR, plus the QR as a downloadable attachment.
+        $parts = collect($message->getAttachments());
+        $this->assertCount(3, $parts);
+        $this->assertSame(2, $parts->filter(fn ($part) => $part->getDisposition() === 'inline')->count());
+        $this->assertSame(['ICRC-SCODEX-QR-code.png'], $parts->filter(fn ($part) => $part->getDisposition() === 'attachment')->map->getFilename()->values()->all());
+        $this->assertTrue($parts->every(fn ($part) => $part->getMediaType() === 'image'));
     }
 }

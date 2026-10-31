@@ -1,0 +1,30 @@
+/* Standalone badge scanner stations: one full-screen page per direction. */
+@font-face{font-family:'Manrope';src:url('fonts/manrope/Manrope-variable.ttf') format('truetype');font-weight:200 800;font-display:swap}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body.station{--accent:#075332;--accent-soft:#e8f1eb;min-height:100vh;min-height:100svh;display:flex;align-items:center;justify-content:center;padding:32px 16px;background:#f7f8f4;color:#1d3326;font-family:'Manrope',system-ui,sans-serif}
+body.station-sign-out{--accent:#8b6726;--accent-soft:#f6efe2}
+.station-panel{width:100%;max-width:560px;text-align:center}
+.station-brand{display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:44px}
+.station-brand img{width:112px;height:auto}
+.station-brand span{font-size:12px;font-weight:700;letter-spacing:2.4px;color:#5d6d61}
+.station h1{margin:0;font-size:clamp(44px,9vw,72px);line-height:1.05;font-weight:800;letter-spacing:-1.5px;color:var(--accent)}
+.station-lead{margin:12px 0 36px;font-size:19px;color:#4f604f}
+.station-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.station input{display:block;width:100%;padding:20px 22px;border:2px solid var(--accent);border-radius:14px;background:#fff;font:600 24px/1.2 'Manrope',system-ui,sans-serif;letter-spacing:1.5px;text-align:center;color:#1d3326;outline:none;box-shadow:0 10px 30px #123b2614}
+.station input:focus{box-shadow:0 0 0 5px var(--accent-soft),0 10px 30px #123b2614}
+.station input::placeholder{color:#9aa69d;letter-spacing:.5px;font-weight:500}
+#scanner-result{min-height:64px;margin:28px 0 0;padding:16px 18px;border-radius:12px;font-size:18px;font-weight:600;line-height:1.45}
+#scanner-result.muted{color:#6b786f;font-weight:500}
+#scanner-result.notice{background:#e5f3e8;color:#0d5a2c}
+#scanner-result.errors{background:#fbe9e7;color:#9a2a1c}
+.station-date{margin:36px 0 0;font-size:13px;color:#7d8a80}
+@media(max-width:560px){.station-brand{margin-bottom:32px}.station-brand img{width:92px}.station-lead{font-size:17px;margin-bottom:28px}.station input{font-size:20px;padding:17px 16px}#scanner-result{font-size:16px}}
+/* Badge print station: the badge loads off-screen and prints through the browser's print dialog. */
+.station-print .station-panel{max-width:700px}
+.station-print-frame{position:fixed;left:-10000px;top:0;width:210mm;height:297mm;border:0}
+#print-result{min-height:64px;margin:28px 0 0;padding:16px 18px;border-radius:12px;font-size:18px;font-weight:600;line-height:1.45}
+#print-result.muted{color:#6b786f;font-weight:500}
+#print-result.notice{background:#e5f3e8;color:#0d5a2c}
+#print-result.errors{background:#fbe9e7;color:#9a2a1c}
+@media(max-width:560px){#print-result{font-size:16px}}

@@ -38,7 +38,51 @@ class User extends Authenticatable
         'remember_token',
         'profile',
         'photo_path',
+        'qr_code',
+        'print_code',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (User $user): void {
+            $user->qr_code ??= self::newCode();
+            $user->print_code ??= self::newCode();
+        });
+    }
+
+    /**
+     * A unique 16-digit number. Each person has two that never match: the badge QR ID read by
+     * attendance scanners, and the print code sent with their invitation for badge printing.
+     */
+    public static function newCode(): string
+    {
+        do {
+            $code = (string) random_int(1, 9);
+            for ($i = 1; $i < 16; $i++) $code .= random_int(0, 9);
+        } while (self::where('qr_code', $code)->orWhere('print_code', $code)->exists());
+
+        return $code;
+    }
+
+    /** The badge QR ID, issuing one for records inserted without it (e.g. legacy SQL imports). */
+    public function qrCode(): string
+    {
+        if (! $this->qr_code) {
+            $this->forceFill(['qr_code' => self::newCode()])->saveQuietly();
+        }
+
+        return $this->qr_code;
+    }
+
+    /** The badge print code, issuing one for people who do not have it yet. */
+    public function printCode(): string
+    {
+        if (! $this->print_code) {
+            $this->forceFill(['print_code' => self::newCode()])->saveQuietly();
+        }
+
+        return $this->print_code;
+    }
 
     /**
      * Get the attributes that should be cast.

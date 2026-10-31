@@ -20,42 +20,110 @@ class InvitationEmail
         'email' => 'Email address',
         'role' => 'Account type',
         'programme_dates' => 'Programme dates',
+        'start_date' => 'Programme start date',
         'timezone' => 'Programme timezone',
         'expiry' => 'Invitation expiry',
     ];
 
-    public const DEFAULT_SUBJECT = 'Welcome to the ICRC Orientation Programme | Create your password';
+    public const DEFAULT_SUBJECT = 'Welcome to the ICRC SCODEX Training Programme | Activate your account';
 
     public const DEFAULT_BUTTON = 'Create your password & sign in';
 
     public const DEFAULT_BODY = <<<'MD'
+🎓 **WELCOME TO THE ICRC SCODEX TRAINING PROGRAMME!**
+
 Dear {name},
 
-Welcome to the **ICRC Orientation Programme for 2026 Recruited Staff**, running from **{programme_dates}**. An account has been created for you with **{role}** access. This email explains what the programme portal offers and how to get started.
+**Congratulations and Welcome Aboard!** 🎉
 
-## About the programme portal
+If you are receiving this message, it means you have been **successfully enrolled in the ICRC SCODEX Training Programme**, scheduled to commence on **{start_date}**.
 
-The portal is your single home for the orientation. It brings together the timetable, daily attendance, learning materials, assessments and programme updates, so you always know where to be and what is expected of you. All programme times are shown in {timezone}.
+We are delighted to welcome you to this exciting and impactful learning experience!
 
-## What you can do in the portal
+📌 **TRAINING COMMENCEMENT DETAILS**
 
-- **Programme timetable**: follow each week and day of the programme, with session times, topics and facilitators.
-- **Daily attendance**: check in and check out once each programme day using the signed daily QR code at the venue. Your attendance record is always visible to you.
-- **Assessments and assignments**: take quizzes and submit assignments and presentations before their deadlines. Scores and feedback appear once they are released.
-- **Resources**: open the presentations, handbooks and materials published for each session.
-- **Announcements**: receive important updates from the programme team.
-- **Session Q&A**: ask questions about sessions. Facilitators answer, and published answers are shared with participants.
-- **Your profile**: keep your contact details up to date and add a photo for your programme badge.
+🗓️ **Start Date:** {start_date}
 
-## Getting started
+⏰ **Time:** 8:00 AM Prompt
 
-1. Select the button below to open your personal activation page.
-2. Confirm your details and complete any missing profile information.
-3. Read and acknowledge the privacy notice.
-4. Create a secure password of at least 8 characters.
-5. Sign in with your email address and your new password.
+📍 **Venue:** CBN, Central Area, Abuja
 
-Your activation link is personal to you, so please do not forward this email. If you need help at any point, contact the programme team.
+👔 **Dress Code:** Corporate Attire – Dress Smart and Professional
+
+💻 **Laptop:** All participants are encouraged to come with their laptops and chargers.
+
+🎒 **COLLECTION OF TRAINING BAGS & LEARNING MATERIALS**
+
+Please come with your **unique QR Code**, which will be scanned at the venue for verification and collection of your training bag and learning materials.
+
+Ensure your QR Code is readily accessible on your phone or as a printed copy to facilitate a smooth verification and collection process.
+
+🔐 **IMPORTANT: COMPLETE YOUR ONBOARDING PROCESS**
+
+Before arriving for the training, you are required to **activate your account and complete your onboarding process**.
+
+🌐 **Access the SCODEX Training Portal:**
+https://icrcscodex.bcommz.com
+
+**Follow these steps:**
+
+1. Select the **Create your password & sign in** button below.
+2. Complete your boarding/onboarding process.
+3. Create your personal login password.
+4. Log in to your training dashboard.
+5. Familiarise yourself with the portal and its features.
+
+⚠️ **Please complete your portal activation and onboarding before the training commences on {start_date}.**
+
+💻 **INTRODUCING YOUR DIGITAL LEARNING PORTAL**
+
+The **SCODEX Training Portal** will serve as your central learning and engagement platform throughout the programme.
+
+Through the portal, you will be able to:
+
+✅ **Attendance:** Record and track your daily training attendance.
+
+✅ **Learning Materials:** Access course documents, presentations and other training resources.
+
+✅ **Assignments:** Receive, complete and submit your assignments online.
+
+✅ **Assessments:** Participate in quizzes, tests and knowledge evaluations.
+
+✅ **Presentations:** Access and submit presentation-related activities.
+
+✅ **Learning Progress:** Monitor your training participation and progress.
+
+We encourage all participants to explore the portal before the training begins to ensure a smooth and productive learning experience.
+
+📢 **IMPORTANT REMINDERS**
+
+✔ **Arrive at the venue by 8:00 AM prompt.**
+
+✔ Dress smartly in corporate attire.
+
+✔ Come with your laptop and charger.
+
+✔ Complete your portal activation and onboarding before Monday.
+
+✔ Keep your unique QR Code accessible for verification and collection of your training materials.
+
+✔ Familiarise yourself with your SCODEX Training Dashboard.
+
+✔ Be punctual, prepared and ready to participate actively.
+
+🚀 **GET READY FOR AN EXCITING LEARNING EXPERIENCE!**
+
+We look forward to welcoming you on **{start_date}, at CBN, Central Area, Abuja, by 8:00 AM.**
+
+Get ready for an engaging, practical, interactive and rewarding learning experience designed to enhance your knowledge, strengthen your skills and support your professional development.
+
+**Once again, congratulations and welcome to the ICRC SCODEX Training Programme!** 🎉🎓
+
+Warm regards,
+
+**SCODEX Training Coordination Team**
+
+🌐 https://icrcscodex.bcommz.com
 MD;
 
     public static function defaults(): array
@@ -102,6 +170,7 @@ MD;
             '{email}' => (string) $recipient->email,
             '{role}' => ucfirst((string) $recipient->role),
             '{programme_dates}' => $programme->starts_on->format('j F').' – '.$programme->ends_on->format('j F Y'),
+            '{start_date}' => $programme->starts_on->format('l, jS F Y'),
             '{timezone}' => $programme->timezone,
             '{expiry}' => $expiresAt->copy()->timezone($programme->timezone)->format('j F Y \a\t H:i'),
         ];
