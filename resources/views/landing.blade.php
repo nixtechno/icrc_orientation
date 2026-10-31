@@ -2,7 +2,7 @@
 @section('title','ICRC SCODEX 2026')
 @section('description','ICRC SCODEX 2026 — Staff Capacity, Onboarding, Development & Excellence Experience. Building Competence, Inspiring Excellence, Strengthening Institutional Capacity.')
 @section('content')
-<link rel="stylesheet" href="{{ asset('orientation-hero.css') }}?v=20261029a">
+<link rel="stylesheet" href="{{ asset('orientation-hero.css') }}?v=20261031e">
 @php
     $zone=$programme->timezone;
     $logoUrl=$programme->logoUrl();
@@ -24,7 +24,7 @@
     <div class="hero-copy"><div class="hero-kicker"><span></span> ONBOARDING &amp; CAPACITY DEVELOPMENT</div><h1 id="hero-title"><span class="hero-title-line"><span class="hero-title-word">ICRC</span></span> <span class="hero-title-line"><em class="hero-title-word">SCODEX</em></span> <span class="hero-title-line"><span class="hero-title-word">2026</span></span></h1><p class="hero-lead">Staff Capacity, Onboarding, Development &amp; Excellence Experience</p><p class="scodex-theme"><span>OUR THEME</span>Building Competence, Inspiring Excellence, Strengthening Institutional Capacity.</p><div class="buttons"><a class="button gold" href="#programme">Explore the programme <span aria-hidden="true">↓</span></a></div><div class="hero-dateline"><span class="date-icon" aria-hidden="true">02<small>NOV</small></span><div><strong>{{ $programme->starts_on->format('j F') }} – {{ $programme->ends_on->format('j F Y') }}</strong><span>Six weeks · Abuja, Nigeria</span></div></div>@if($programme->settings['venue']??null)<p class="hero-venue">Venue: {{ $programme->settings['venue'] }}</p>@endif</div>
     <div class="orientation-portrait" aria-label="ICRC SCODEX 2026 staff onboarding and capacity development">
         <div class="portrait-halo" aria-hidden="true"></div>
-        <img class="orientation-host" src="{{ asset('brand/orientation-colleagues-v2.png') }}" alt="A Nigerian woman and male colleague welcoming new staff, with the woman pointing towards the orientation programme introduction" width="1254" height="1254" fetchpriority="high">
+        <img class="orientation-host" src="{{ asset('brand/hero-speaker-cutout-v1.webp') }}" alt="A speaker addresses the programme from a podium bearing the Nigerian coat of arms and the ICRC seal" width="1166" height="1195" fetchpriority="high">
         <div class="portrait-note"><span class="note-mark" aria-hidden="true">✓</span><div><span>YOUR NEXT CHAPTER</span><p>A foundation for service.</p></div></div>
     </div>
     <a class="scroll-cue" href="#about"><span aria-hidden="true">↓</span> Discover your orientation</a>
