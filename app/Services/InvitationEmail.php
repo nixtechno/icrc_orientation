@@ -30,7 +30,7 @@ class InvitationEmail
     public const DEFAULT_BUTTON = 'Create your password & sign in';
 
     public const DEFAULT_BODY = <<<'MD'
-🎓 **WELCOME TO THE ICRC SCODEX TRAINING PROGRAMME!**
+🎓 **WELCOME TO THE ICRC Staff Capacity, On-Boarding, Development Excellence Experience (SCODEX) 2026**
 
 Dear {name},
 

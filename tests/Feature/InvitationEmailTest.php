@@ -28,7 +28,7 @@ class InvitationEmailTest extends TestCase
             $this->assertNotNull($record);
             $this->assertSame($mail->expiresAt->format('Y-m-d H:i:s'), $record->expires_at);
             $html = $mail->render();
-            $this->assertStringContainsString('WELCOME TO THE ICRC SCODEX TRAINING PROGRAMME!', $html);
+            $this->assertStringContainsString('WELCOME TO THE ICRC Staff Capacity, On-Boarding, Development Excellence Experience (SCODEX) 2026', $html);
             $this->assertStringContainsString('CBN, Central Area, Abuja', $html);
             $this->assertStringContainsString('href="https://icrcscodex.bcommz.com"', $html);
             $this->assertStringContainsString('amina@example.test', $html);
