@@ -55,6 +55,8 @@ class QuizAttemptService
                 $locked->draft_version = $revision;
             }
             $locked->score = $this->score($locked->activity, $locked->answers ?? []);
+            // Fully auto-marked assessments show the score straight away; written answers wait for a reviewer.
+            $locked->released_at = $locked->score !== null ? now() : null;
             $locked->submitted_at = now();
             $locked->submission_reason = $reason;
             $locked->save();

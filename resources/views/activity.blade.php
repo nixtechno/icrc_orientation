@@ -55,7 +55,8 @@
 @endforeach
 @if($s->path)<p><a href="/submissions/{{ $s->getRouteKey() }}/download">Download submitted file</a></p>
 @endif
-@if($s->released_at)<p><strong>Released score: {{ $s->score }}</strong></p><p class="preline">{{ $s->feedback }}</p>
+@if($s->released_at)<p><strong>Score: {{ +$s->score }}@if($activity->kind==='quiz'&&$activity->questions->sum('points')) / {{ +$activity->questions->sum('points') }}@endif</strong></p>@if(filled($s->feedback))<p class="preline">{{ $s->feedback }}</p>@endif
+@elseif($activity->kind==='quiz')<p class="badge warning">Awaiting marking of your written answers</p>
 @else<p class="badge warning">Awaiting review / result release</p>
 @endif
 @endif</section>

@@ -103,7 +103,7 @@ class FullscreenQuizTest extends TestCase
         $this->postJson($base.'/draft',['answers'=>[$this->question->id=>'A'],'draft_version'=>1])->assertOk()->assertJson(['version'=>2]);
         $this->assertSame('B',$submission->fresh()->answers[$this->question->id]);
         $this->postJson($base.'/auto-submit',['reason'=>'fullscreen_exit','answers_present'=>1,'answers'=>$answers,'draft_version'=>3])->assertOk()->assertJson(['submitted'=>true]);
-        $submission->refresh();$this->assertEquals(8,$submission->score);$this->assertNotNull($submission->submitted_at);$this->assertNull($submission->released_at);$this->assertSame('fullscreen_exit',$submission->submission_reason);
+        $submission->refresh();$this->assertEquals(8,$submission->score);$this->assertNotNull($submission->submitted_at);$this->assertNotNull($submission->released_at);$this->assertSame('fullscreen_exit',$submission->submission_reason);
         $this->postJson($base.'/auto-submit',['reason'=>'page_exit','answers_present'=>1,'answers'=>[$this->question->id=>'A'],'draft_version'=>4])->assertOk();
         $this->postJson($base.'/complete',['answers'=>[$this->question->id=>'A']])->assertOk();
         $this->assertEquals(8,$submission->fresh()->score);$this->assertSame('fullscreen_exit',$submission->fresh()->submission_reason);
@@ -132,7 +132,8 @@ class FullscreenQuizTest extends TestCase
     {
         $written=Question::create(['activity_id'=>$this->quiz->id,'type'=>'long_answer','prompt'=>'Explain','points'=>10]);$submission=$this->start();$base='/submissions/'.$submission->slug;
         $this->postJson($base.'/complete',['answers'=>[$this->question->id=>'B',$written->id=>'My explanation'],'draft_version'=>1])->assertOk()->assertJson(['submitted'=>true]);
-        $this->assertNull($submission->fresh()->score);$this->assertSame('manual',$submission->fresh()->submission_reason);
+        $this->assertNull($submission->fresh()->score);$this->assertNull($submission->fresh()->released_at);$this->assertSame('manual',$submission->fresh()->submission_reason);
+        $this->get('/activities/'.$this->quiz->slug)->assertSee('Awaiting marking of your written answers')->assertDontSee('Score:');
         $this->postJson($base.'/auto-submit',['reason'=>'fullscreen_exit'])->assertOk();
         $this->assertSame('My explanation',$submission->fresh()->answers[$written->id]);$this->assertSame('manual',$submission->fresh()->submission_reason);
     }

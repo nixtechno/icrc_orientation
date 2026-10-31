@@ -390,15 +390,18 @@ return view('activities', ['items' => $items, 'manager' => $manager, 'selectedKi
             if ($s->submitted_at) {
                 return false;
             }
-            $s->update(['body' => $v['body'] ?? null, 'answers' => collect($answers)->only($a->questions->pluck('id')->all())->all(), 'path' => $r->file('file')?->store('submissions', 'local'), 'filename' => $r->file('file')?->getClientOriginalName(), 'score' => $a->kind === 'quiz' && ! $written ? $score : null, 'submitted_at' => now(), 'submission_reason'=>$a->kind==='quiz'?'manual':null, 'draft_version'=>max($s->draft_version,(int)($v['draft_version']??0))]);
+            $s->update(['body' => $v['body'] ?? null, 'answers' => collect($answers)->only($a->questions->pluck('id')->all())->all(), 'path' => $r->file('file')?->store('submissions', 'local'), 'filename' => $r->file('file')?->getClientOriginalName(), 'score' => $a->kind === 'quiz' && ! $written ? $score : null, 'released_at' => $a->kind === 'quiz' && ! $written ? now() : null, 'submitted_at' => now(), 'submission_reason'=>$a->kind==='quiz'?'manual':null, 'draft_version'=>max($s->draft_version,(int)($v['draft_version']??0))]);
             Access::audit('submission.submit', (string) $s->id);
             return true;
         });
 
         if ($r->expectsJson()) return response()->json(['submitted'=>true,'return_url'=>url('/activities/'.$a->getRouteKey())])->header('Cache-Control','private, no-store');
-        return redirect('/activities/'.$a->getRouteKey())->with('success', $saved
-            ? 'Work submitted. Results remain private until released.'
-            : 'This attempt has already been submitted. Your saved answers have not changed.');
+        return redirect('/activities/'.$a->getRouteKey())->with('success', match (true) {
+            ! $saved => 'This attempt has already been submitted. Your saved answers have not changed.',
+            $a->kind === 'quiz' && ! $written => 'Assessment submitted. Your score: '.(+$score).' / '.(+$a->questions->sum('points')).'.',
+            $a->kind === 'quiz' => 'Assessment submitted. Your score will appear once your written answers have been marked.',
+            default => 'Work submitted. Results remain private until released.',
+        });
     }
 
     public function review(Request $r, Submission $submission)

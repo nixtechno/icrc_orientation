@@ -9,6 +9,7 @@
             default => ['View presentation', false],
         },
         'quiz' => match (true) {
+            (bool) $a->staff_released => ['View score', false],
             (bool) $a->staff_submitted => ['View assessment', false],
             $open && $a->staff_started => ['Continue assessment', true],
             $open => ['Start assessment', true],
