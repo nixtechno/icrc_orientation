@@ -40,6 +40,7 @@ class ActivityController extends Controller
             $q->withExists([
                 'submissions as staff_submitted' => fn ($query) => $query->where('user_id', $r->user()->id)->whereNotNull('submitted_at'),
                 'submissions as staff_started' => fn ($query) => $query->where('user_id', $r->user()->id)->whereNull('submitted_at'),
+                'submissions as staff_released' => fn ($query) => $query->where('user_id', $r->user()->id)->whereNotNull('released_at'),
             ]);
         }
 

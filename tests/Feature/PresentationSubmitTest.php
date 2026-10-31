@@ -35,8 +35,8 @@ class PresentationSubmitTest extends TestCase
     public function test_staff_submit_a_powerpoint_or_text_directly_from_the_presentation_page(): void
     {
         $amina=$this->user('staff','Amina Bello');$grace=$this->user('staff','Grace Okafor');$activity=$this->presentation([$amina,$grace]);$url='/activities/'.$activity->slug;
-        $this->actingAs($amina)->get($url)->assertOk()->assertSee('Submit your presentation')->assertSee('name="file"',false)->assertSee('name="body"',false)->assertSee('.pptx',false)->assertDontSee('Start / continue an attempt');
-        $this->get('/activities?kind=presentation')->assertOk()->assertSee('Not submitted');
+        $this->actingAs($amina)->get($url)->assertOk()->assertSee('Submit your presentation')->assertSee('name="file"',false)->assertSee('name="body"',false)->assertSee('.pptx',false)->assertDontSee('Start / continue an attempt')->assertDontSee('PUBLISHED')->assertDontSee('All presentations');
+        $this->get('/activities?kind=presentation')->assertOk()->assertSee('Not submitted')->assertSee('class="button small activity-card-cta" href="'.$url.'">Submit presentation</a>',false)->assertDontSee('View activity');
         $this->from($url)->post($url.'/presentation',['body'=>''])->assertRedirect($url)->assertSessionHasErrors('body');
         $this->from($url)->post($url.'/presentation',['file'=>UploadedFile::fake()->create('notes.exe',10,'application/x-msdownload')])->assertSessionHasErrors('file');
         $this->from($url)->post($url.'/presentation',['file'=>UploadedFile::fake()->create('huge.pptx',51201,self::PPTX)])->assertSessionHasErrors('file');
@@ -46,7 +46,7 @@ class PresentationSubmitTest extends TestCase
         $submission=Submission::sole();$first=$submission->path;
         $this->assertSame(['my-deck.pptx','Speaker notes',1],[$submission->filename,$submission->body,$submission->attempt]);$this->assertNotNull($submission->submitted_at);Storage::disk('local')->assertExists($first);
         $this->get($url)->assertSee('Replace your submission')->assertSee('my-deck.pptx');
-        $this->get('/activities?kind=presentation')->assertSee('Submitted');
+        $this->get('/activities?kind=presentation')->assertSee('Submitted')->assertSee('View or update submission')->assertDontSee('>Submit presentation</a>',false);
 
         // Leaving the file empty keeps the current file; a new file replaces it.
         $this->post($url.'/presentation',['body'=>'Updated notes'])->assertSessionHasNoErrors();
@@ -67,11 +67,14 @@ class PresentationSubmitTest extends TestCase
         $this->actingAs($staff)->post($url.'/presentation',['body'=>'First version'])->assertSessionHasNoErrors();
         Submission::sole()->update(['score'=>15]);
         $this->get($url)->assertSee('has been reviewed')->assertDontSee('name="file"',false);
+        Submission::sole()->update(['released_at'=>now()]);
+        $this->get('/activities?kind=presentation')->assertSee('View feedback');
         $this->post($url.'/presentation',['body'=>'Changed'])->assertStatus(422);
         $this->assertSame('First version',Submission::sole()->body);
 
         $late=$this->presentation([$staff],['title'=>'Closed presentation','due_at'=>now()->subHour()]);
         $this->get('/activities/'.$late->slug)->assertSee('submissions are closed')->assertDontSee('name="file"',false);
+        $this->get('/activities?kind=presentation')->assertSee('View presentation');
         $this->post('/activities/'.$late->slug.'/presentation',['body'=>'Too late'])->assertStatus(422);
     }
 

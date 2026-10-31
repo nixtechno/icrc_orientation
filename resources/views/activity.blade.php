@@ -1,6 +1,6 @@
 @extends('layout')
 
-@section('content')<div class="page-heading"><div><span class="eyebrow">{{ $activity->label() }} · {{ $activity->published?'PUBLISHED':'DRAFT' }}</span><h1>{{ $activity->title }}</h1><p class="muted">{{ $activity->due_at?'Due '.$activity->due_at->format('j F Y · H:i'):'No deadline' }}{{ $activity->kind==='presentation'?'':' · '.$activity->attempts.' attempt(s)' }}{{ $activity->time_limit?' · '.$activity->time_limit.' minute limit':'' }}</p></div><div class="buttons">@if($manager)<form method="post" action="/activities/{{ $activity->getRouteKey() }}/publish">@csrf<button class="{{ $activity->published?'secondary':'' }}">{{ $activity->published?'Unpublish':'Publish' }} {{ $activity->label() }}</button></form>@endif @unless($manager)<a href="/activities?kind={{ $activity->kind }}">{{ match($activity->kind){'assignment'=>'All assignments','presentation'=>'All presentations',default=>'All assessments'} }}</a>@endunless</div></div>
+@section('content')<div class="page-heading"><div><span class="eyebrow">{{ $activity->label() }}@if($manager) · {{ $activity->published?'PUBLISHED':'DRAFT' }}@endif</span><h1>{{ $activity->title }}</h1><p class="muted">{{ $activity->due_at?'Due '.$activity->due_at->format('j F Y · H:i'):'No deadline' }}{{ $activity->kind==='presentation'?'':' · '.$activity->attempts.' attempt(s)' }}{{ $activity->time_limit?' · '.$activity->time_limit.' minute limit':'' }}</p></div><div class="buttons">@if($manager)<form method="post" action="/activities/{{ $activity->getRouteKey() }}/publish">@csrf<button class="{{ $activity->published?'secondary':'' }}">{{ $activity->published?'Unpublish':'Publish' }} {{ $activity->label() }}</button></form>@endif</div></div>
 @if(!$manager)<section class="card"><h2>Instructions</h2><p class="preline">{{ $activity->instructions }}</p>
 @if($activity->kind==='quiz')
 @include('partials.quiz-launch')
@@ -8,7 +8,7 @@
 @include('partials.presentation-submit')
 @else<form method="post" action="/activities/{{ $activity->getRouteKey() }}/start">@csrf<button>Start / continue an attempt</button></form>
 @endif</section>
-@else<link rel="stylesheet" href="{{ asset('activity-manage.css') }}?v=20261101f"><script src="{{ asset('audience-picker.js') }}?v=20261101a" defer></script><script src="{{ asset('activity-delete.js') }}?v=20261101a" defer></script>
+@else<link rel="stylesheet" href="{{ asset('activity-manage.css') }}?v=20261101g"><script src="{{ asset('audience-picker.js') }}?v=20261101a" defer></script><script src="{{ asset('activity-delete.js') }}?v=20261101a" defer></script>
 <div class="manage-grid">
 <section class="card"><h2>Instructions</h2><p class="preline">{{ $activity->instructions }}</p>
 <details @if($errors->hasAny(['title','instructions','due_at'])) open @endif><summary>Edit details</summary><form method="post" action="/activities/{{ $activity->getRouteKey() }}" style="margin-top:16px">@csrf
