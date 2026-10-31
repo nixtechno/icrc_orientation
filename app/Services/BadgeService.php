@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\User;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -11,6 +12,12 @@ use Illuminate\Support\Facades\Storage;
 
 class BadgeService
 {
+    /** A QR code as PNG bytes, for email bodies and attachments where SVG is not displayed. */
+    public static function qrPng(string $text, int $size = 480): string
+    {
+        return (new Writer(new \BaconQrCode\Renderer\GDLibRenderer($size, 4)))->writeString($text);
+    }
+
     public function snapshot($person, string $type): array
     {
         $profile = $type === 'u' ? ($person->profile ?? []) : [];
@@ -45,12 +52,15 @@ class BadgeService
         $writer = new Writer(new ImageRenderer(new RendererStyle(220, 4), new SvgImageBackEnd));
         $metrics = (new \Dompdf\Dompdf)->getFontMetrics();
         $font = $metrics->getFont('DejaVu Sans', 'bold');
-        $items = $badges->map(function ($badge) use ($writer, $settings, $sizes, $metrics, $font) {
+        $people = User::whereIn('id', $badges->pluck('user_id')->filter())->get()->keyBy('id');
+        $items = $badges->map(function ($badge) use ($writer, $settings, $sizes, $metrics, $font, $people) {
             $snapshot = $badge->snapshot;
             $parts = preg_split('/\s+/', trim($snapshot['name']), 2);
             $snapshot += ['first_name' => $parts[0], 'last_name' => $parts[1] ?? '', 'designation' => '', 'organisation' => $snapshot['department'] ?? 'ICRC'];
             $verifyUrl = url('/badges/'.$badge->getRouteKey().'/verify');
-            $qr = 'data:image/svg+xml;base64,'.base64_encode($writer->writeString($verifyUrl));
+            // Account badges carry the person's numeric QR ID for attendance scanners; facilitator-only badges keep the verification link.
+            $person = $badge->user_id ? $people->get($badge->user_id) : null;
+            $qr = 'data:image/svg+xml;base64,'.base64_encode($writer->writeString($person ? $person->qrCode() : $verifyUrl));
             $photo = ($snapshot['photo_path'] ?? null) ? PdfService::image(Storage::disk('local')->path($snapshot['photo_path'])) : null;
             $colour = match ($badge->category) { 'admin' => '#8b6726', 'facilitator' => '#24536b', default => $settings['accent'] };
             $fit = $sizes;

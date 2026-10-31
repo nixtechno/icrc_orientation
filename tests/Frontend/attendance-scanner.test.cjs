@@ -3,9 +3,9 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
 
-function mount(fetcher) {
+function mount(fetcher, withButton=true) {
  const input = {value:'https://portal.test/badges/staff-badge/verify',focus(){this.focused=true;}}, button={}, result={};
- const form = {action:'/attendance/scanner/sign-in',querySelector(selector){return selector==='button'?button:input;},addEventListener(name,handler){this[name]=handler;}};
+ const form = {action:'/attendance/scanner/sign-in',querySelector(selector){return selector==='button'?(withButton?button:null):input;},addEventListener(name,handler){this[name]=handler;}};
  const calls=[];
  class Data {constructor(){this.code=input.value;}}
  vm.runInNewContext(fs.readFileSync('public/attendance-scanner.js','utf8'),{
@@ -33,4 +33,9 @@ test('duplicate and invalid scans display the server reason and leave the statio
 test('expired sessions and connection failures are visible instead of reporting false success',async()=>{
  const expired=mount(async()=>({status:419}));await expired.submit();assert.match(expired.result.textContent,/session has expired/);
  const offline=mount(async()=>{throw new TypeError('Offline');});await offline.submit();assert.match(offline.result.textContent,/Connection lost/);assert.equal(offline.input.focused,true);
+});
+
+test('stations without a submit button record on Enter and stay ready',async()=>{
+ const p=mount(async()=>({ok:true,json:async()=>({message:'Amina — Sign-out recorded at 17:00:00.'})}),false);
+ await p.submit();assert.match(p.result.textContent,/Amina/);assert.equal(p.input.value,'');assert.equal(p.input.readOnly,false);assert.equal(p.input.focused,true);
 });

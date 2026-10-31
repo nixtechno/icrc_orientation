@@ -39,15 +39,15 @@ class AttendanceScannerTest extends TestCase
 
     private function scan(string $mode='sign-in', ?string $code=null)
     {
-        return $this->postJson('/attendance/scanner/'.$mode,['code'=>$code ?? url('/badges/'.$this->badge->slug.'/verify')]);
+        return $this->postJson('/attendance/scanner/'.$mode,['code'=>$code ?? $this->staff->qr_code]);
     }
 
     public function test_manager_stations_record_attendance_and_reject_duplicate_scans(): void
     {
         $this->get('/attendance')->assertOk()->assertSee('Scan with scanner');
-        $this->get('/attendance/scanner')->assertOk()->assertSee('/attendance/scanner/sign-in',false)->assertSee('/attendance/scanner/sign-out',false);
-        $this->get('/attendance/scanner/sign-in')->assertOk()->assertSee('Sign-in station')->assertSee('name="code"',false);
-        $this->get('/attendance/scanner/sign-out')->assertOk()->assertSee('Sign-out station');
+        $this->get('/attendance/scanner')->assertOk()->assertSee('/attendance/scanner/sign-in',false)->assertSee('/attendance/scanner/sign-out',false)->assertSee('target="_blank"',false);
+        $this->get('/attendance/scanner/sign-in')->assertOk()->assertSee('Scan to sign in')->assertSee('name="code" type="password"',false)->assertDontSee('Record sign-in')->assertDontSee('site-footer',false);
+        $this->get('/attendance/scanner/sign-out')->assertOk()->assertSee('Scan to sign out')->assertDontSee('Record sign-out');
         $this->scan()->assertOk()->assertJsonPath('name',$this->staff->name)->assertJsonPath('status','late');
         $record=DailyAttendance::firstOrFail();
         $signedIn=$record->checked_in_at->toIso8601String();
@@ -84,8 +84,8 @@ class AttendanceScannerTest extends TestCase
         $this->scan('sign-in','https://example.test/badges/unknown/verify')->assertUnprocessable();
         $this->badge->update(['category'=>'facilitator']); $this->scan()->assertUnprocessable();
         $this->badge->update(['category'=>'staff']);
-        $this->staff->forceFill(['active'=>false])->save(); $this->scan()->assertForbidden();
-        $this->staff->forceFill(['active'=>true])->save(); $this->staff->programmes()->detach(); $this->scan()->assertForbidden();
+        $this->staff->forceFill(['active'=>false])->save(); $this->scan()->assertForbidden()->assertJsonPath('message',$this->staff->name.' has not activated their account yet. Attendance can be recorded once they accept their invitation.');
+        $this->staff->forceFill(['active'=>true])->save(); $this->staff->programmes()->detach(); $this->scan()->assertForbidden()->assertJsonPath('message',$this->staff->name.' is not enrolled in this programme.');
         $this->staff->programmes()->attach(Programme::first()->id);
         $this->badge->update(['programme_id'=>Programme::create(['code'=>'OTHER','title'=>'Other','starts_on'=>'2026-11-02','ends_on'=>'2026-12-31'])->id]);
         $this->scan()->assertUnprocessable();
@@ -113,5 +113,26 @@ class AttendanceScannerTest extends TestCase
         $this->assertTrue($record->signin_device_verified); $this->assertTrue($record->signin_location_verified);
         $this->assertSame('device',$record->signin_method); $this->assertSame('scanner',$record->signout_method);
         $this->assertEquals(3600,$record->duration_seconds);
+    }
+
+    public function test_every_new_person_gets_a_unique_numeric_qr_id(): void
+    {
+        $other=$this->user('facilitator');
+        $this->assertMatchesRegularExpression('/^[1-9][0-9]{15}$/',$this->staff->qr_code);
+        $this->assertNotSame($this->staff->qr_code,$other->qr_code);
+        $this->assertArrayNotHasKey('qr_code',$this->staff->toArray());
+        $this->staff->forceFill(['qr_code'=>null])->saveQuietly();
+        $this->assertMatchesRegularExpression('/^[0-9]{16}$/',$this->staff->qrCode());
+        $this->assertSame($this->staff->qr_code,$this->staff->fresh()->qr_code);
+    }
+
+    public function test_badges_carry_the_qr_id_and_links_on_earlier_badges_still_scan(): void
+    {
+        $writer=new \BaconQrCode\Writer(new \BaconQrCode\Renderer\ImageRenderer(new \BaconQrCode\Renderer\RendererStyle\RendererStyle(220,4),new \BaconQrCode\Renderer\Image\SvgImageBackEnd));
+        $item=app(\App\Services\BadgeService::class)->data(collect([$this->badge]))['items']->first();
+        $this->assertSame('data:image/svg+xml;base64,'.base64_encode($writer->writeString($this->staff->qr_code)),$item['qr']);
+        $this->scan('sign-in',url('/badges/'.$this->badge->slug.'/verify'))->assertOk()->assertJsonPath('name',$this->staff->name);
+        $this->scan('sign-in','1234567890123456')->assertUnprocessable();
+        $this->scan('sign-in',$this->admin->qr_code)->assertUnprocessable();
     }
 }

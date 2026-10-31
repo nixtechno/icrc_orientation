@@ -122,11 +122,19 @@ return redirect('/manage/staff')->with('success', $message);
     {
         Access::manage('staff');
         $content = $r->validate(InvitationEmail::rules());
-        $sample = $r->validate(['name' => 'nullable|string|max:255', 'email' => 'nullable|string|max:255', 'role' => ['nullable', Rule::in(User::ROLES)]]);
-        $recipient = (new User)->forceFill(['name' => ($sample['name'] ?? null) ?: 'Sample Recipient', 'email' => ($sample['email'] ?? null) ?: 'recipient@example.org', 'role' => $sample['role'] ?? 'staff']);
+        $sample = $r->validate(['name' => 'nullable|string|max:255', 'email' => 'nullable|string|max:255', 'role' => ['nullable', Rule::in(User::ROLES)], 'user' => 'nullable|string|max:120']);
+        if (filled($sample['user'] ?? null)) {
+            // A single existing person: preview exactly what they will receive, including their own QR code.
+            $recipient = User::where('slug', $sample['user'])->first();
+            abort_unless($recipient && $this->manages($recipient), 404);
+        } else {
+            // New people and bulk sends: sample details and a placeholder QR code.
+            $recipient = (new User)->forceFill(['name' => ($sample['name'] ?? null) ?: 'Sample Recipient', 'email' => ($sample['email'] ?? null) ?: 'recipient@example.org', 'role' => $sample['role'] ?? 'staff']);
+        }
         $programme = Access::programme();
         $mail = new ProgrammeInvitation($recipient, $programme, url('/invitation/your-personal-activation-link'), now()->addDays(3), $content);
         $mail->logoSrc = $programme->logoUrl() ?? asset('brand/ICRC_Logo.png');
+        $mail->printQrSrc = 'data:image/png;base64,'.base64_encode($mail->printQrPng());
 
         return response()->json(['subject' => $mail->subjectLine, 'html' => $mail->render()]);
     }

@@ -18,20 +18,32 @@ class AttendanceScannerController extends Controller
     public function page(string $mode)
     {
         Access::manage('attendance');
-        return response()->view('daily.scanner-scan', compact('mode'))->header('Cache-Control', 'private, no-store');
+        $logoUrl = Access::programme()->logoUrl();
+        return response()->view('daily.scanner-scan', compact('mode', 'logoUrl'))->header('Cache-Control', 'private, no-store');
     }
 
     public function record(Request $request, string $mode, AttendanceSecurity $security, AttendanceService $service)
     {
         Access::manage('attendance');
         $value = trim($request->validate(['code'=>'required|string|max:2048'])['code']);
-        // Read the QR payload locally. Never follow or fetch a scanned URL.
-        $path = parse_url($value, PHP_URL_PATH);
-        $slug = is_string($path) && preg_match('~(?:^|/)badges/([a-zA-Z0-9-]+)/verify/?$~D', $path, $matches)
-            ? $matches[1] : $value;
-        abort_unless(preg_match('/^[a-zA-Z0-9-]+$/D', $slug), 422, 'Scan a valid ICRC staff badge QR code.');
-        $badge = Badge::where('programme_id', Access::programme()->id)->where('slug', $slug)->first();
+        $badges = Badge::where('programme_id', Access::programme()->id);
+        if (ctype_digit($value)) {
+            // Current badges carry the person's numeric QR ID.
+            $owner = User::where('qr_code', $value)->value('id');
+            $badge = $owner ? $badges->where('user_id', $owner)->orderByRaw("category = 'staff' desc")->latest('id')->first() : null;
+        } else {
+            // Badges printed earlier carry the verification link. Read it locally; never follow or fetch a scanned URL.
+            $path = parse_url($value, PHP_URL_PATH);
+            $slug = is_string($path) && preg_match('~(?:^|/)badges/([a-zA-Z0-9-]+)/verify/?$~D', $path, $matches)
+                ? $matches[1] : $value;
+            abort_unless(preg_match('/^[a-zA-Z0-9-]+$/D', $slug), 422, 'Scan a valid ICRC staff badge QR code.');
+            $badge = $badges->where('slug', $slug)->first();
+        }
         abort_unless($badge && $badge->category === 'staff' && $badge->user_id, 422, 'This QR code is not an enrolled staff badge for this programme.');
+        // Explain account problems by name; the shared enrolment check rejects without a reason.
+        $person = User::find($badge->user_id);
+        abort_unless($person?->active, 403, ($person?->name ?? 'This person').' has not activated their account yet. Attendance can be recorded once they accept their invitation.');
+        abort_unless($person->programmes()->where('programmes.id', Access::programme()->id)->exists(), 403, $person->name.' is not enrolled in this programme.');
         $direction = $mode === 'sign-in' ? 'in' : 'out';
         $record = DB::transaction(function () use ($badge, $direction, $security, $service) {
             $user = User::whereKey($badge->user_id)->lockForUpdate()->firstOrFail();

@@ -4,10 +4,10 @@ namespace App\Mail;
 
 use App\Models\Programme;
 use App\Models\User;
-use App\Services\InvitationEmail;
+use App\Services\{BadgeService, InvitationEmail};
 use Carbon\CarbonInterface;
 use Illuminate\Mail\Mailable;
-use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\{Attachment, Content};
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Support\Facades\Storage;
 
@@ -26,6 +26,12 @@ class ProgrammeInvitation extends Mailable
 
     public string $buttonLabel;
 
+    /** The recipient's badge print code, shown as a QR in the email and attached as an image. */
+    public string $printCode;
+
+    /** A data URI used instead of an embedded image, for in-browser previews. */
+    public ?string $printQrSrc = null;
+
     public function __construct(
         public User $recipient,
         public Programme $programme,
@@ -43,6 +49,13 @@ class ProgrammeInvitation extends Mailable
         $this->bodyHtml = InvitationEmail::html($content['body'], $vars);
         $this->bodyText = InvitationEmail::text($content['body'], $vars);
         $this->buttonLabel = trim($content['button']);
+        // Previews use an unsaved sample person; only real recipients are issued a code.
+        $this->printCode = $recipient->exists ? $recipient->printCode() : str_repeat('0', 16);
+    }
+
+    public function printQrPng(): string
+    {
+        return BadgeService::qrPng($this->printCode);
     }
 
     public function envelope(): Envelope
@@ -53,5 +66,10 @@ class ProgrammeInvitation extends Mailable
     public function content(): Content
     {
         return new Content(view: 'emails.invitation', text: 'emails.invitation-text');
+    }
+
+    public function attachments(): array
+    {
+        return [Attachment::fromData(fn () => $this->printQrPng(), 'ICRC-SCODEX-QR-code.png')->withMime('image/png')];
     }
 }

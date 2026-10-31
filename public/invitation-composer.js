@@ -42,9 +42,11 @@
     };
 
     // Preview -----------------------------------------------------------------
+    // One existing person previews with their own details and QR code; new people and bulk sends use a sample QR.
+    const single = () => state.mode !== 'new' && state.recipients.length === 1;
     const sample = () => state.mode === 'new'
         ? {name: newField('name').value.trim(), email: newField('email').value.trim(), role: newField('role').value}
-        : (state.recipients[0] ? {name: state.recipients[0].name, email: state.recipients[0].email, role: state.recipients[0].role} : {});
+        : (state.recipients[0] ? {name: state.recipients[0].name, email: state.recipients[0].email, role: state.recipients[0].role, ...(single() ? {user: state.recipients[0].key} : {})} : {});
     const frame = $('[data-invite-frame]');
     const previewStatus = $('[data-invite-preview-status]');
     const refreshPreview = async () => {
@@ -59,7 +61,9 @@
             frame.srcdoc = data.html;
             $('[data-invite-preview-subject]').textContent = data.subject;
             const who = sample().name;
-            previewStatus.textContent = who ? `Shown as ${who} will see it` : 'Shown with sample details';
+            previewStatus.textContent = single() ? `Shown as ${who} will see it`
+                : who ? `Shown with ${who}'s details and a sample QR code; each person receives their own`
+                : 'Shown with sample details and a sample QR code';
         } catch (error) {
             if (request === state.previewRequest) previewStatus.textContent = `Preview unavailable: ${error.message}`;
         }
