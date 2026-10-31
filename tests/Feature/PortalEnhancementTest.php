@@ -49,9 +49,8 @@ class PortalEnhancementTest extends TestCase
 
     public function test_multiple_answer_questions_validate_render_score_and_review_correctly(): void
     {
-        $admin = $this->account('admin'); $staff = $this->account();
+        $admin = $this->account('admin');
         $activity = Activity::create(['programme_id' => Programme::first()->id, 'kind' => 'quiz', 'title' => 'Multiple answers quiz', 'instructions' => 'Select all', 'due_at' => now()->addDay(), 'attempts' => 5]);
-        $activity->participants()->attach($staff->id);
         $questionUrl = '/activities/'.$activity->id.'/questions';
         $data = ['type' => 'multiple_answers', 'prompt' => 'Which two?', 'options' => "A\nB\nC", 'correct_answer' => "A\nC", 'points' => 5];
         $this->actingAs($admin)->post($questionUrl, [...$data, 'correct_answer' => "A\nD"])->assertUnprocessable();
@@ -60,6 +59,8 @@ class PortalEnhancementTest extends TestCase
         $this->get('/activities/'.$activity->id)->assertOk()->assertSee('Multiple Choice Multiple Answers');
         $activity->update(['published' => true]);
         foreach ([[['C', 'A'], 5], [['A'], 0], [['A', 'B', 'C'], 0]] as [$selected, $score]) {
+            $staff = $this->account();
+            $activity->participants()->attach($staff->id);
             $this->actingAs($staff)->post('/activities/'.$activity->id.'/start')->assertRedirect();
             $submission = Submission::where('activity_id', $activity->id)->latest('id')->firstOrFail();
             $url = '/submissions/'.$submission->id.'/complete';
