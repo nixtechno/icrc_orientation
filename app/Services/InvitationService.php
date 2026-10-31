@@ -10,17 +10,18 @@ use Illuminate\Support\Str;
 
 class InvitationService
 {
-    public function send(User $u): void
+    /** @param  array{subject: string, body: string, button: string}|null  $content  Custom email content; the programme default when null. */
+    public function send(User $u, ?array $content = null): void
     {
         abort_if($u->active, 422, 'Account is active. Use password reset.');
         $token = Str::random(64);
         $expiresAt = now()->addDays(3);
-        DB::transaction(function () use ($u, $token, $expiresAt) {
+        DB::transaction(function () use ($u, $token, $expiresAt, $content) {
             User::whereKey($u->id)->lockForUpdate()->firstOrFail();
             DB::table('invitations')->where('user_id', $u->id)->whereNull('used_at')->update(['revoked_at' => now()]);
             DB::table('invitations')->insert(['user_id' => $u->id, 'token_hash' => hash('sha256', $token), 'expires_at' => $expiresAt, 'created_at' => now(), 'updated_at' => now()]);
-            Access::audit('invitation.send', (string) $u->id);
+            Access::audit('invitation.send', (string) $u->id, null, $content ? ['subject' => $content['subject'], 'customised' => true] : null);
         });
-        Mail::to($u->email)->send(new ProgrammeInvitation($u, Access::programme(), url('/invitation/'.$token), $expiresAt));
+        Mail::to($u->email)->send(new ProgrammeInvitation($u, Access::programme(), url('/invitation/'.$token), $expiresAt, $content));
     }
 }

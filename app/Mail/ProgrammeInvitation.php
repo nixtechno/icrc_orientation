@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use App\Models\Programme;
 use App\Models\User;
+use App\Services\InvitationEmail;
 use Carbon\CarbonInterface;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -14,21 +15,39 @@ class ProgrammeInvitation extends Mailable
 {
     public string $logoPath;
 
+    /** A public logo URL used instead of an embedded image, for in-browser previews. */
+    public ?string $logoSrc = null;
+
+    public string $subjectLine;
+
+    public string $bodyHtml;
+
+    public string $bodyText;
+
+    public string $buttonLabel;
+
     public function __construct(
         public User $recipient,
         public Programme $programme,
         public string $activationUrl,
         public CarbonInterface $expiresAt,
+        ?array $content = null,
     ) {
         $logo = $programme->settings['logo'] ?? null;
         $this->logoPath = $logo && Storage::disk('public')->exists($logo)
             ? Storage::disk('public')->path($logo)
             : public_path('brand/ICRC_Logo.png');
+        $content ??= InvitationEmail::content($programme);
+        $vars = InvitationEmail::variables($recipient, $programme, $expiresAt);
+        $this->subjectLine = InvitationEmail::subject($content['subject'], $vars);
+        $this->bodyHtml = InvitationEmail::html($content['body'], $vars);
+        $this->bodyText = InvitationEmail::text($content['body'], $vars);
+        $this->buttonLabel = trim($content['button']);
     }
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Your invitation | ICRC Orientation Programme');
+        return new Envelope(subject: $this->subjectLine);
     }
 
     public function content(): Content
