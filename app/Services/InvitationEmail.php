@@ -171,7 +171,7 @@ MD;
             '{role}' => ucfirst((string) $recipient->role),
             '{programme_dates}' => $programme->starts_on->format('j F').' – '.$programme->ends_on->format('j F Y'),
             '{start_date}' => $programme->starts_on->format('l, jS F Y'),
-            '{timezone}' => $programme->timezone,
+            '{timezone}' => 'Abuja, Nigeria',
             '{expiry}' => $expiresAt->copy()->timezone($programme->timezone)->format('j F Y \a\t H:i'),
         ];
     }

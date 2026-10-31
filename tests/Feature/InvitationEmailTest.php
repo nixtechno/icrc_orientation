@@ -35,6 +35,8 @@ class InvitationEmailTest extends TestCase
             $this->assertStringContainsString('Dear Amina Example,', $html);
             $this->assertSame(5, substr_count($html, 'Monday, 2nd November 2026')); // Four in the body, one in the inbox preview line.
             $this->assertStringNotContainsString('{start_date}', $html);
+            $this->assertStringContainsString('(Abuja, Nigeria)', $html);
+            $this->assertStringNotContainsString('Africa/Lagos', $html);
             $this->assertSame('Welcome to the ICRC SCODEX Training Programme | Activate your account', $mail->subjectLine);
             $this->assertStringContainsString('Select the <strong style="color:#2d4c34;font-weight:600">Create your password &amp; sign in</strong> button below.', $html);
             $this->assertSame(1, substr_count($html, 'SCODEX Training Coordination Team'));
