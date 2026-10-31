@@ -1,0 +1,85 @@
+/* Invitation composer: a full-height dialog with the editor beside a live email preview. */
+.invite-modal{width:min(1240px,calc(100vw - 32px));max-width:none;height:min(900px,calc(100dvh - 32px));max-height:none;padding:0;border:0;border-radius:20px;background:#fff;color:#253e2e;box-shadow:0 30px 80px #0b2a1a40;overflow:hidden}
+.invite-modal::backdrop{background:#0c241866;backdrop-filter:blur(3px)}
+.invite-modal[open]{display:flex}
+.invite-shell{display:flex;flex-direction:column;width:100%;min-height:0}
+.invite-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding:22px 28px 18px;border-bottom:1px solid #edf0eb}
+.invite-head h2{margin:4px 0 3px;font-size:21px;line-height:1.3;color:#173a26}
+.invite-head .muted{margin:0;font-size:12px}
+.invite-modal .invite-close{flex:none;width:38px;height:38px;min-height:0;padding:0;border-radius:10px;border:1px solid #e3e9e0;background:#fff;color:#4c624f;font-size:22px;line-height:1;box-shadow:none}
+.invite-modal .invite-close:hover{background:#f3f6f1}
+.invite-views{display:none}
+.invite-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr)}
+.invite-compose{overflow:auto;padding:22px 28px 26px;border-right:1px solid #edf0eb}
+.invite-compose label{display:block;margin-bottom:18px}
+.invite-compose :is(input,select,textarea){width:100%;box-sizing:border-box}
+.invite-compose textarea{min-height:360px;font-size:13px;line-height:1.75}
+.invite-recipients{margin:0 0 20px;padding:16px 18px 4px;border:1px solid #e8ede3;border-radius:14px;background:#fafbf8}
+.invite-recipients legend{padding:0 6px;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#6d7f6f}
+.invite-new-fields{display:grid;grid-template-columns:150px minmax(0,1fr) minmax(0,1.2fr);gap:0 12px}
+.invite-new-fields label{margin-bottom:12px}
+.invite-count{font-weight:600;color:#8b9a8c}
+.invite-chips{list-style:none;margin:2px 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:7px;max-height:132px;overflow:auto}
+.invite-chips li{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:5px 5px 5px 11px;border:1px solid #dfe7dc;border-radius:999px;background:#fff;font-size:12px;color:#5c6e5f}
+.invite-chips li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.invite-chips li strong{color:#23452f;font-weight:650}
+.invite-modal .invite-chips button{flex:none;width:22px;height:22px;min-height:0;padding:0;border:0;border-radius:50%;background:#eef2ec;color:#5b6d5d;font-size:14px;line-height:1;box-shadow:none}
+.invite-modal .invite-chips button:hover:not(:disabled){background:#e2e9df;color:#1d3f29}
+.invite-hint{margin:0 0 14px;font-size:11px;line-height:1.7;color:#7c897e}
+.invite-hint code{font-size:10.5px;padding:1px 5px;border-radius:4px;background:#f0f3ee;color:#3d5843}
+.invite-message-label{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 14px}
+.invite-message-label label{margin:0;font-size:12px;font-weight:650;color:#465b4b}
+.invite-message-label .invite-hint{margin:0}
+.invite-placeholders{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0 0}
+.invite-placeholders>span{font-size:11px;color:#7c897e;margin-right:2px}
+.invite-modal .invite-placeholders button{min-height:0;padding:5px 10px;border:1px dashed #c9d6c6;border-radius:7px;background:#fff;color:#2f5a3c;font-size:11px;font-weight:600;box-shadow:none}
+.invite-modal .invite-placeholders button:hover:not(:disabled){border-style:solid;background:#f2f6f0}
+.invite-template-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.invite-template-status{font-size:11px;color:#2f6b45}
+.invite-preview{display:flex;flex-direction:column;min-height:0;background:#f0f3ee}
+.invite-preview-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;padding:14px 22px;border-bottom:1px solid #e3e9df;background:#f7f9f5}
+.invite-preview-head>div{min-width:0}
+.invite-preview-label{display:block;font-size:9px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#869385}
+.invite-preview-head strong{display:block;font-size:13px;color:#203f2b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.invite-preview-status{flex:none;font-size:11px;color:#7c897e}
+.invite-preview iframe{flex:1;width:100%;min-height:0;border:0;background:#f0f3ee}
+.invite-errors{margin:0;padding:12px 28px;border-top:1px solid #f0d9d3;background:#fff7f5;color:#8b3b2c;font-size:12px}
+.invite-errors ul{margin:4px 0 0;padding-left:18px}
+.invite-progress{padding:14px 28px;border-top:1px solid #edf0eb;background:#fafbf8}
+.invite-progress-top{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:#5d6f60}
+.invite-progress-top strong{color:#1f432c}
+.invite-progress progress{width:100%;height:8px;margin:8px 0 4px;accent-color:#075332}
+.invite-results{list-style:none;margin:6px 0 0;padding:0;max-height:110px;overflow:auto;font-size:12px}
+.invite-results li{padding:3px 0 3px 18px;position:relative;color:#5d6f60}
+.invite-results li:before{content:'';position:absolute;left:3px;top:10px;width:7px;height:7px;border-radius:50%;background:#2f8a55}
+.invite-results li.is-skipped:before{background:#c6a264}
+.invite-results li.is-failed{color:#8b3b2c}
+.invite-results li.is-failed:before{background:#c4553f}
+.invite-foot{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 28px;border-top:1px solid #edf0eb;background:#fff}
+.invite-foot .invite-hint{margin:0}
+.invite-foot .buttons{display:flex;gap:10px;flex:none}
+.invite-modal.is-sending [data-invite-send]{cursor:progress}
+.invite-bulkbar{position:sticky;top:12px;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 0 14px;padding:12px 16px 12px 20px;border:1px solid #cfe0d2;border-radius:14px;background:#f2f8f2;box-shadow:0 8px 22px #0f3a2412}
+.invite-bulkbar[hidden]{display:none}
+.invite-bulkbar p{margin:0;font-size:13px;color:#2f4d38}
+.invite-bulkbar .buttons{display:flex;gap:8px;margin:0}
+.invite-table .invite-check{width:34px;padding-right:0}
+.invite-table .invite-check input{width:16px;height:16px;min-height:0;margin:0;padding:0;accent-color:#075332;cursor:pointer}
+.invite-table td [data-invite-person]{margin-left:8px}
+@media(max-width:1000px){
+.invite-views{display:flex;gap:4px;margin:12px 20px 0;padding:4px;border-radius:11px;background:#f0f3ee}
+.invite-modal .invite-views button{flex:1;min-height:0;padding:8px 10px;border:0;border-radius:8px;background:transparent;color:#5b6d5d;font-size:12px;font-weight:650;box-shadow:none}
+.invite-modal .invite-views button[aria-selected=true]{background:#fff;color:#173a26;box-shadow:0 1px 3px #1c3a2814}
+.invite-body{grid-template-columns:minmax(0,1fr)}
+.invite-body[data-view=compose] .invite-preview,.invite-body[data-view=preview] .invite-compose{display:none}
+.invite-compose{border-right:0}
+}
+@media(max-width:650px){
+.invite-modal{width:100vw;height:100dvh;border-radius:0}
+.invite-head,.invite-compose,.invite-foot,.invite-progress,.invite-errors{padding-left:16px;padding-right:16px}
+.invite-views{margin:10px 16px 0}
+.invite-new-fields{grid-template-columns:minmax(0,1fr)}
+.invite-foot{flex-direction:column;align-items:stretch}
+.invite-foot .buttons>*{flex:1}
+.invite-bulkbar{flex-direction:column;align-items:stretch}
+}

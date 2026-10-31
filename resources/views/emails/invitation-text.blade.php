@@ -3,14 +3,10 @@ Infrastructure Concession Regulatory Commission
 
 YOUR PROGRAMME INVITATION
 
-Dear {{ $recipient->name }},
+{!! $bodyText !!}
 
-You have been invited to join the ICRC Orientation Programme with {{ $recipient->role }} access.
 
-Programme dates: {{ $programme->starts_on->format('j F') }} – {{ $programme->ends_on->format('j F Y') }}.
-Programme timezone: {{ $programme->timezone }}.
-
-Activate your account, complete your profile and choose your own secure password:
+{!! $buttonLabel !!}:
 {{ $activationUrl }}
 
 This invitation expires on {{ $expiresAt->copy()->timezone($programme->timezone)->format('j F Y \a\t H:i') }} ({{ $programme->timezone }}). It can be used once.
