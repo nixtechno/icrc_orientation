@@ -13,7 +13,7 @@
 <p class="notice" role="status"><strong>{{ $quizLaunchUnavailable }}</strong></p>
 @else
 <script src="{{ asset('quiz.js') }}?v=20261030c" defer></script>
-<link rel="stylesheet" href="{{ asset('quiz.css') }}?v=20261030a">
+<link rel="stylesheet" href="{{ asset('quiz.css') }}?v=20261101a">
 <div data-quiz-entry data-start-url="/activities/{{ $activity->getRouteKey() }}/start">
 @csrf
 <div class="quiz-policy" role="note"><h3>IMPORTANT ASSESSMENT NOTICE</h3><p><strong>This assessment runs in fullscreen. Leaving or cancelling fullscreen before you click Submit final answers automatically submits your current answers, including unanswered questions.</strong></p><p><strong>Do not refresh, navigate away or close the assessment. Once submitted, this attempt cannot be resumed. Keep your connection active so your answers can be saved.</strong></p><label><input type="checkbox" data-quiz-ack required>I understand and accept the fullscreen submission rule.</label></div>
