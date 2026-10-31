@@ -12,7 +12,7 @@
 @endphp
 <div class="portal-frame">
 <aside class="portal-sidebar" id="portal-navigation" aria-label="Portal navigation">
- <a class="portal-brand" href="{{ url('/dashboard') }}"><img src="{{ $logoUrl }}" alt="ICRC" width="48" height="48"><span><strong>ICRC</strong><small>Orientation portal</small></span></a>
+ <a class="portal-brand" href="{{ url('/dashboard') }}"><img src="{{ $logoUrl }}" alt="ICRC" width="62" height="62"><span><strong>ICRC</strong><small>SCODEX 2026 Portal</small></span></a>
  <div class="portal-sidebar-scroll">
  @foreach(['YOUR WORKSPACE'=>$links,'MANAGEMENT'=>$management,'ACCOUNT'=>[['/profile','My profile','people']]] as $group=>$items)
  @if(count($items))<div class="portal-nav-label">{{ $group }}</div><nav aria-label="{{ $group }}">
