@@ -11,6 +11,9 @@ class ProfileService
     public const PERSONAL = ['first_name', 'middle_name', 'surname', 'preferred_name', 'accommodation', 'emergency_name', 'emergency_relationship', 'emergency_phone', 'programme_information'];
 
     public const EMPLOYMENT = ['resumption_date', 'duty_location'];
+
+    /** Employment details assigned by administrators; staff do not fill these in at activation. */
+    public const ASSIGNED = ['staff_number', 'department', 'designation', 'group_name', 'resumption_date', 'duty_location'];
     public const FACILITATOR_PERSONAL = ['first_name', 'middle_name', 'surname', 'preferred_name', 'organisation', 'alternative_phone'];
 
     public const CONFIGURABLE = ['phone', 'department', 'designation', 'photo', 'resumption_date', 'duty_location', 'emergency_name', 'emergency_relationship', 'emergency_phone'];
@@ -25,7 +28,7 @@ class ProfileService
 
     public function rules(?User $user = null, bool $complete = false, ?string $role = null): array
     {
-        $rules = ['first_name' => [$complete ? 'required' : 'nullable', 'string', 'max:100'], 'surname' => [$complete ? 'required' : 'nullable', 'string', 'max:100'], 'name' => 'nullable|string|max:255', 'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user?->id)], 'phone' => 'nullable|string|max:40', 'staff_number' => ['nullable', 'string', 'max:100', Rule::unique('users')->ignore($user?->id)], 'department' => 'nullable|string|max:255', 'designation' => 'nullable|string|max:255', 'group_name' => 'nullable|string|max:255', 'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048', 'resumption_date' => 'nullable|date', 'duty_location' => 'nullable|string|max:255'];
+        $rules = ['first_name' => [$complete ? 'required' : 'nullable', 'string', 'max:100'], 'surname' => [$complete ? 'required' : 'nullable', 'string', 'max:100'], 'name' => 'nullable|string|max:255', 'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user?->id)], 'phone' => 'nullable|string|max:40', 'staff_number' => ['nullable', 'string', 'max:100', Rule::unique('users')->ignore($user?->id)], 'department' => 'nullable|string|max:255', 'designation' => 'nullable|string|max:255', 'group_name' => 'nullable|string|max:255', 'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:5120', 'resumption_date' => 'nullable|date', 'duty_location' => 'nullable|string|max:255'];
         foreach (array_diff(self::PERSONAL, ['first_name', 'surname']) as $f) {
             $rules[$f] = 'nullable|string|max:'.(in_array($f, ['accommodation', 'programme_information']) ? 2000 : 255);
         }

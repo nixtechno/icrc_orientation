@@ -31,7 +31,7 @@ class FacilitatorController extends Controller
         Access::manage('facilitators');
         if ($facilitator) {
             abort_unless($facilitator->programme_id === Access::programme()->id, 403);
-        }$v = $r->validate(['name' => 'required|string|max:255', 'organisation' => 'nullable|string|max:255', 'department' => 'nullable|string|max:255', 'job_title' => 'nullable|string|max:255', 'email' => 'nullable|email|max:255', 'phone' => 'nullable|string|max:40', 'alternative_phone' => 'nullable|string|max:40', 'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048', 'sessions' => 'nullable|array', 'sessions.*' => 'integer', 'user_id' => 'nullable|integer']);
+        }$v = $r->validate(['name' => 'required|string|max:255', 'organisation' => 'nullable|string|max:255', 'department' => 'nullable|string|max:255', 'job_title' => 'nullable|string|max:255', 'email' => 'nullable|email|max:255', 'phone' => 'nullable|string|max:40', 'alternative_phone' => 'nullable|string|max:40', 'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:5120', 'sessions' => 'nullable|array', 'sessions.*' => 'integer', 'user_id' => 'nullable|integer']);
         $ids = ProgrammeSession::whereHas('day.week', fn ($q) => $q->where('programme_id', Access::programme()->id))->whereIn('id', $v['sessions'] ?? [])->pluck('id');
         abort_unless($ids->count() === count(array_unique($v['sessions'] ?? [])), 422);
         if (! empty($v['user_id'])) {

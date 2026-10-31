@@ -30,14 +30,19 @@ class RegistrationController extends Controller
         abort_if($i->used_at || $i->revoked_at || now()->gte($i->expires_at), 410, 'Invitation has expired, been revoked or already been used.');
         $u = User::findOrFail($i->user_id);
         $fixed = ['email' => $u->email];
-        foreach ($u->role === 'facilitator' ? [] : ['staff_number', 'department', 'designation', 'group_name'] as $field) {
-            if ($u->$field) {
-                $fixed[$field] = $u->$field;
-            }
-        }$r->merge($fixed);
         $rules = $profiles->rules($u, true);
+        if ($u->role !== 'facilitator') {
+            // Staff do not see employment details at activation; keep whatever has been assigned to them.
+            $r->replace($r->except(ProfileService::ASSIGNED));
+            foreach (['staff_number', 'department', 'designation', 'group_name'] as $field) {
+                if ($u->$field) {
+                    $fixed[$field] = $u->$field;
+                }
+            }
+            $rules = [...$rules, ...array_intersect_key($profiles->rules($u, false, 'staff'), array_flip(ProfileService::ASSIGNED))];
+        }$r->merge($fixed);
         if ($u->photo_path) {
-            $rules['photo'] = 'nullable|image|mimes:jpg,jpeg,png|max:2048';
+            $rules['photo'] = 'nullable|image|mimes:jpg,jpeg,png|max:5120';
         }$v = $r->validate([...$rules, 'password' => ['required', 'confirmed', Password::min(8)], 'privacy_acknowledged' => 'accepted']);
         app(\App\Services\ActivationCaptcha::class)->verify($r);
         DB::transaction(function () use ($u, $v, $i, $profiles, $r) {

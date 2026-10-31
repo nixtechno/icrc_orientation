@@ -126,10 +126,29 @@ class ManagementUpdateTest extends TestCase
         $u = $this->user();
         $u->forceFill(['active' => false])->save();
         $this->invitation($u);
-        $this->post('/invitation/test-invite', $this->activation())->assertSessionHasErrors(['department', 'emergency_phone']);
-        $values = [...$this->activation(), 'department' => 'ICT', 'emergency_phone' => '08011111111'];
+        // Department is assigned by administrators, so it is not required from staff at activation.
+        $this->post('/invitation/test-invite', $this->activation())->assertSessionHasErrors('emergency_phone')->assertSessionDoesntHaveErrors('department');
+        $values = [...$this->activation(), 'emergency_phone' => '08011111111'];
         unset($values['privacy_acknowledged']);
         $this->post('/invitation/test-invite', $values)->assertSessionHasErrors('privacy_acknowledged');
+    }
+
+    public function test_staff_activation_has_no_employment_details_and_keeps_assigned_ones(): void
+    {
+        $p = Programme::first();
+        $p->update(['settings' => [...$p->settings, 'required_profile_fields' => ['department', 'designation', 'resumption_date', 'duty_location']]]);
+        $u = $this->user('staff');
+        $u->forceFill(['active' => false, 'staff_number' => 'SCODEX2026001', 'department' => null, 'profile' => ['resumption_date' => '2026-11-02']])->save();
+        $this->invitation($u);
+        $this->get('/invitation/test-invite')->assertOk()->assertDontSee('Employment details')->assertDontSee('name="staff_number"', false)
+            ->assertDontSee('name="duty_location"', false)->assertDontSee('Additional required fields at activation');
+        $this->post('/invitation/test-invite', [...$this->activation(), 'staff_number' => 'FORGED', 'department' => 'Forged unit', 'designation' => 'Forged title', 'group_name' => 'Forged group', 'resumption_date' => '2030-01-01', 'duty_location' => 'Forged office'])
+            ->assertRedirect('/login');
+        $u->refresh();
+        $this->assertTrue($u->active);
+        $this->assertSame(['SCODEX2026001', null, null, null], [$u->staff_number, $u->department, $u->designation, $u->group_name]);
+        $this->assertSame('2026-11-02', $u->profile['resumption_date']);
+        $this->assertArrayNotHasKey('duty_location', $u->profile);
     }
 
     public function test_self_profile_cannot_edit_employment_or_view_other_private_photos(): void
@@ -144,6 +163,17 @@ class ManagementUpdateTest extends TestCase
         $this->assertSame('Official unit', $u->fresh()->department);
         $this->assertSame('2026-11-02', $u->fresh()->profile['resumption_date']);
         $this->get('/people/'.$other->id.'/photo')->assertForbidden();
+    }
+
+    public function test_profile_photographs_up_to_five_megabytes_are_accepted(): void
+    {
+        Storage::fake('local');
+        $u = $this->user();
+        $profile = ['first_name' => 'New', 'surname' => 'Name', 'phone' => '08000000000'];
+        $this->actingAs($u)->post('/profile', [...$profile, 'photo' => UploadedFile::fake()->image('passport.jpg')->size(4900)])->assertSessionHasNoErrors();
+        $this->assertNotNull($u->fresh()->photo_path);
+        $this->post('/profile', [...$profile, 'photo' => UploadedFile::fake()->image('passport.jpg')->size(5200)])->assertSessionHasErrors('photo');
+        $this->get('/profile')->assertSee('maximum 5 MB');
     }
 
     public function test_csv_template_import_supports_both_roles_and_reports_row_errors(): void
