@@ -69,7 +69,7 @@ class AssessmentGroupTest extends TestCase
         $this->get('/assessment-groups')->assertForbidden();
     }
 
-    public function test_sessions_require_their_selected_week_and_creator_ui_has_no_individual_participant_picker(): void
+    public function test_sessions_require_their_selected_week_and_the_staff_picker_starts_hidden(): void
     {
         $admin = $this->user('admin'); $this->user();
         $session = ProgrammeSession::firstOrFail(); $week = $session->day->programme_week_id;
@@ -77,9 +77,11 @@ class AssessmentGroupTest extends TestCase
         $otherWeek = Programme::first()->weeks()->where('id', '!=', $week)->firstOrFail();
         $this->post('/activities', $this->activity(['session_id' => $session->id, 'programme_week_id' => $otherWeek->id]))->assertUnprocessable();
         $this->post('/activities', $this->activity(['session_id' => $session->id, 'programme_week_id' => $week]))->assertSessionHasNoErrors()->assertRedirect();
-        $html = $this->get('/activities')->assertOk()->assertSee('Use AI Speech to Text')->assertSee('Manage staff groups')->assertDontSee('Selected participants')->assertDontSee('name="participants[]"', false)->getContent();
+        $html = $this->get('/activities')->assertOk()->assertSee('Use AI Speech to Text')->assertSee('Manage staff groups')->assertSee('Specific staff')->getContent();
         $dom = new \DOMDocument; @$dom->loadHTML($html); $xpath = new \DOMXPath($dom);
         $this->assertSame(1, $xpath->query('//select[@name="session_id" and @disabled]')->length);
+        // The individual picker is only submitted after choosing Specific staff.
+        $this->assertSame(1, $xpath->query('//fieldset[@data-staff-field and @hidden and @disabled]//input[@name="participants[]"]')->length);
         $this->assertEquals($session->id, Activity::first()->session_id);
     }
 

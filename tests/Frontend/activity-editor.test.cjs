@@ -7,9 +7,8 @@ function setup(supported = true) {
     const node = extra => Object.assign({ value:'', dataset:{}, listeners:{}, addEventListener(type, fn) { this.listeners[type] = fn; }, setAttribute(key, value) { this[key] = value; }, dispatchEvent() {}, focus() {} }, extra);
     const week = node();
     const session = node({options:[node(),node({value:'s1',dataset:{week:'w1'}}),node({value:'s2',dataset:{week:'w2'}})]});
-    const audience = node({value:'all'}), groupField = node(), group = node();
     const toggle = node(), instructions = node({value:'Existing instructions.',maxLength:20000}), status = node(), preview = node();
-    const fields = {'[name="programme_week_id"]':week,'[name="session_id"]':session,'[name="assignment_mode"]':audience,'[data-group-field]':groupField,'[name="assessment_group_id"]':group,'[data-dictation-toggle]':toggle,'[name="instructions"]':instructions,'[data-dictation-status]':status,'[data-dictation-preview]':preview};
+    const fields = {'[name="programme_week_id"]':week,'[name="session_id"]':session,'[data-dictation-toggle]':toggle,'[name="instructions"]':instructions,'[data-dictation-status]':status,'[data-dictation-preview]':preview};
     const form = node({isConnected:true,querySelector:selector=>fields[selector],closest:()=>null});
     let recognition;
     class Recognition {
@@ -21,7 +20,7 @@ function setup(supported = true) {
     const document = node({querySelectorAll:()=>[form],hidden:false});
     const window = node(supported ? {SpeechRecognition:Recognition} : {});
     vm.runInNewContext(fs.readFileSync('public/activity-editor.js','utf8'), {document, window, Event:class {}});
-    return {week,session,audience,groupField,group,toggle,instructions,status,preview,form,document,window,get recognition(){return recognition;}};
+    return {week,session,toggle,instructions,status,preview,form,document,window,get recognition(){return recognition;}};
 }
 
 test('sessions stay disabled until a week is chosen, filter by that week and clear on changes', () => {
@@ -34,11 +33,6 @@ test('sessions stay disabled until a week is chosen, filter by that week and cle
     ui.week.value='';ui.week.listeners.change();assert.equal(ui.session.disabled,true);
 });
 
-test('group selection is required only for the group audience', () => {
-    const ui=setup();assert.equal(ui.groupField.hidden,true);assert.equal(ui.group.disabled,true);
-    ui.audience.value='group';ui.audience.listeners.change();assert.equal(ui.groupField.hidden,false);assert.equal(ui.group.required,true);
-    ui.audience.value='all';ui.audience.listeners.change();assert.equal(ui.group.required,false);assert.equal(ui.group.disabled,true);
-});
 
 test('dictation appends final text once without replacing edits or adding interim speech', () => {
     const ui=setup();ui.toggle.listeners.click();assert.equal(ui.toggle['aria-pressed'],'true');

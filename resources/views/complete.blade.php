@@ -4,7 +4,7 @@
 @if($activity->kind==='quiz')
 @include('partials.quiz-launch')<template data-quiz-initial>
 @include('partials.quiz-attempt')</template>
-@else<script src="{{ asset('submission.js') }}?v=20261029a" defer></script><h1>{{ $activity->title }}</h1><div class="notice">Attempt {{ $submission->attempt }} · Started {{ $submission->started_at->format('H:i') }}. {{ $activity->due_at?'Due '.$activity->due_at->format('j M H:i').'.':'No deadline.' }}
+@else<script src="{{ asset('submission.js') }}?v=20261101a" defer></script><h1>{{ $activity->title }}</h1><div class="notice">Attempt {{ $submission->attempt }} · Started {{ $submission->started_at->format('H:i') }}. {{ $activity->due_at?'Due '.$activity->due_at->format('j M H:i').'.':'No deadline.' }}
 @if($activity->time_limit) Time limit: {{ $activity->time_limit }} minutes from the start of this attempt.
 @endif</div><p class="preline">{{ $activity->instructions }}</p><form class="card" method="post" enctype="multipart/form-data" data-final-submission>@csrf
 @if($activity->kind==='quiz')

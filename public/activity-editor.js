@@ -20,12 +20,6 @@
             week.addEventListener('change', () => updateSessions(true));
             updateSessions();
 
-            const audience = form.querySelector('[name="assignment_mode"]');
-            const groupField = form.querySelector('[data-group-field]');
-            const group = form.querySelector('[name="assessment_group_id"]');
-            const updateGroup = () => { const active = audience.value === 'group'; groupField.hidden = !active; group.disabled = !active; group.required = active; };
-            audience.addEventListener('change', updateGroup); updateGroup();
-
             const toggle = form.querySelector('[data-dictation-toggle]');
             const instructions = form.querySelector('[name="instructions"]');
             const status = form.querySelector('[data-dictation-status]');

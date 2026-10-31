@@ -9,7 +9,7 @@
         if (pending) { event.preventDefault(); return; }
         pending = true;
         form.setAttribute('aria-busy', 'true');
-        if (button) { button.disabled = true; button.textContent = 'Submitting your answers…'; }
+        if (button) { button.disabled = true; button.textContent = form.dataset?.pendingLabel || 'Submitting your answers…'; }
     });
     window.addEventListener('pageshow', event => {
         if (!event.persisted) return;

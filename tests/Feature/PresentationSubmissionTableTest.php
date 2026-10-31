@@ -41,7 +41,10 @@ class PresentationSubmissionTableTest extends TestCase
         $other=Programme::create(['code'=>'OTHER-PRESENTATIONS','title'=>'Other','starts_on'=>today(),'ends_on'=>today()->addDay(),'timezone'=>'Africa/Lagos']);
         $this->submitted($this->activity('Private other programme','presentation',$other->id),$first);
         foreach(['admin','facilitator'] as $role){
-            $this->actingAs($this->user($role))->get('/activities?kind=presentation')->assertOk()->assertSee('All submitted presentations')->assertSee('Amina Bello')->assertSee('Grace Okafor')->assertDontSee('Not yet submitted')->assertDontSee('Private other programme')->assertSee('/submissions/'.$a->slug.'/download',false)->assertSee('#submission-'.$b->slug,false)->assertViewHas('presentationTable',fn($data)=>$data['submissions']->total()===2);
+            // Every staff name also appears in the assignment picker, so only the submissions table is checked for them.
+            $html=$this->actingAs($this->user($role))->get('/activities?kind=presentation&view=submissions')->assertOk()->assertSee('All submitted presentations')->assertDontSee('Private other programme')->assertSee('/submissions/'.$a->slug.'/download',false)->assertSee('#submission-'.$b->slug,false)->assertViewHas('presentationTable',fn($data)=>$data['submissions']->total()===2)->getContent();
+            $table=strstr(strstr($html,'All submitted presentations'),'</section>',true);
+            $this->assertStringContainsString('Amina Bello',$table);$this->assertStringContainsString('Grace Okafor',$table);$this->assertStringNotContainsString('Not yet submitted',$table);
         }
         $this->get('/activities/'.$presentation->slug)->assertOk()->assertSee('id="submission-'.$a->slug.'"',false);
     }
@@ -55,25 +58,25 @@ class PresentationSubmissionTableTest extends TestCase
         $b=$this->submitted($beta,$second,['submitted_at'=>now()->subDays(2),'score'=>20,'released_at'=>now()]);
         $c=$this->submitted($alpha,$second,['submitted_at'=>now()->subDays(2)]);
         $this->actingAs($admin);
-        foreach(['q=SCODEX-123','q=alpha.pptx','department=ICT','review=graded','from='.now()->subDay()->toDateString().'&to='.now()->subDay()->toDateString()] as $query) $this->get('/activities?kind=presentation&'.$query)->assertOk()->assertViewHas('presentationTable',fn($data)=>$data['submissions']->modelKeys()===[$a->id]);
-        $this->get('/activities?kind=presentation&presentation='.$beta->slug)->assertViewHas('presentationTable',fn($data)=>$data['submissions']->modelKeys()===[$b->id]);
-        $this->get('/activities?kind=presentation&review=ungraded')->assertViewHas('presentationTable',fn($data)=>$data['submissions']->modelKeys()===[$c->id]);
-        $this->get('/activities?kind=presentation&review=released')->assertViewHas('presentationTable',fn($data)=>$data['submissions']->modelKeys()===[$b->id]);
-        $this->get('/activities?kind=presentation&q=NoSuchStaff')->assertOk()->assertSee('No submitted presentations match these filters.');
-        foreach(['per_page=10000','sort=password','direction=sideways','review=invalid','from=2026-11-02&to=2026-11-01'] as $query) $this->getJson('/activities?kind=presentation&'.$query)->assertUnprocessable();
+        foreach(['q=SCODEX-123','q=alpha.pptx','department=ICT','review=graded','from='.now()->subDay()->toDateString().'&to='.now()->subDay()->toDateString()] as $query) $this->get('/activities?kind=presentation&view=submissions&'.$query)->assertOk()->assertViewHas('presentationTable',fn($data)=>$data['submissions']->modelKeys()===[$a->id]);
+        $this->get('/activities?kind=presentation&view=submissions&presentation='.$beta->slug)->assertViewHas('presentationTable',fn($data)=>$data['submissions']->modelKeys()===[$b->id]);
+        $this->get('/activities?kind=presentation&view=submissions&review=ungraded')->assertViewHas('presentationTable',fn($data)=>$data['submissions']->modelKeys()===[$c->id]);
+        $this->get('/activities?kind=presentation&view=submissions&review=released')->assertViewHas('presentationTable',fn($data)=>$data['submissions']->modelKeys()===[$b->id]);
+        $this->get('/activities?kind=presentation&view=submissions&q=NoSuchStaff')->assertOk()->assertSee('No submitted presentations match these filters.');
+        foreach(['per_page=10000','sort=password','direction=sideways','review=invalid','from=2026-11-02&to=2026-11-01'] as $query) $this->getJson('/activities?kind=presentation&view=submissions&'.$query)->assertUnprocessable();
     }
 
     public function test_pagination_and_staff_privacy_and_preloader_branding(): void
     {
         $admin=$this->user('admin');$presentation=$this->activity();$staff=null;
         for($i=1;$i<=25;$i++){$staff=$this->user('staff',sprintf('Presenter %02d',$i));$this->submitted($presentation,$staff,['submitted_at'=>now()->subMinutes($i)]);}
-        $this->actingAs($admin)->get('/activities?kind=presentation')->assertViewHas('presentationTable',fn($data)=>$data['submissions']->count()===10&&$data['submissions']->total()===25)->assertSee('Page 1 of 3');
-        $this->get('/activities?kind=presentation&submissions_page=2')->assertViewHas('presentationTable',fn($data)=>$data['submissions']->count()===10&&$data['submissions']->currentPage()===2);
-        $this->get('/activities?kind=presentation&per_page=25')->assertViewHas('presentationTable',fn($data)=>$data['submissions']->count()===25);
-        $this->get('/activities?kind=presentation&sort=staff&direction=desc')->assertViewHas('presentationTable',fn($data)=>$data['submissions']->first()->user->name==='Presenter 25');
-        $this->actingAs($staff)->get('/activities?kind=presentation')->assertOk()->assertDontSee('All submitted presentations')->assertDontSee('Presenter 01');
+        $this->actingAs($admin)->get('/activities?kind=presentation&view=submissions')->assertViewHas('presentationTable',fn($data)=>$data['submissions']->count()===10&&$data['submissions']->total()===25)->assertSee('Page 1 of 3');
+        $this->get('/activities?kind=presentation&view=submissions&submissions_page=2')->assertViewHas('presentationTable',fn($data)=>$data['submissions']->count()===10&&$data['submissions']->currentPage()===2);
+        $this->get('/activities?kind=presentation&view=submissions&per_page=25')->assertViewHas('presentationTable',fn($data)=>$data['submissions']->count()===25);
+        $this->get('/activities?kind=presentation&view=submissions&sort=staff&direction=desc')->assertViewHas('presentationTable',fn($data)=>$data['submissions']->first()->user->name==='Presenter 25');
+        $this->actingAs($staff)->get('/activities?kind=presentation&view=submissions')->assertOk()->assertDontSee('All submitted presentations')->assertDontSee('Presenter 01');
         $facilitator=$this->user('facilitator');$facilitator->forceFill(['permissions'=>[]])->save();
-        $this->actingAs($facilitator)->get('/activities?kind=presentation')->assertOk()->assertDontSee('All submitted presentations');
+        $this->actingAs($facilitator)->get('/activities?kind=presentation&view=submissions')->assertOk()->assertDontSee('All submitted presentations');
         $this->actingAs($admin)->get('/dashboard')->assertOk()->assertSee('<p class="icrc-preloader-title">ICRC SCODEX 2026</p>',false)->assertSee('Loading ICRC SCODEX 2026');
         $this->get('/')->assertOk()->assertSee('<p class="icrc-preloader-title">ICRC SCODEX 2026</p>',false);
     }

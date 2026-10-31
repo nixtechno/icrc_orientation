@@ -1,0 +1,1 @@
+<button type="button" class="{{ $buttonClass??'link danger-link' }}" data-delete-activity data-url="/activities/{{ $activity->getRouteKey() }}" data-title="{{ $activity->title }}" data-label="{{ $activity->label() }}" data-submissions="{{ $activity->submissions_count??$activity->submissions()->count() }}" hidden>{{ $buttonText??'Delete' }}</button>

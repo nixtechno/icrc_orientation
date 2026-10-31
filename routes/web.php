@@ -54,7 +54,11 @@ Route::middleware(['auth', ActiveAccount::class])->group(function () {
     Route::get('/activities/{activity}', [ActivityController::class, 'show']);
     Route::post('/activities/{activity}/questions', [ActivityController::class, 'question']);
     Route::post('/activities/{activity}/publish', [ActivityController::class, 'publish']);
+    Route::post('/activities/{activity}', [ActivityController::class, 'update']);
+    Route::post('/activities/{activity}/assignment', [ActivityController::class, 'assign']);
+    Route::delete('/activities/{activity}', [ActivityController::class, 'destroy']);
     Route::post('/activities/{activity}/start', [ActivityController::class, 'start']);
+    Route::post('/activities/{activity}/presentation', [ActivityController::class, 'present']);
     Route::get('/submissions/{submission}/complete', [ActivityController::class, 'complete']);
     Route::post('/submissions/{submission}/complete', [ActivityController::class, 'submit']);
     Route::post('/submissions/{submission}/draft', [\App\Http\Controllers\QuizAttemptController::class, 'draft']);

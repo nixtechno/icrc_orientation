@@ -36,17 +36,40 @@ class ActivityController extends Controller
             $q->where('published', true)->whereHas('participants', fn ($q) => $q->where('users.id', auth()->id()));
         }
         $q->where('kind', $kind);
-        if (! $manager && $kind === 'quiz') {
+        if (! $manager && in_array($kind, ['quiz', 'presentation'], true)) {
             $q->withExists([
                 'submissions as staff_submitted' => fn ($query) => $query->where('user_id', $r->user()->id)->whereNotNull('submitted_at'),
                 'submissions as staff_started' => fn ($query) => $query->where('user_id', $r->user()->id)->whereNull('submitted_at'),
             ]);
         }
 
-return view('activities', ['items' => $q->with('group')->withCount('submissions')->latest()->get(), 'manager' => $manager, 'selectedKind' => $kind,
-    'presentationTable' => $manager && $kind === 'presentation' ? app(\App\Services\PresentationSubmissionTable::class)->data($r) : null,
-    'groups' => $manager ? \App\Models\AssessmentGroup::where('programme_id', Access::programme()->id)->withCount('members')->orderBy('name')->get() : collect(),
+        // Managers see presentations in two tabs: the presentations themselves and every submission.
+        $tabbed = $manager && $kind === 'presentation';
+        $view = $tabbed && $r->input('view') === 'submissions' ? 'submissions' : 'activities';
+        $items = $q->with('group')->withCount(['submissions', 'participants'])->latest()->get();
+
+return view('activities', ['items' => $items, 'manager' => $manager, 'selectedKind' => $kind, 'view' => $view, 'tabbed' => $tabbed,
+    'stats' => $manager ? $this->progress($items->modelKeys()) : collect(),
+    'submittedTotal' => $tabbed ? Submission::whereIn('activity_id', $items->modelKeys())->whereNotNull('submitted_at')->whereHas('user', fn ($u) => $u->where('role', 'staff'))->count() : 0,
+    'presentationTable' => $view === 'submissions' ? app(\App\Services\PresentationSubmissionTable::class)->data($r) : null,
+    ...($manager ? $this->audienceOptions() : ['groups' => collect(), 'staffList' => collect()]),
     'weeks' => $manager ? Access::programme()->weeks()->with('days.sessions')->get() : collect()]);
+    }
+
+    /** Submitted, reviewed and released staff per activity, keyed by activity id. */
+    private function progress(array $ids)
+    {
+        return Submission::whereIn('activity_id', $ids)->groupBy('activity_id')
+            ->selectRaw('activity_id, count(distinct case when submitted_at is not null then user_id end) as submitted, count(distinct case when submitted_at is not null and score is not null then user_id end) as reviewed, count(distinct case when released_at is not null then user_id end) as released')
+            ->get()->keyBy('activity_id');
+    }
+
+    private function audienceOptions(): array
+    {
+        return [
+            'groups' => \App\Models\AssessmentGroup::where('programme_id', Access::programme()->id)->withCount('members')->orderBy('name')->get(),
+            'staffList' => Access::staff()->orderBy('name')->get(['users.id', 'name', 'staff_number', 'department']),
+        ];
     }
 
     public function store(Request $r)
@@ -57,22 +80,10 @@ return view('activities', ['items' => $q->with('group')->withCount('submissions'
         $v = $r->validate(['kind' => 'required|in:quiz,assignment,presentation', 'title' => 'required|string|max:255', 'instructions' => 'required|string|max:20000', 'available_at' => 'nullable|date|before:due_at', 'due_at' => 'required|date|after:now', 'attempts' => ($requiresAttempts?'required':'nullable').'|integer|between:1,10', 'time_limit' => 'nullable|integer|between:1,240', 'assignment_mode' => 'nullable|in:all,group,selected', 'group_name' => 'nullable|string|max:255', 'participants' => 'nullable|array', 'participants.*' => 'integer', 'programme_week_id' => 'nullable|integer', 'session_id' => 'nullable|integer']);
         $v['attempts'] ??= 1;
         $v['due_at'] ??= null;
-        $r->validate(['programme_week_id' => 'nullable|required_with:session_id|integer', 'assessment_group_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::requiredIf(fn () => $r->input('assignment_mode') === 'group' && ! $r->filled('group_name'))]]);
-        $mode = $v['assignment_mode'] ?? 'all';
-        $q = Access::staff();
-        if ($mode === 'selected') {
-            $q->whereIn('id', $v['participants'] ?? []);
-        } elseif ($mode === 'group') {
-            if ($r->filled('assessment_group_id')) {
-                $group = \App\Models\AssessmentGroup::where('programme_id', Access::programme()->id)->findOrFail($r->integer('assessment_group_id'));
-                $q->whereIn('users.id', $group->members()->select('users.id'));
-                $v['assessment_group_id'] = $group->id;
-            } else {
-                // Keep earlier programme-group integrations usable.
-                $q->where('group_name', $v['group_name'] ?? null);
-            }
-        }$ids = $q->pluck('id');
-        abort_unless($ids->count() > 0 && ($mode !== 'selected' || $ids->count() === count(array_unique($v['participants'] ?? []))), 422, 'Select valid participants or a non-empty group.');
+        $r->validate(['programme_week_id' => 'nullable|required_with:session_id|integer']);
+        [$mode, $ids, $groupId] = $this->audience($r);
+        $v['assignment_mode'] = $mode;
+        $v['assessment_group_id'] = $groupId;
         if (! empty($v['programme_week_id'])) {
             abort_unless(ProgrammeWeek::where('programme_id', Access::programme()->id)->whereKey($v['programme_week_id'])->exists(), 422);
         }if (! empty($v['session_id'])) {
@@ -82,7 +93,7 @@ return view('activities', ['items' => $q->with('group')->withCount('submissions'
                 abort_unless($session->day->programme_week_id == (int) $v['programme_week_id'], 422, 'The selected session must belong to the selected week.');
             }
         }DB::transaction(function () use ($v, $ids) {
-            $a = Activity::create([...collect($v)->except(['participants', 'assignment_mode', 'group_name'])->all(), 'programme_id' => Access::programme()->id]);
+            $a = Activity::create([...collect($v)->except(['participants', 'group_name'])->all(), 'programme_id' => Access::programme()->id]);
             $a->participants()->sync($ids);
             Access::audit('activity.create', (string) $a->id);
         });
@@ -94,7 +105,89 @@ return view('activities', ['items' => $q->with('group')->withCount('submissions'
         });
     }
 
-    public function show(Activity $activity)
+    /** @return array{0: string, 1: \Illuminate\Support\Collection, 2: ?int} The mode, the staff ids and the group id. */
+    private function audience(Request $r): array
+    {
+        $r->validate(['assignment_mode' => 'nullable|in:all,group,selected', 'group_name' => 'nullable|string|max:255', 'participants' => 'nullable|array', 'participants.*' => 'integer',
+            'assessment_group_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::requiredIf(fn () => $r->input('assignment_mode') === 'group' && ! $r->filled('group_name'))]],
+            ['assessment_group_id.required' => 'Choose a staff group.']);
+        $mode = $r->input('assignment_mode') ?: 'all';
+        $groupId = null;
+        $q = Access::staff();
+        if ($mode === 'selected') {
+            $chosen = array_unique(array_map('intval', $r->input('participants', [])));
+            if (! $chosen) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['participants' => 'Choose at least one staff member.']);
+            }
+            $q->whereIn('users.id', $chosen);
+        } elseif ($mode === 'group') {
+            if ($r->filled('assessment_group_id')) {
+                $group = \App\Models\AssessmentGroup::where('programme_id', Access::programme()->id)->findOrFail($r->integer('assessment_group_id'));
+                $q->whereIn('users.id', $group->members()->select('users.id'));
+                $groupId = $group->id;
+            } else {
+                // Keep earlier programme-group integrations usable.
+                $q->where('group_name', $r->input('group_name'));
+            }
+        }
+        $ids = $q->pluck('users.id');
+        abort_unless($ids->count() > 0 && ($mode !== 'selected' || $ids->count() === count($chosen)), 422, 'Select valid participants or a non-empty group.');
+
+        return [$mode, $ids, $groupId];
+    }
+
+    public function update(Request $r, Activity $activity)
+    {
+        Access::manage('assessments');
+        $this->scope($activity);
+        $v = $r->validate(['title' => 'required|string|max:255', 'instructions' => 'required|string|max:20000', 'due_at' => 'required|date'.($activity->available_at ? '|after:'.$activity->available_at->toDateTimeString() : '')]);
+        $before = $activity->only(array_keys($v));
+        $activity->update($v);
+        Access::audit('activity.update', (string) $activity->id, $before, $activity->only(array_keys($v)));
+
+        return back()->with('success', ucfirst($activity->label()).' details saved.');
+    }
+
+    public function assign(Request $r, Activity $activity)
+    {
+        Access::manage('assessments');
+        $this->scope($activity);
+        [$mode, $ids, $groupId] = $this->audience($r);
+        // Staff who already have work on this activity stay assigned so they can still see it and their results.
+        $kept = $activity->submissions()->whereNotIn('user_id', $ids)->distinct()->pluck('user_id');
+        $before = $activity->participants()->pluck('users.id')->sort()->values()->all();
+        DB::transaction(function () use ($activity, $mode, $ids, $groupId, $kept, $before) {
+            $activity->update(['assignment_mode' => $mode, 'assessment_group_id' => $groupId]);
+            $activity->participants()->sync($ids->merge($kept)->unique()->values());
+            Access::audit('activity.assignment', (string) $activity->id, ['participants' => $before], ['mode' => $mode, 'participants' => $activity->participants()->pluck('users.id')->sort()->values()->all()]);
+        });
+        $message = 'Assignment updated: '.$ids->count().' staff assigned.';
+        if ($kept->isNotEmpty()) {
+            $message .= ' '.$kept->count().' '.($kept->count() === 1 ? 'person who has' : 'people who have').' already started or submitted '.($kept->count() === 1 ? 'stays' : 'stay').' assigned.';
+        }
+
+        return back()->with('success', $message);
+    }
+
+    public function destroy(Request $r, Activity $activity)
+    {
+        Access::manage('assessments');
+        $this->scope($activity);
+        $r->validate(['confirmed' => 'accepted'], ['confirmed.accepted' => 'Confirm the deletion first.']);
+        $paths = $activity->submissions()->whereNotNull('path')->pluck('path');
+        DB::transaction(function () use ($activity) {
+            Access::audit('activity.delete', (string) $activity->id, $activity->only(['kind', 'title', 'due_at']) + ['submissions' => $activity->submissions()->count()]);
+            $activity->submissions()->delete();
+            $activity->questions()->delete();
+            $activity->participants()->detach();
+            $activity->delete();
+        });
+        Storage::disk('local')->delete($paths->all());
+
+        return redirect('/activities?kind='.$activity->kind)->with('success', '“'.$activity->title.'” has been deleted.');
+    }
+
+    public function show(Request $r, Activity $activity)
     {
         $this->scope($activity);
         $manager = auth()->user()->canManage('assessments');
@@ -106,7 +199,8 @@ return view('activities', ['items' => $q->with('group')->withCount('submissions'
         }$activity->load('questions');
         $submissions = $manager ? $activity->submissions()->with('user')->get() : $activity->submissions()->where('user_id', auth()->id())->get();
 
-        return view('activity', compact('activity', 'manager', 'submissions'));
+        return view('activity', [...compact('activity', 'manager', 'submissions'), ...($manager ? $this->audienceOptions() : []),
+            'presentationTable' => $manager && $activity->kind === 'presentation' ? app(\App\Services\PresentationSubmissionTable::class)->data($r, $activity) : null]);
     }
 
     public function question(Request $r, Activity $activity)
@@ -172,6 +266,48 @@ return view('activities', ['items' => $q->with('group')->withCount('submissions'
         if ($submission->submitted_at) return redirect('/activities/'.$activity->getRouteKey())->with('success','This assessment attempt has ended and its saved answers have been submitted.');
 
         return redirect('/submissions/'.$submission->getRouteKey().'/complete');
+    }
+
+    public const PRESENTATION_FILES = ['ppt', 'pptx', 'pps', 'ppsx', 'odp', 'pdf'];
+
+    // Office files are sometimes detected as a generic zip or OLE container, so the extension is checked as well.
+    private const PRESENTATION_MIME_TYPES = ['application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/vnd.openxmlformats-officedocument.presentationml.slideshow', 'application/vnd.oasis.opendocument.presentation', 'application/pdf', 'application/zip', 'application/vnd.ms-office', 'application/CDFV2', 'application/x-ole-storage'];
+
+    public function present(Request $r, Activity $activity)
+    {
+        $this->participant($activity);
+        abort_unless($activity->kind === 'presentation' && auth()->user()->role === 'staff', 403);
+        abort_if(($activity->due_at && now()->gt($activity->due_at)) || ($activity->available_at && now()->lt($activity->available_at)), 422, 'This presentation is outside its submission window.');
+        $v = $r->validate([
+            'file' => ['nullable', 'file', 'max:51200', 'extensions:'.implode(',', self::PRESENTATION_FILES), 'mimetypes:'.implode(',', self::PRESENTATION_MIME_TYPES)],
+            'body' => 'nullable|string|max:50000',
+        ], ['file.extensions' => 'Upload a PowerPoint, OpenDocument or PDF file.', 'file.mimetypes' => 'Upload a PowerPoint, OpenDocument or PDF file.', 'file.max' => 'The presentation file must not be larger than 50 MB.']);
+        $existing = $activity->submissions()->where('user_id', auth()->id())->first();
+        if (! $r->hasFile('file') && blank($v['body'] ?? null) && ! $existing?->path) {
+            return back()->withErrors(['body' => 'Upload your presentation file or write your presentation in the text box.'])->withInput();
+        }
+        DB::transaction(function () use ($activity, $r, $v) {
+            User::whereKey(auth()->id())->lockForUpdate()->firstOrFail();
+            $s = $activity->submissions()->where('user_id', auth()->id())->first();
+            abort_if($s && ($s->score !== null || $s->released_at), 422, 'This presentation has been reviewed and can no longer be changed.');
+            $file = $r->file('file');
+            $old = $file ? $s?->path : null;
+            $data = ['body' => filled($v['body'] ?? null) ? $v['body'] : null, 'submitted_at' => now()];
+            if ($file) {
+                $data += ['path' => $file->store('submissions', 'local'), 'filename' => $file->getClientOriginalName()];
+            }
+            if ($s) {
+                $s->update($data);
+            } else {
+                $s = Submission::create([...$data, 'activity_id' => $activity->id, 'user_id' => auth()->id(), 'attempt' => 1, 'started_at' => now()]);
+            }
+            if ($old) {
+                DB::afterCommit(fn () => Storage::disk('local')->delete($old));
+            }
+            Access::audit('submission.presentation', (string) $s->id);
+        });
+
+        return redirect('/activities/'.$activity->getRouteKey())->with('success', 'Presentation submitted. You can replace it until the deadline or until it is reviewed.');
     }
 
     private function owns(Submission $s): void

@@ -7,7 +7,8 @@ use Illuminate\Http\Request;
 
 class PresentationSubmissionTable
 {
-    public function data(Request $request): array
+    /** With an activity, the table only lists that presentation and its own filter is ignored. */
+    public function data(Request $request, ?Activity $only = null): array
     {
         Access::manage('assessments');
         $request->validate([
@@ -27,7 +28,8 @@ class PresentationSubmissionTable
             foreach (['presenter.name','presenter.staff_number','presentation.title','submissions.filename'] as $column) $query->orWhere($column, 'like', '%'.$request->q.'%');
         });
         if ($request->filled('department')) $query->where('presenter.department', $request->department);
-        if ($request->filled('presentation')) $query->where('presentation.slug', $request->presentation);
+        if ($only) $query->where('presentation.id', $only->id);
+        elseif ($request->filled('presentation')) $query->where('presentation.slug', $request->presentation);
         if ($request->filled('from')) $query->whereDate('submissions.submitted_at', '>=', $request->from);
         if ($request->filled('to')) $query->whereDate('submissions.submitted_at', '<=', $request->to);
         if ($request->filled('review')) match ($request->review) {
@@ -40,6 +42,7 @@ class PresentationSubmissionTable
             ->orderByDesc('submissions.id')->paginate($request->integer('per_page',10), ['submissions.*'], 'submissions_page')->withQueryString();
         $departments = Access::staff()->whereNotNull('department')->where('department','!=','')->distinct()->orderBy('department')->pluck('department');
         $presentations = Activity::where('programme_id',Access::programme()->id)->where('kind','presentation')->orderBy('title')->get();
-        return compact('submissions','departments','presentations');
+        $scope = $only;
+        return compact('submissions','departments','presentations','scope');
     }
 }

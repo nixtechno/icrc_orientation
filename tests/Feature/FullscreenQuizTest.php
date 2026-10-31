@@ -54,12 +54,12 @@ class FullscreenQuizTest extends TestCase
         foreach (['quiz', 'assignment', 'presentation'] as $kind) {
             $this->quiz->update(['kind'=>$kind]);
             $this->actingAs($this->staff)->get('/activities/'.$this->quiz->slug)
-                ->assertOk()->assertDontSee('@else')->assertDontSee('Unpublish activity')->assertDontSee('Assigned:');
+                ->assertOk()->assertDontSee('@else')->assertDontSee('Unpublish')->assertDontSee('Change who is assigned');
         }
         $admin=User::factory()->create(['role'=>'admin','active'=>true]);
         $admin->programmes()->attach(Programme::first()->id);
         $this->actingAs($admin)->get('/activities/'.$this->quiz->slug)
-            ->assertOk()->assertSee('Unpublish activity')->assertSee('Assigned:')->assertDontSee('@else')->assertDontSee('Start / continue an attempt');
+            ->assertOk()->assertSee('Unpublish presentation')->assertSee('Change who is assigned')->assertDontSee('@else')->assertDontSee('Start / continue an attempt');
     }
 
     public function test_unavailable_quizzes_show_the_reason_instead_of_opening_fullscreen(): void
