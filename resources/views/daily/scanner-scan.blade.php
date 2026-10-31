@@ -11,5 +11,6 @@
 </form>
 <p id="scanner-result" class="muted" role="status" aria-live="polite" aria-atomic="true" data-scanner-result>Waiting for a badge scan.</p>
 <p class="station-date">{{ now('Africa/Lagos')->format('l j F Y') }}</p>
+@if (\App\Services\AttendanceSync::venue())<p class="station-sync" data-attendance-sync><span data-sync-text>Checking sync…</span></p><script src="{{ asset('attendance-sync.js') }}?v=20261101a" defer></script>@endif
 </main>
 </body></html>

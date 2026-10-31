@@ -87,6 +87,8 @@ Route::middleware(['auth', ActiveAccount::class])->group(function () {
     Route::get('/attendance/scanner', [\App\Http\Controllers\AttendanceScannerController::class, 'index']);
     Route::get('/attendance/scanner/{mode}', [\App\Http\Controllers\AttendanceScannerController::class, 'page'])->where('mode', 'sign-in|sign-out');
     Route::post('/attendance/scanner/{mode}', [\App\Http\Controllers\AttendanceScannerController::class, 'record'])->where('mode', 'sign-in|sign-out')->middleware('throttle:120,1');
+    Route::get('/attendance/sync', [\App\Http\Controllers\AttendanceSyncController::class, 'status']);
+    Route::post('/attendance/sync', [\App\Http\Controllers\AttendanceSyncController::class, 'now'])->middleware('throttle:10,1');
     Route::get('/attendance/live', [DailyAttendanceController::class, 'live']);
     Route::get('/attendance/legacy', [DailyAttendanceController::class, 'legacy']);
     Route::post('/manage/days/{day}/attendance', [DailyAttendanceController::class, 'configure']);
