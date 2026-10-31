@@ -67,11 +67,6 @@ Route::middleware(['auth', ActiveAccount::class])->group(function () {
     Route::get('/submissions/{submission}/download', [ActivityController::class, 'download']);
     Route::get('/reports', [ReportController::class, 'index']);
     Route::get('/reports/export', [ReportController::class, 'export']);
-    Route::post('/notifications/read', function () {
-        auth()->user()->unreadNotifications->markAsRead();
-
-        return back()->with('success', 'Notifications marked as read.');
-    });
     Route::get('/manage/staff', [PeopleController::class, 'index']);
     Route::post('/manage/staff', [PeopleController::class, 'save']);
     Route::get('/manage/staff/create', [PeopleController::class, 'form']);

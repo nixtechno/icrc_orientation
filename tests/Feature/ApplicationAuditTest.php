@@ -7,7 +7,6 @@ use App\Models\Programme;
 use App\Models\ProgrammeSession;
 use App\Models\Submission;
 use App\Models\User;
-use App\Notifications\ProgrammeUpdate;
 use App\Services\TimetableImporter;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -215,17 +214,6 @@ class ApplicationAuditTest extends TestCase
         $this->assertSame('ICT', $staff->department);
         $this->assertSame('QA001', $staff->staff_number);
         $this->assertSame('QA Tester', $staff->name);
-    }
-
-    public function test_mark_notifications_read_affects_only_the_current_account(): void
-    {
-        $staff = $this->account(); $other = $this->account();
-        foreach ([$staff, $other] as $user) {
-            $user->notifications()->create(['id' => (string) \Illuminate\Support\Str::uuid(), 'type' => ProgrammeUpdate::class, 'data' => ['title' => 'QA notification', 'body' => 'Test message']]);
-        }
-        $this->actingAs($staff)->post('/notifications/read')->assertRedirect();
-        $this->assertSame(0, $staff->unreadNotifications()->count());
-        $this->assertSame(1, $other->unreadNotifications()->count());
     }
 
     public function test_timetable_edits_recalculate_actual_duration_without_changing_original_source(): void

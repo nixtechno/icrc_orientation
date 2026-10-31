@@ -10,4 +10,4 @@
 @else
 @include('partials.management-dashboard')
 @endif
-<section class="card" id="notifications"><div class="page-heading"><h2>Notifications</h2><form action="/notifications/read" method="post">@csrf<button class="small secondary">Mark all as read</button></form></div>@forelse($u->notifications()->latest()->limit(10)->get() as $n)<div class="activity-row"><div><h3>{{ $n->data['title'] }}</h3><p class="preline">{{ $n->data['body'] }}</p><small class="muted">{{ $n->created_at->format('j M H:i') }} · {{ $n->read_at?'Read':'Unread' }}</small></div></div>@empty<p class="muted">You’re up to date. Programme notifications will appear here.</p>@endforelse<a href="/announcements">Programme announcements →</a></section>@endsection
+@endsection

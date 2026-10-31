@@ -70,10 +70,14 @@ return view('resources', ['items' => $q->latest()->get(), 'manager' => $manager]
         $manager = auth()->user()->canManage('announcements');
         $q = Announcement::where('programme_id', Access::programme()->id);
         if (! $manager) {
-            $q->where('archived', false)->where('published_at', '<=', now())->where(fn ($q) => $q->whereNull('department')->orWhere('department', auth()->user()->department))->where(fn ($q) => $q->whereNull('group_name')->orWhere('group_name', auth()->user()->group_name));
+            $q->visibleTo(auth()->user());
         }
+        $items = $q->latest()->get();
+        // Opening the page clears the unread count on the Announcements link.
+        \App\Models\User::whereKey(auth()->id())->toBase()->update(['announcements_seen_at' => now()]);
+        auth()->user()->announcements_seen_at = now();
 
-return view('announcements', ['items' => $q->latest()->get(), 'manager' => $manager]);
+return view('announcements', ['items' => $items, 'manager' => $manager]);
     }
 
     public function saveAnnouncement(Request $r)
