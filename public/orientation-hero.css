@@ -624,3 +624,8 @@
 #icrc-team .team-photo-reveal{position:relative;aspect-ratio:4096/1365}
 #icrc-team .team-photo-image{position:absolute;inset:0;height:100%;object-fit:cover;object-position:center 49%}
 .orientation-hero .hero-lead{margin-bottom:18px}.orientation-hero .scodex-theme{max-width:495px;margin:0 0 26px;padding:0 0 0 16px;border-left:2px solid #d6ad68;color:#365443;font-size:14px;line-height:1.75}.orientation-hero .scodex-theme>span{display:block;font-size:9px;letter-spacing:1.5px;font-weight:700;color:#7b835f;margin-bottom:5px}@media(max-width:560px){.orientation-hero .scodex-theme{font-size:13px;margin-bottom:22px}}
+/* Podium speaker cutout: keep the note clear of the podium crests */
+.orientation-hero .portrait-note{top:11%;bottom:auto;left:-8%;right:auto}
+@media(max-width:800px){.orientation-hero .portrait-note{top:8%;left:-2%}}
+@media(max-width:560px){.orientation-hero .portrait-note{top:2%;left:-3%;max-width:37%;padding:9px 10px;gap:7px}.orientation-hero .portrait-note p{white-space:normal;font-size:12px;line-height:1.3}}
+@media(max-width:360px){.orientation-hero .portrait-note .note-mark{display:none}}
