@@ -26,6 +26,17 @@ class PortalEnhancementTest extends TestCase
         return $user;
     }
 
+    public function test_portal_pages_show_abuja_nigeria_instead_of_the_timezone_name(): void
+    {
+        $this->assertSame('Abuja, Nigeria', Programme::first()->timezoneLabel());
+        foreach (['staff' => ['/dashboard', '/timetable', '/attendance'], 'admin' => ['/dashboard', '/timetable', '/attendance', '/attendance/security/audit']] as $role => $pages) {
+            $this->actingAs($this->account($role));
+            foreach ($pages as $page) {
+                $this->get($page)->assertOk()->assertSee('Abuja, Nigeria')->assertDontSee('Africa/Lagos');
+            }
+        }
+    }
+
     public function test_activation_requires_google_verification_and_accepts_an_eight_character_password(): void
     {
         $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);

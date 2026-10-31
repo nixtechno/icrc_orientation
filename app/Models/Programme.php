@@ -24,4 +24,10 @@ class Programme extends Model
 
         return $logo && $logo !== 'Images/ICRC_Logo.png' ? asset('storage/'.$logo) : (asset('brand/ICRC_Logo.png').'?v=20261027d');
     }
+
+    /** The programme timezone as people read it, e.g. "Abuja, Nigeria" rather than "Africa/Lagos". */
+    public function timezoneLabel(): string
+    {
+        return ($this->timezone ?: 'Africa/Lagos') === 'Africa/Lagos' ? 'Abuja, Nigeria' : $this->timezone;
+    }
 }

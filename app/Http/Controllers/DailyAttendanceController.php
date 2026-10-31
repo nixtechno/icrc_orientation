@@ -80,7 +80,7 @@ class DailyAttendanceController extends Controller
         $day->update([...$v, 'attendance_required' => $r->boolean('attendance_required'), 'cancelled' => $r->boolean('cancelled')]);
         app(AttendanceSecurity::class)->log('day_policy.updated', true, 'Day '.$day->id.' attendance windows updated.');
 
-        return back()->with('success', 'Daily attendance policy saved. All times are Africa/Lagos.');
+        return back()->with('success', 'Daily attendance policy saved. All times are Abuja, Nigeria time.');
     }
 
     public function qr(Request $r, ?string $mode = null)

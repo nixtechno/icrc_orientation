@@ -1,7 +1,7 @@
 @extends('layout')
 @section('content')
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<div class="page-heading"><div><span class="eyebrow">SECURE DAILY ATTENDANCE</span><h1>{{ $mode==='device'?'Register your attendance device':($mode==='sign-in'?'Sign in to today’s programme':'Sign out of today’s programme') }}</h1><p class="muted">{{ now('Africa/Lagos')->format('l j F Y') }} · Africa/Lagos</p></div><a href="/attendance">My attendance</a></div>
+<div class="page-heading"><div><span class="eyebrow">SECURE DAILY ATTENDANCE</span><h1>{{ $mode==='device'?'Register your attendance device':($mode==='sign-in'?'Sign in to today’s programme':'Sign out of today’s programme') }}</h1><p class="muted">{{ now('Africa/Lagos')->format('l j F Y') }} · Abuja, Nigeria</p></div><a href="/attendance">My attendance</a></div>
 <section class="card" style="max-width:760px;margin:auto" data-attendance-verification data-purpose="{{ $mode==='device'?'register':($mode==='sign-in'?'in':'out') }}">
 @if($mode==='device')
 <h2>One account. One authorized credential.</h2><p>Register on the device you will bring each day. Your device must offer a non-synchronized platform credential with fingerprint, face recognition or device PIN verification. Biometric data and PINs stay on your device.</p>
