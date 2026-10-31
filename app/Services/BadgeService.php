@@ -48,6 +48,7 @@ class BadgeService
             if (isset($validated['layout'])) $settings['layout'] = $validated['layout'];
         }
         $logo = PdfService::image(public_path('brand/ICRC_Logo.png'));
+        $wordmark = PdfService::image(public_path('brand/scodex-wordmark.png'));
         $producer = PdfService::image(public_path('brand/BREVITY_logo.png'));
         $background = 'data:image/svg+xml;base64,'.base64_encode(file_get_contents(public_path('brand/badge-contours.svg')));
         $writer = new Writer(new ImageRenderer(new RendererStyle(220, 4), new SvgImageBackEnd));
@@ -75,6 +76,6 @@ class BadgeService
             }
             return compact('badge', 'snapshot', 'qr', 'photo', 'colour', 'fit', 'verifyUrl');
         });
-        return compact('items', 'settings', 'sizes', 'fontScale', 'logo', 'producer', 'background', 'p');
+        return compact('items', 'settings', 'sizes', 'fontScale', 'logo', 'wordmark', 'producer', 'background', 'p');
     }
 }

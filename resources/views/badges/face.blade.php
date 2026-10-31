@@ -1,8 +1,9 @@
 <div class="badge-face {{ ($reverse??false)?'badge-back':'' }}">
 <img class="badge-background" src="{{ $background }}" alt="">
 <div class="badge-brand">@if($logo)<img class="badge-logo" src="{{ $logo }}" alt="ICRC">@endif<div class="badge-brand-text"><div>Infrastructure Concession<br>Regulatory Commission<small>THE PRESIDENCY</small></div></div></div>
-<div class="badge-programme">{{ $settings['label'] }}</div>
-<div class="badge-theme">Staff Capacity, On-Boarding, Development Excellence Experience</div>
+@if($wordmark&&strcasecmp(trim($settings['label']),'ICRC SCODEX 2026')===0)<img class="badge-wordmark" src="{{ $wordmark }}" alt="ICRC SCODEX 2026 — Staff Capacity, On-boarding, Development &amp; Excellence Experience">
+@else<div class="badge-programme">{{ $settings['label'] }}</div>
+<div class="badge-theme">Staff Capacity, On-Boarding, Development Excellence Experience</div>@endif
 <div class="badge-identity"><div class="badge-name" data-badge-text="name" style="font-size:{{ $item['fit']['name']*$fontScale }}mm"><span data-badge-field="first_name">{{ $item['snapshot']['first_name'] }}</span><span data-badge-field="last_name">{{ $item['snapshot']['last_name'] }}</span></div>
 <div class="badge-designation" data-badge-text="title" data-badge-field="designation" style="font-size:{{ $item['fit']['title']*$fontScale }}mm">{{ $item['snapshot']['designation'] }}</div>
 <div class="badge-organisation" data-badge-text="organisation" data-badge-field="organisation" style="font-size:{{ $item['fit']['organisation']*$fontScale }}mm">{{ $item['snapshot']['organisation'] }}</div>
