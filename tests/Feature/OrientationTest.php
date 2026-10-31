@@ -62,7 +62,7 @@ class OrientationTest extends TestCase
 
     public function test_public_and_authenticated_pages_render_and_roles_are_enforced(): void
     {
-        $this->get('/')->assertOk()->assertSee('Building knowledge.');
+        $this->get('/')->assertOk()->assertSee('ICRC SCODEX 2026')->assertSee('Building competence.');
         $this->get('/login')->assertOk();
         $staff = $this->account();
         $this->actingAs($staff);

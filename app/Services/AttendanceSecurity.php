@@ -198,7 +198,7 @@ class AttendanceSecurity
                 abort_unless($c->expires_at->isFuture(), 422, 'Attendance challenge expired. Start again.');
                 $stamp = now();
                 $prefix = $purpose === 'in' ? 'signin' : 'signout';
-                $fields = [$prefix.'_device_id' => $device->id, $prefix.'_device_verified' => true, $prefix.'_location_verified' => true, $prefix.'_location' => $location];
+                $fields = [$prefix.'_method' => 'device', $prefix.'_device_id' => $device->id, $prefix.'_device_verified' => true, $prefix.'_location_verified' => true, $prefix.'_location' => $location];
                 if ($purpose === 'in') {
                     $late = app(AttendanceService::class)->time($day, 'late_after');
                     abort_unless($late, 422, 'The late arrival threshold has not been configured.');

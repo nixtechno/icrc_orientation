@@ -1,2 +1,24 @@
 @extends('layout')
-@section('content')<script src="{{ asset('submission.js') }}?v=20261029a" defer></script><h1>{{ $activity->title }}</h1><div class="notice">Attempt {{ $submission->attempt }} · Started {{ $submission->started_at->format('H:i') }}. Due {{ $activity->due_at->format('j M H:i') }}.@if($activity->time_limit) Time limit: {{ $activity->time_limit }} minutes from the start of this attempt.@endif</div><p class="preline">{{ $activity->instructions }}</p><form class="card" method="post" enctype="multipart/form-data" data-final-submission>@csrf @if($activity->kind==='quiz')@foreach($activity->questions as $q)<fieldset><legend>{{ $loop->iteration }}. {{ $q->prompt }} ({{ $q->points }} points)</legend>@if($q->type==='multiple_answers')<p class="muted">Select all correct answers. Full points require every correct option and no incorrect options.</p>@foreach($q->options as $option)<label><input type="checkbox" name="answers[{{ $q->id }}][]" value="{{ $option }}" @checked(in_array($option,(array)old('answers.'.$q->id,[]),true))>{{ $option }}</label>@endforeach @elseif(in_array($q->type,['multiple_choice','true_false']))@foreach($q->options as $option)<label><input type="radio" name="answers[{{ $q->id }}]" value="{{ $option }}" @checked(old('answers.'.$q->id)===$option)>{{ $option }}</label>@endforeach @else<label>Your response<textarea name="answers[{{ $q->id }}]">{{ old('answers.'.$q->id) }}</textarea></label>@endif</fieldset>@endforeach @else<label>Your submission<textarea name="body" rows="12">{{ old('body') }}</textarea></label><label>Attachment (PDF, Word, PowerPoint, JPG or PNG; max 10 MB)<input type="file" name="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png"></label>@endif<button>Submit final answers</button><p class="muted" style="margin-top:15px">Submitting completes this attempt. Results are shown after facilitator release.</p></form>@endsection
+
+@section('content')
+@if($activity->kind==='quiz')
+@include('partials.quiz-launch')<template data-quiz-initial>
+@include('partials.quiz-attempt')</template>
+@else<script src="{{ asset('submission.js') }}?v=20261029a" defer></script><h1>{{ $activity->title }}</h1><div class="notice">Attempt {{ $submission->attempt }} · Started {{ $submission->started_at->format('H:i') }}. {{ $activity->due_at?'Due '.$activity->due_at->format('j M H:i').'.':'No deadline.' }}
+@if($activity->time_limit) Time limit: {{ $activity->time_limit }} minutes from the start of this attempt.
+@endif</div><p class="preline">{{ $activity->instructions }}</p><form class="card" method="post" enctype="multipart/form-data" data-final-submission>@csrf
+@if($activity->kind==='quiz')
+@foreach($activity->questions as $q)<fieldset><legend>{{ $loop->iteration }}. {{ $q->prompt }} ({{ $q->points }} points)</legend>
+@if($q->type==='multiple_answers')<p class="muted">Select all correct answers. Full points require every correct option and no incorrect options.</p>
+@foreach($q->options as $option)<label><input type="checkbox" name="answers[{{ $q->id }}][]" value="{{ $option }}" @checked(in_array($option,(array)old('answers.'.$q->id,[]),true))>{{ $option }}</label>
+@endforeach
+@elseif(in_array($q->type,['multiple_choice','true_false']))
+@foreach($q->options as $option)<label><input type="radio" name="answers[{{ $q->id }}]" value="{{ $option }}" @checked(old('answers.'.$q->id)===$option)>{{ $option }}</label>
+@endforeach
+@else<label>Your response<textarea name="answers[{{ $q->id }}]">{{ old('answers.'.$q->id) }}</textarea></label>
+@endif</fieldset>
+@endforeach
+@else<label>Your submission<textarea name="body" rows="12">{{ old('body') }}</textarea></label><label>Attachment (PDF, Word, PowerPoint, JPG or PNG; max 10 MB)<input type="file" name="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png"></label>
+@endif<button>Submit final answers</button><p class="muted" style="margin-top:15px">Submitting completes this attempt. Results are shown after facilitator release.</p></form>
+@endif
+@endsection

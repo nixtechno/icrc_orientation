@@ -31,6 +31,7 @@ function mount({path = '/manage/staff', searchable = true, fetcher} = {}) {
         input(f = form) {handlers.input({target: {closest: () => f, matches: () => true}});},
         runTimers() {const pending = [...timers.values()]; timers.clear(); pending.forEach(fn => fn());},
         pop: () => windowHandlers.popstate(), response,
+        clickResult(href,values={}) {const link={href};main.results.contains=item=>item===link;let prevented=false;handlers.click({target:{closest:selector=>selector==='[data-results-link]'?link:null},button:0,preventDefault(){prevented=true;},...values});return prevented;},
     };
 }
 
@@ -81,4 +82,17 @@ test('history restores filters and results on a searchable page', async () => {
 
 test('ordinary data-changing forms are not intercepted', () => {
     const p = mount(); const other = {matches: () => false}; assert.equal(p.submit(other), false); assert.equal(p.calls.length, 0);
+});
+
+test('submission table pagination and sorting replace results without navigating the document',async()=>{
+    const p=mount({path:'/activities'});
+    assert.equal(p.clickResult('http://localhost/activities?kind=presentation&submissions_page=2&sort=staff&direction=asc'),true);await tick();
+    assert.match(p.calls[0].url.href,/submissions_page=2/);assert.equal(p.main.results.childNodes[0],'filtered');assert.equal(p.changes[0].mode,'push');
+    assert.equal(p.clickResult('http://localhost/activities?kind=presentation',{ctrlKey:true}),false);
+});
+
+test('clearing submission filters restores safe field defaults instead of invalid empty sorting values',async()=>{
+    const p=mount({path:'/activities'});p.fields.push({name:'sort',type:'hidden',value:'staff',dataset:{filterDefault:'submitted'}},{name:'direction',type:'hidden',value:'asc',dataset:{filterDefault:'desc'}});
+    p.clickResult('http://localhost/activities?kind=presentation');await tick();
+    assert.equal(p.fields.find(field=>field.name==='sort').value,'submitted');assert.equal(p.fields.find(field=>field.name==='direction').value,'desc');
 });

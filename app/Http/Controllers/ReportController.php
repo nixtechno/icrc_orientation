@@ -57,7 +57,7 @@ class ReportController extends Controller
                 }break;
             case 'attendance':
                 $mode = $v['attendance_mode'] ?? 'daily';
-                $headers = ['Staff ID', 'Name', 'Department', 'Programme day', 'Week', 'Date', 'Status', 'Punctuality', 'Sign in (Lagos)', 'Sign out (Lagos)', 'Duration seconds', 'Device in', 'Device out', 'Location in', 'Location out', 'Notes'];
+                $headers = ['Staff ID', 'Name', 'Department', 'Programme day', 'Week', 'Date', 'Status', 'Punctuality', 'Sign in (Lagos)', 'Sign out (Lagos)', 'Duration seconds', 'Device in', 'Device out', 'Location in', 'Location out', 'Notes', 'Sign-in method', 'Sign-out method'];
                 $q = app(AttendanceService::class)->days()->whereBetween('date', [Access::programme()->starts_on->toDateString(), Access::programme()->ends_on->toDateString()])->with('week')->where('attendance_required', true)->where('cancelled', false)->whereDate('date', '<=', now('Africa/Lagos')->toDateString());
                 $this->dateFilters($q, $v, 'day');
                 $days = $q->orderBy('date')->get();
@@ -99,7 +99,7 @@ class ReportController extends Controller
                         if ($mode === 'incomplete' && (! $record?->checked_in_at || $record?->checked_out_at)) {
                             continue;
                         }
-                        $rows[] = [$record?->staff_number_snapshot ?? $u->staff_number, $record?->staff_name ?? $u->name, $u->department, $day->number, $day->week->number, $day->date->toDateString(), $status, $record?->punctuality_status, $record?->checked_in_at?->timezone('Africa/Lagos')->format('Y-m-d H:i:s'), $record?->checked_out_at?->timezone('Africa/Lagos')->format('Y-m-d H:i:s'), $record?->duration_seconds, $record?->signin_device_verified ? 'Verified' : 'Unverified', $record?->signout_device_verified ? 'Verified' : 'Unverified', $record?->signin_location_verified ? 'Verified' : 'Unverified', $record?->signout_location_verified ? 'Verified' : 'Unverified', $record?->notes];
+                        $rows[] = [$record?->staff_number_snapshot ?? $u->staff_number, $record?->staff_name ?? $u->name, $u->department, $day->number, $day->week->number, $day->date->toDateString(), $status, $record?->punctuality_status, $record?->checked_in_at?->timezone('Africa/Lagos')->format('Y-m-d H:i:s'), $record?->checked_out_at?->timezone('Africa/Lagos')->format('Y-m-d H:i:s'), $record?->duration_seconds, $record?->signin_device_verified ? 'Verified' : 'Unverified', $record?->signout_device_verified ? 'Verified' : 'Unverified', $record?->signin_location_verified ? 'Verified' : 'Unverified', $record?->signout_location_verified ? 'Verified' : 'Unverified', $record?->notes, $record?->signin_method ?? ($record?->signin_device_verified ? 'device' : null), $record?->signout_method ?? ($record?->signout_device_verified ? 'device' : null)];
                     }
                     if ($mode === 'summary') {
                         $rows[] = [$u->staff_number, $u->name, $u->department, $total, $present, max(0, $total - $present), $late, $total ? round(100 * $present / $total, 1) : null];

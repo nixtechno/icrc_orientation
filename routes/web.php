@@ -57,6 +57,8 @@ Route::middleware(['auth', ActiveAccount::class])->group(function () {
     Route::post('/activities/{activity}/start', [ActivityController::class, 'start']);
     Route::get('/submissions/{submission}/complete', [ActivityController::class, 'complete']);
     Route::post('/submissions/{submission}/complete', [ActivityController::class, 'submit']);
+    Route::post('/submissions/{submission}/draft', [\App\Http\Controllers\QuizAttemptController::class, 'draft']);
+    Route::post('/submissions/{submission}/auto-submit', [\App\Http\Controllers\QuizAttemptController::class, 'finish']);
     Route::post('/submissions/{submission}/review', [ActivityController::class, 'review']);
     Route::get('/submissions/{submission}/download', [ActivityController::class, 'download']);
     Route::get('/reports', [ReportController::class, 'index']);
@@ -79,6 +81,9 @@ Route::middleware(['auth', ActiveAccount::class])->group(function () {
     Route::get('/people/{user}/photo', [PeopleController::class, 'photo']);
     Route::match(['get', 'post'], '/settings/registration', [PeopleController::class, 'profileSettings']);
     Route::get('/attendance', [DailyAttendanceController::class, 'index']);
+    Route::get('/attendance/scanner', [\App\Http\Controllers\AttendanceScannerController::class, 'index']);
+    Route::get('/attendance/scanner/{mode}', [\App\Http\Controllers\AttendanceScannerController::class, 'page'])->where('mode', 'sign-in|sign-out');
+    Route::post('/attendance/scanner/{mode}', [\App\Http\Controllers\AttendanceScannerController::class, 'record'])->where('mode', 'sign-in|sign-out')->middleware('throttle:120,1');
     Route::get('/attendance/live', [DailyAttendanceController::class, 'live']);
     Route::get('/attendance/legacy', [DailyAttendanceController::class, 'legacy']);
     Route::post('/manage/days/{day}/attendance', [DailyAttendanceController::class, 'configure']);
@@ -106,4 +111,8 @@ Route::middleware(['auth', ActiveAccount::class])->group(function () {
     Route::post('/badges/generate',[BadgeController::class, 'generate']);
     Route::get('/badges/batch',[BadgeController::class, 'batch']);
     Route::post('/badges/printed',[BadgeController::class, 'printed']);
+    Route::get('/badges/{badge}/edit', [BadgeController::class, 'edit']);
+    Route::post('/badges/{badge}', [BadgeController::class, 'update']);
+    Route::get('/badges/{badge}/verify', [BadgeController::class, 'verify']);
+    Route::post('/badges/{badge}/collection', [BadgeController::class, 'collection']);
 });

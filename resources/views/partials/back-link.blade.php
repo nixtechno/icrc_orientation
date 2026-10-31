@@ -6,7 +6,7 @@
      request()->is('manage/staff/*')=>['/manage/staff','Back to people'],
      request()->is('assessment-groups')=>['/activities','Back to assessments'],
      request()->is('assessment-groups/*')=>['/assessment-groups','Back to groups'],
-     request()->is('activities/*')=>['/activities','Back to assessments'],
+     request()->is('activities/*')=>['/activities?kind='.$activity->kind,match($activity->kind){'assignment'=>'Back to assignments','presentation'=>'Back to presentations',default=>'Back to assessments'}],
      request()->is('submissions/*/complete')=>['/activities/'.$activity->getRouteKey(),'Back to assessment'],
      request()->is('manage/sessions/*')=>['/timetable','Back to timetable'],
      request()->is('qa/sessions/*')=>['/qa','Back to sessions'],

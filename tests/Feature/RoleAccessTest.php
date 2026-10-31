@@ -31,7 +31,7 @@ class RoleAccessTest extends TestCase
         $facilitator = $this->account('facilitator', User::FACILITATOR_DEFAULT_PERMISSIONS);
         $this->actingAs($facilitator)->get('/dashboard')->assertOk()->assertSee('Facilitator Dashboard');
         foreach (['quiz', 'assignment', 'presentation'] as $kind) {
-            $this->get('/activities?kind='.$kind)->assertOk()->assertSee('Create an activity');
+            $this->get('/activities?kind='.$kind)->assertOk()->assertSee(match($kind){'assignment'=>'Create an Assignment','presentation'=>'Create a Presentation',default=>'Create an Assessment'});
             $this->post('/activities', ['kind' => $kind, 'title' => 'Facilitator '.$kind, 'instructions' => 'Teaching exercise', 'due_at' => now()->addDays(3)->toDateTimeString(), 'attempts' => 1, 'assignment_mode' => 'selected', 'participants' => [$staff->id]])->assertSessionHasNoErrors()->assertRedirect();
         }
         $this->assertSame(3, Activity::count());

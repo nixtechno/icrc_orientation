@@ -22,7 +22,7 @@
     const syncFields = url => {
         main.querySelectorAll('form.filters').forEach(form => {
             for (const field of form.elements) {
-                if (field.name && !['checkbox', 'radio', 'submit'].includes(field.type)) field.value = url.searchParams.get(field.name) || '';
+                if (field.name && !['checkbox', 'radio', 'submit'].includes(field.type)) field.value = url.searchParams.get(field.name) || field.dataset?.filterDefault || '';
             }
         });
     };
@@ -57,7 +57,7 @@
             if (mode !== 'none' && url.href !== location.href) history[mode === 'replace' ? 'replaceState' : 'pushState']({search: true}, '', url);
             document.querySelectorAll('.portal-nav-link').forEach(link => {
                 const target = new URL(link.href, location.href);
-                const active = target.pathname === url.pathname && (!target.search || target.search === url.search);
+                const active = target.pathname === url.pathname && [...target.searchParams].every(([key,value]) => url.searchParams.get(key) === value);
                 link.classList.toggle('selected', active);
                 if (active) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
             });
@@ -88,6 +88,13 @@
         if (supported(form) && event.target.matches('select,input[type=date]')) search(formUrl(form));
     });
     document.addEventListener('click', event => {
+        const resultLink = event.target.closest('[data-results-link]');
+        if (resultLink && resultArea()?.contains(resultLink)) {
+            if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
+            const url = new URL(resultLink.href, location.href);
+            if (url.origin !== location.origin || url.pathname !== location.pathname) return;
+            event.preventDefault(); search(url, 'push', true); return;
+        }
         const link = event.target.closest('form.filters a');
         if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0 || !supported(link.closest('form'))) return;
         const url = new URL(link.href, location.href);
