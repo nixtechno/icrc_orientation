@@ -2,9 +2,11 @@
 
 use App\Models\User;
 use App\Services\Access;
+use App\Services\AttendanceSync;
 use App\Services\SupplementImporter;
 use App\Services\TimetableImporter;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('icrc:seed-demo {--staff=200 : Number of synthetic staff (10-5000)}', function () {
     $count = filter_var($this->option('staff'), FILTER_VALIDATE_INT);
@@ -53,3 +55,20 @@ Artisan::command('icrc:create-admin', function () {
     $u->programmes()->attach($p->id);
     $this->info('Administrator created. No default credentials are installed.');
 });
+
+Artisan::command('attendance:sync', function (AttendanceSync $sync) {
+    if (! AttendanceSync::venue()) {
+        $this->error('Set ATTENDANCE_SYNC_URL and ATTENDANCE_SYNC_TOKEN on the venue server to sync with the live site.');
+
+        return 1;
+    }
+    $status = $sync->run();
+    $status['online']
+        ? $this->info('Synced. Uploaded '.($status['uploaded'] ?? 0).', merged '.($status['downloaded'] ?? 0).' from the live site, '.$status['waiting'].' waiting.')
+        : $this->warn(($status['error'] ?? 'Sync did not run.').' '.$status['waiting'].' waiting.');
+
+    return $status['online'] ? 0 : 1;
+})->purpose('Upload venue attendance to the live site and download people, badges and attendance');
+
+// Venue server only: keep `php artisan schedule:work` running so this checks every two minutes.
+Schedule::command('attendance:sync')->everyTwoMinutes()->withoutOverlapping(10)->when(fn () => AttendanceSync::venue());

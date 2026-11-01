@@ -34,7 +34,7 @@ class AttendanceSecurity
 
     public function log(string $event, bool $verified, string $reason, ?int $userId = null): void
     {
-        DB::table('attendance_audit_logs')->insert(['programme_id' => Access::programme()->id, 'user_id' => $userId ?? auth()->id(), 'actor_id' => auth()->id(), 'event' => $event, 'verified' => $verified, 'reason' => $reason, 'ip_address' => request()->ip(), 'user_agent' => mb_substr(request()->userAgent() ?? '', 0, 1000), 'created_at' => now()]);
+        DB::table('attendance_audit_logs')->insert(['programme_id' => Access::programme()->id, 'user_id' => $userId ?? auth()->id(), 'actor_id' => auth()->id(), 'event' => $event, 'verified' => $verified, 'reason' => $reason, 'ip_address' => request()->ip(), 'user_agent' => mb_substr(request()->userAgent() ?? '', 0, 1000), 'created_at' => now(), 'sync_uuid' => (string) Str::uuid(), 'origin' => config('attendance_sync.origin')]);
     }
 
     public function webauthn(): WebAuthn

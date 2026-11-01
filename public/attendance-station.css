@@ -28,3 +28,6 @@ body.station-sign-out{--accent:#8b6726;--accent-soft:#f6efe2}
 #print-result.notice{background:#e5f3e8;color:#0d5a2c}
 #print-result.errors{background:#fbe9e7;color:#9a2a1c}
 @media(max-width:560px){#print-result{font-size:16px}}
+/* Venue sync status under the station date. */
+.station-sync{margin:10px 0 0;font-size:13px;color:#7d8a80}
+.station-sync[data-state=offline],.station-sync[data-state=problems]{color:#9a5b12}
