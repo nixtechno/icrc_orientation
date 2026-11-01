@@ -43,6 +43,7 @@
       text.textContent = 'Syncing with the live site…';
       try {
         const response = await fetch(form.action, {method: 'POST', body: new FormData(form), headers: {Accept: 'application/json'}, credentials: 'same-origin'});
+        if (response.ok && form.hasAttribute('data-sync-reload')) { location.reload(); return; }
         if (response.ok) show(await response.json()); else text.textContent = 'Sync could not start (error ' + response.status + ').';
       } catch (e) {
         text.textContent = 'Sync could not start. Check this computer is running the venue server.';

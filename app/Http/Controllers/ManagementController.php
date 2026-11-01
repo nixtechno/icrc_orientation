@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DailyAttendance;
 use App\Models\ProgrammeSession;
 use App\Models\Resource;
 use App\Models\Announcement;
@@ -127,7 +128,20 @@ return back()->with('success', 'Announcement saved.');
     {
         abort_unless(auth()->user()->role === 'admin', 403);
 
-        return view('settings', ['p' => Access::programme()]);
+        $sync = app(\App\Services\AttendanceSync::class);
+
+        return view('settings', [
+            'p' => Access::programme(),
+            'tab' => request('tab') === 'sync' ? 'sync' : 'programme',
+            'sync' => [
+                'status' => $sync->status(),
+                'history' => $sync->history(),
+                'configured' => strlen((string) config('attendance_sync.token')) >= 32,
+                'problems' => DailyAttendance::with('day:id,date')->whereNotNull('sync_error')->latest('updated_at')->limit(50)
+                    ->get(['id', 'programme_day_id', 'staff_name', 'sync_error', 'checked_in_at', 'checked_out_at']),
+                'origins' => DailyAttendance::where('programme_id', Access::programme()->id)->selectRaw("coalesce(origin, 'online') origin, count(*) n")->groupByRaw("coalesce(origin, 'online')")->pluck('n', 'origin'),
+            ],
+        ]);
     }
 
     public function saveSettings(Request $r)

@@ -23,9 +23,10 @@ Phones always sign in on the live site; their device registration is tied to the
    ```
 
 3. Run `php artisan migrate --seed`, which creates the programme and timetable.
-4. **Create the scanner operator accounts here.** People downloaded from the live site arrive without passwords and cannot sign in on the venue server. Run `php artisan icrc:create-admin` for each operator, using the same email as their live account so their scans are credited to them on the live site. Facilitator operators need the Attendance permission.
-5. While online, run `php artisan attendance:sync` once. It should report the people, badges and attendance it merged. Open **Daily attendance → Scan with scanner** and check that the sync line shows *Online* with no clock warning.
-6. Keep `php artisan schedule:work` running for the whole event; it syncs every two minutes. **Sync now** on the scanner page runs a sync immediately.
+4. While online, run `php artisan attendance:sync` once. It should report the people, badges and attendance it merged.
+5. **Give each scanner operator a password here.** People downloaded from the live site arrive without usable passwords, and `icrc:create-admin` refuses their emails because they already exist. Run `php artisan attendance:venue-password operator@example.com` for each operator; it asks for the password privately. The account must be an admin, or a facilitator with the Attendance permission, on the live site. The password applies to the venue server only, and syncing never overwrites it.
+6. Sign in on the venue server, open **Daily attendance → Scan with scanner**, and check that the sync line shows *Online* with no clock warning.
+7. Keep `php artisan schedule:work` running for the whole event; it syncs every two minutes. **Sync now** on the scanner page runs a sync immediately.
 
 ## Dry run: download only
 

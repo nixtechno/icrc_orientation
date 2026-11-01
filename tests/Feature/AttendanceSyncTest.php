@@ -25,7 +25,7 @@ class AttendanceSyncTest extends TestCase
     {
         parent::setUp();
         app(TimetableImporter::class)->run();
-        config(['attendance_sync.token' => self::TOKEN, 'attendance_sync.url' => null, 'attendance_sync.origin' => 'online']);
+        config(['attendance_sync.token' => self::TOKEN, 'attendance_sync.url' => null, 'attendance_sync.origin' => 'online', 'attendance_sync.upload' => true]);
         $this->travelTo(Carbon::parse('2026-11-02 09:00:00', 'Africa/Lagos'));
         $this->admin = $this->user('admin', ['email' => 'operator@example.test']);
         $this->staff = $this->user('staff', ['name' => 'Amina Bello', 'email' => 'amina@example.test']);
@@ -295,7 +295,7 @@ class AttendanceSyncTest extends TestCase
         $this->assertNull($status['uploaded']);
         $this->assertSame([], array_values(array_filter($urls, fn ($url) => ! str_starts_with($url, 'GET '))));
         $this->assertNull(DailyAttendance::first()->synced_version);
-        $this->actingAs($this->admin)->get('/attendance/scanner')->assertOk()->assertSee('Uploads are switched off');
+        $this->actingAs($this->admin)->get('/settings?tab=sync')->assertOk()->assertSee('Uploads are switched off.');
     }
 
     public function test_live_records_the_venue_cannot_place_download_again_next_run(): void
@@ -319,16 +319,65 @@ class AttendanceSyncTest extends TestCase
         $this->assertTrue(DailyAttendance::whereHas('user', fn ($q) => $q->where('email', 'ngozi@example.test'))->exists());
     }
 
+    public function test_settings_sync_tab_shows_uploads_received_on_the_live_site(): void
+    {
+        $this->actingAs($this->admin)->get('/settings')->assertOk()->assertSee('settings-tab-sync', false)->assertSee('Save settings');
+        $this->get('/settings?tab=sync')->assertOk()->assertSee('THIS COPY IS THE LIVE SITE')->assertSee('No venue uploads have been received yet.');
+        $this->upload([$this->venueRecord()])->assertOk();
+        $this->actingAs($this->admin)->get('/settings?tab=sync')->assertOk()->assertSee('Uploads received')->assertSee('Attendance recorded at venue');
+        $received = app(AttendanceSync::class)->history()[0];
+        $this->assertSame(['venue', 1, 0], [$received['origin'], $received['records'], $received['problems']]);
+        $this->actingAs($this->staff)->get('/settings?tab=sync')->assertForbidden();
+    }
+
+    public function test_settings_sync_tab_logs_venue_runs_and_combines_quiet_ones(): void
+    {
+        $this->asVenue();
+        $offline = true;
+        Http::fake(function (ClientRequest $request) use (&$offline) {
+            if ($offline) {
+                throw new \Illuminate\Http\Client\ConnectionException('Could not resolve host');
+            }
+            return str_ends_with($request->url(), '/ping') ? Http::response(['time' => now()->toIso8601String()]) : Http::response($this->emptySnapshot());
+        });
+        $sync = app(AttendanceSync::class);
+        $sync->run();
+        $this->travel(2)->minutes();
+        $sync->run();
+        $this->assertCount(1, $sync->history());
+        $this->assertSame([false, 2], [$sync->history()[0]['online'], $sync->history()[0]['repeats']]);
+
+        $offline = false;
+        $sync->run();
+        $this->assertCount(2, $sync->history());
+        $this->assertTrue($sync->history()[0]['online']);
+        $this->actingAs($this->admin)->get('/settings?tab=sync')->assertOk()
+            ->assertSee('THIS COPY IS A VENUE SERVER')->assertSee('Sync now')->assertSee('Sync log')->assertSee('×2 since', false)->assertSee('could not be reached');
+    }
+
+    public function test_venue_password_lets_a_downloaded_operator_sign_in_on_the_venue_only(): void
+    {
+        $this->artisan('attendance:venue-password', ['email' => 'operator@example.test'])->assertFailed();
+
+        $this->asVenue();
+        $this->artisan('attendance:venue-password', ['email' => 'amina@example.test'])->expectsOutputToContain('cannot operate the scanner')->assertFailed();
+        $this->artisan('attendance:venue-password', ['email' => 'operator@example.test'])
+            ->expectsQuestion('New password for this venue server (8+ characters)', 'venue-pass-123')
+            ->expectsQuestion('Confirm password', 'venue-pass-123')
+            ->assertSuccessful();
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('venue-pass-123', $this->admin->fresh()->password));
+    }
+
     public function test_scanner_pages_show_the_sync_line_and_sync_now_runs_on_the_venue_only(): void
     {
         $this->actingAs($this->admin);
-        $this->get('/attendance/scanner')->assertOk()->assertSee('Checking venue uploads')->assertDontSee('Sync now');
+        $this->get('/attendance/scanner')->assertOk()->assertSee('Settings → Venue sync')->assertDontSee('Sync now');
         $this->getJson('/attendance/sync')->assertOk()->assertJsonPath('mode', 'online');
         $this->postJson('/attendance/sync')->assertNotFound();
 
         $this->asVenue();
         Http::fake(['*/ping' => Http::response(['time' => now()->toIso8601String()]), '*' => Http::response($this->emptySnapshot())]);
-        $this->get('/attendance/scanner')->assertOk()->assertSee('Sync now')->assertSee('attendance-sync.js', false);
+        $this->get('/attendance/scanner')->assertOk()->assertDontSee('Sync now');
         $this->get('/attendance/scanner/sign-in')->assertOk()->assertSee('data-attendance-sync', false);
         $this->postJson('/attendance/sync')->assertOk()->assertJsonPath('mode', 'venue')->assertJsonPath('online', true)->assertJsonPath('waiting', 0);
         $this->getJson('/api/attendance-sync/ping')->assertNotFound();

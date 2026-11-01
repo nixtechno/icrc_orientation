@@ -56,6 +56,35 @@ Artisan::command('icrc:create-admin', function () {
     $this->info('Administrator created. No default credentials are installed.');
 });
 
+// People downloaded from the live site have no usable password on the venue server; this gives a scanner operator one.
+Artisan::command('attendance:venue-password {email}', function (string $email) {
+    if (! AttendanceSync::venue()) {
+        $this->error('This sets passwords on the venue server only. On the live site, use password reset.');
+
+        return 1;
+    }
+    $user = User::where('email', $email)->first();
+    if (! $user) {
+        $this->error('No account with that email. Run php artisan attendance:sync to download people from the live site first.');
+
+        return 1;
+    }
+    if (! $user->active || ! $user->canManage('attendance')) {
+        $this->error($user->name.' cannot operate the scanner: the account must be active and be an admin or have the Attendance permission on the live site.');
+
+        return 1;
+    }
+    $password = $this->secret('New password for this venue server (8+ characters)');
+    if (strlen((string) $password) < 8 || $password !== $this->secret('Confirm password')) {
+        $this->error('Passwords must match and be at least 8 characters.');
+
+        return 1;
+    }
+    $user->forceFill(['password' => $password])->save();
+    Access::audit('account.venue_password', (string) $user->id);
+    $this->info('Password set for '.$user->name.' on this venue server only. The live site password is unchanged, and syncing does not overwrite it.');
+})->purpose('Set a venue-server password for a scanner operator downloaded from the live site');
+
 Artisan::command('attendance:sync', function (AttendanceSync $sync) {
     if (! AttendanceSync::venue()) {
         $this->error('Set ATTENDANCE_SYNC_URL and ATTENDANCE_SYNC_TOKEN on the venue server to sync with the live site.');

@@ -1,0 +1,19 @@
+/* Programme settings: section tabs and the Venue sync tab. */
+.settings-tabs{display:inline-flex;gap:4px;margin:6px 0 22px;padding:4px;border-radius:12px;background:#f0f3ee;max-width:100%;overflow-x:auto}
+.settings-tabs [role=tab]{padding:9px 20px;border-radius:9px;color:#5b6d5d;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;transition:background .15s,color .15s}
+.settings-tabs [role=tab]:hover{background:#e6ece3;color:#173a26}
+.settings-tabs [role=tab][aria-selected=true]{background:#fff;color:#0d5a2c;box-shadow:0 1px 3px #1c3a2814}
+.settings-tabs [role=tab]:focus-visible{outline:2px solid #18754f;outline-offset:-2px}
+.sync-summary-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.sync-summary-head h2{margin:6px 0 0}
+.sync-summary-head form{margin:0}
+.sync-facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:18px 0 0}
+.sync-facts div{padding:12px 14px;border:1px solid #e3e9e1;border-radius:10px;background:#fafbf8}
+.sync-facts dt{font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:#6c7b70}
+.sync-facts dd{margin:4px 0 0;font-weight:650;color:#1f3a2b;overflow-wrap:anywhere}
+.sync-note{margin:14px 0 0;padding:12px 14px;border-left:3px solid #d6ad68;border-radius:4px;background:#fbf6ec;color:#5c4b25}
+.sync-note-error{border-color:#b54a3c;background:#fbefed;color:#7a2e24}
+.sync-result{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700}
+.sync-result.is-ok{background:#e4f2e8;color:#1d6a3b}
+.sync-result.is-off{background:#f7e6e3;color:#93362a}
+.sync-log td{vertical-align:top}

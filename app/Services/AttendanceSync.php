@@ -25,6 +25,11 @@ class AttendanceSync
 
     public const RECEIVED = 'attendance_sync.received';
 
+    /** Recent sync runs (venue) or uploads received (live site), newest first, for the settings Sync tab. */
+    public const HISTORY = 'attendance_sync.history';
+
+    private const HISTORY_SIZE = 100;
+
     private const BATCH = 200;
 
     private const PERSON = ['name', 'email', 'role', 'active', 'permissions', 'staff_number', 'department', 'designation', 'group_name', 'slug', 'qr_code', 'print_code'];
@@ -108,6 +113,7 @@ class AttendanceSync
             'records' => $results ? count($results) : ($previous['records'] ?? 0),
             'problems' => $results ? count(array_filter($results)) : ($previous['problems'] ?? 0),
         ]);
+        $this->remember(['origin' => $origin, 'records' => count($results), 'problems' => count(array_filter($results)), 'logs' => count($accepted)]);
 
         return ['records' => $results, 'logs' => $accepted];
     }
@@ -137,8 +143,32 @@ class AttendanceSync
             $lock->release();
         }
         Cache::forever(self::STATUS, $status);
+        $this->remember(['online' => $status['online'], 'upload' => (bool) config('attendance_sync.upload'), 'uploaded' => $uploaded ?? null,
+            'downloaded' => $downloaded ?? 0, 'unplaced' => $unplaced ?? 0, 'error' => $status['online'] ? null : $status['error']]);
 
         return $this->status();
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function history(): array
+    {
+        return Cache::get(self::HISTORY, []);
+    }
+
+    /** Adds an entry to the history; a run with nothing to report that matches the last one just extends it. */
+    private function remember(array $entry): void
+    {
+        $entry = ['at' => now()->toIso8601String(), ...$entry];
+        $history = $this->history();
+        $quiet = fn (array $e) => ! ($e['uploaded'] ?? 0) && ! ($e['downloaded'] ?? 0) && ! ($e['unplaced'] ?? 0) && ! ($e['records'] ?? 0) && ! ($e['logs'] ?? 0);
+        $last = $history[0] ?? null;
+        $same = fn (array $a, array $b) => Arr::except($a, ['at', 'since', 'repeats']) == Arr::except($b, ['at', 'since', 'repeats']);
+        if ($last && $quiet($entry) && $quiet($last) && $same($entry, $last)) {
+            $history[0] = [...$entry, 'since' => $last['since'] ?? $last['at'], 'repeats' => ($last['repeats'] ?? 1) + 1];
+        } else {
+            array_unshift($history, $entry);
+        }
+        Cache::forever(self::HISTORY, array_slice($history, 0, self::HISTORY_SIZE));
     }
 
     public function status(): array
