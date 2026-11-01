@@ -2,7 +2,7 @@
 @section('title','ICRC SCODEX 2026')
 @section('description','ICRC SCODEX 2026 — Staff Capacity, Onboarding, Development & Excellence Experience. Building Competence, Inspiring Excellence, Strengthening Institutional Capacity.')
 @section('content')
-<link rel="stylesheet" href="{{ asset('orientation-hero.css') }}?v=20261031e">
+<link rel="stylesheet" href="{{ asset('orientation-hero.css') }}?v=20261101a">
 @php
     $zone=$programme->timezone;
     $logoUrl=$programme->logoUrl();
