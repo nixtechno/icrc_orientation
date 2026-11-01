@@ -262,19 +262,18 @@ class AttendanceSyncTest extends TestCase
         Badge::create(['programme_id' => Programme::first()->id, 'subject_key' => 'u:'.$this->staff->id, 'user_id' => $this->staff->id, 'category' => 'staff', 'snapshot' => ['name' => 'Amina Bello'], 'generated_at' => now(), 'generated_by' => $this->admin->id]);
         $this->travelTo(Carbon::parse('2026-11-02 17:00:00', 'Africa/Lagos'));
         $this->actingAs($this->admin);
-        // The live site still requires a sign-in first.
-        $this->postJson('/attendance/scanner/sign-out', ['code' => $this->staff->qr_code])->assertStatus(422);
 
         $this->asVenue();
         $this->postJson('/attendance/scanner/sign-out', ['code' => $this->staff->qr_code])->assertOk();
         $record = DailyAttendance::firstOrFail();
         $this->assertSame(['17:00:00', null, 'pending', 'scanner'], [$record->checked_out_at->format('H:i:s'), $record->checked_in_at, $record->status, $record->signout_method]);
-        $this->postJson('/attendance/scanner/sign-out', ['code' => $this->staff->qr_code])->assertStatus(409);
+        $this->travel(10)->minutes();
+        $this->postJson('/attendance/scanner/sign-out', ['code' => $this->staff->qr_code])->assertOk();
 
         // The phone sign-in arrives from the live site and completes the day.
         $this->assertNull(app(AttendanceSync::class)->import($this->venueRecord(['origin' => 'online', 'checked_in_at' => '2026-11-02T08:20:00+01:00', 'signin_method' => 'device', 'signin_device_verified' => true, 'signin_scanned_by' => null]), true));
         $record->refresh();
-        $this->assertSame(['08:20:00', '17:00:00', 'present', 8 * 3600 + 40 * 60], [$record->checked_in_at->format('H:i:s'), $record->checked_out_at->format('H:i:s'), $record->status, $record->duration_seconds]);
+        $this->assertSame(['08:20:00', '17:10:00', 'present', 8 * 3600 + 50 * 60], [$record->checked_in_at->format('H:i:s'), $record->checked_out_at->format('H:i:s'), $record->status, $record->duration_seconds]);
         $this->assertDatabaseCount('daily_attendance', 1);
     }
 

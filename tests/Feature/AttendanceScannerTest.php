@@ -42,7 +42,7 @@ class AttendanceScannerTest extends TestCase
         return $this->postJson('/attendance/scanner/'.$mode,['code'=>$code ?? $this->staff->qr_code]);
     }
 
-    public function test_manager_stations_record_attendance_and_reject_duplicate_scans(): void
+    public function test_manager_stations_keep_the_first_sign_in_and_the_last_sign_out(): void
     {
         $this->get('/attendance')->assertOk()->assertSee('Scan with scanner');
         $this->get('/attendance/scanner')->assertOk()->assertSee('/attendance/scanner/sign-in',false)->assertSee('/attendance/scanner/sign-out',false)->assertSee('target="_blank"',false);
@@ -54,17 +54,23 @@ class AttendanceScannerTest extends TestCase
         $this->assertSame('scanner',$record->signin_method);
         $this->assertEquals($this->admin->id,$record->signin_scanned_by);
         $this->assertFalse($record->signin_device_verified); $this->assertFalse($record->signin_location_verified);
-        $this->scan()->assertConflict(); $this->assertDatabaseCount('daily_attendance',1);
-        $this->travel(2)->hours();
+        $this->travel(5)->minutes();
+        $this->scan()->assertOk()->assertJsonPath('message', $this->staff->name.' — already signed in at '.$record->checked_in_at->timezone('Africa/Lagos')->format('H:i:s').'. The first sign-in is kept.');
+        $this->assertDatabaseCount('daily_attendance',1);
+        $this->assertSame($signedIn,$record->fresh()->checked_in_at->toIso8601String());
+        $this->travel(115)->minutes();
         $this->scan('sign-out')->assertOk(); $record->refresh();
         $this->assertSame('scanner',$record->signout_method);
         $this->assertEquals($this->admin->id,$record->signout_scanned_by);
         $this->assertEquals(7200,$record->duration_seconds);
-        $out=$record->checked_out_at->toIso8601String();
-        $this->scan('sign-out')->assertConflict();
-        $this->assertSame($signedIn,$record->fresh()->checked_in_at->toIso8601String());
-        $this->assertSame($out,$record->fresh()->checked_out_at->toIso8601String());
-        $this->assertSame(2,DB::table('attendance_audit_logs')->where('user_id',$this->staff->id)->where('actor_id',$this->admin->id)->where('event','like','attendance.scanner.%')->count());
+        $this->travel(30)->minutes();
+        $this->scan('sign-out')->assertOk()->assertJsonPath('message', $this->staff->name.' — sign-out updated to '.now('Africa/Lagos')->format('H:i:s').'.');
+        $record->refresh();
+        $this->assertSame($signedIn,$record->checked_in_at->toIso8601String());
+        $this->assertSame(now()->toIso8601String(),$record->checked_out_at->toIso8601String());
+        $this->assertEquals(9000,$record->duration_seconds);
+        $this->assertSame('late',$record->status);
+        $this->assertSame(4,DB::table('attendance_audit_logs')->where('user_id',$this->staff->id)->where('actor_id',$this->admin->id)->where('event','like','attendance.scanner.%')->count());
         $this->get('/attendance/live')->assertOk()->assertSee('Badge scanner')->assertSee('N/A (scanner)');
     }
 
@@ -92,17 +98,31 @@ class AttendanceScannerTest extends TestCase
         $this->assertDatabaseCount('daily_attendance',0);
     }
 
-    public function test_existing_windows_cancelled_days_and_signout_order_are_enforced(): void
+    public function test_scans_outside_windows_and_programme_days_are_kept_without_changing_the_calculation(): void
     {
-        $this->scan('sign-out')->assertUnprocessable();
-        $this->day->update(['cancelled'=>true]); $this->scan()->assertUnprocessable();
-        $this->day->update(['cancelled'=>false,'attendance_required'=>false]); $this->scan()->assertUnprocessable();
-        $this->day->update(['attendance_required'=>true,'checkin_closes'=>'08:59']); $this->scan()->assertUnprocessable();
-        $this->day->update(['checkin_closes'=>'10:00']);
-        $this->travelTo(Carbon::parse('2026-11-02 08:30:00','Africa/Lagos'));
-        $this->scan('sign-in',$this->badge->slug)->assertOk()->assertJsonPath('status','present');
-        $this->scan('sign-out')->assertUnprocessable();
-        $this->assertNull(DailyAttendance::first()->checked_out_at);
+        $service=app(\App\Services\AttendanceService::class);
+        // Cancelled and not-required days keep the scan, but the day does not count.
+        foreach ([['cancelled'=>true],['cancelled'=>false,'attendance_required'=>false]] as $change) {
+            $this->day->update($change);
+            $this->scan()->assertOk()->assertJsonPath('status','late')->assertJsonPath('message',fn ($m)=>str_ends_with($m,'Today does not count towards attendance.'));
+            $this->assertSame([0,0],[$service->summary($this->staff)['numerator'],$service->summary($this->staff)['denominator']]);
+            DailyAttendance::query()->delete();
+        }
+
+        // A sign-out without a sign-in is kept as pending; a sign-in after the window closes still counts, as late.
+        $this->day->update(['attendance_required'=>true,'checkin_closes'=>'08:59']);
+        $this->scan('sign-out')->assertOk()->assertJsonPath('status','pending');
+        $this->travel(1)->hours();
+        $this->scan('sign-in',$this->badge->slug)->assertOk()->assertJsonPath('status','late');
+        $record=DailyAttendance::firstOrFail();
+        $this->assertSame(['09:00','10:00'],[$record->checked_out_at->timezone('Africa/Lagos')->format('H:i'),$record->checked_in_at->timezone('Africa/Lagos')->format('H:i')]);
+        $this->assertSame([1,1],[$service->summary($this->staff)['numerator'],$service->summary($this->staff)['denominator']]);
+
+        // A day with no programme day only logs the scan.
+        $this->travelTo(Carbon::parse('2026-11-01 12:00:00','Africa/Lagos'));
+        $this->scan()->assertOk()->assertJsonPath('status',null)->assertJsonPath('message',$this->staff->name.' — scan logged at 12:00:00. Today is not a programme day, so it does not count towards attendance.');
+        $this->assertDatabaseCount('daily_attendance',1);
+        $this->assertSame(1,DB::table('attendance_audit_logs')->where('reason','like','%Not a programme day; scan logged only.')->count());
     }
 
     public function test_scanner_checkout_preserves_existing_device_signin_verification(): void

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\{Badge, DailyAttendance, Programme, ProgrammeDay, User};
-use App\Services\{Access, AttendanceSecurity, AttendanceService, AttendanceSync};
+use App\Services\{Access, AttendanceSecurity, AttendanceService};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -45,34 +45,53 @@ class AttendanceScannerController extends Controller
         abort_unless($person?->active, 403, ($person?->name ?? 'This person').' has not activated their account yet. Attendance can be recorded once they accept their invitation.');
         abort_unless($person->programmes()->where('programmes.id', Access::programme()->id)->exists(), 403, $person->name.' is not enrolled in this programme.');
         $direction = $mode === 'sign-in' ? 'in' : 'out';
-        $record = DB::transaction(function () use ($badge, $direction, $security, $service) {
+        $repeat = false;
+        $counts = true;
+        $stamp = now();
+        // Every valid staff badge scan is kept, whatever the time or day. Only required, non-cancelled days count towards
+        // attendance, and late/on time still comes from the first sign-in, so the calculation is unchanged.
+        $record = DB::transaction(function () use ($badge, $direction, $security, $service, $stamp, &$repeat, &$counts) {
             $user = User::whereKey($badge->user_id)->lockForUpdate()->firstOrFail();
             $programme = Programme::whereKey(Access::programme()->id)->lockForUpdate()->firstOrFail();
-            $day = $service->days()->whereDate('date', now('Africa/Lagos')->toDateString())->first();
-            if ($day) ProgrammeDay::whereKey($day->id)->lockForUpdate()->firstOrFail();
-            // A venue server may not yet know about a sign-in made on the live site while it was offline; the sync merges the two.
-            $day = $security->eligible($user, $direction, AttendanceSync::venue());
-            $stamp = now();
+            $security->staff($user);
+            $day = $service->days()->whereDate('date', $stamp->copy()->timezone('Africa/Lagos')->toDateString())->first();
+            $badgeNote = 'Staff badge scanned by attendance manager. Badge '.$badge->getRouteKey().'.';
+            if (! $day) {
+                // No programme day to attach a record to: the scan is kept in the scan log only.
+                $counts = false;
+                $security->log('attendance.scanner.'.$direction, true, $badgeNote.' Not a programme day; scan logged only.', $user->id);
+                return null;
+            }
+            ProgrammeDay::whereKey($day->id)->lockForUpdate()->firstOrFail();
+            $counts = $day->attendance_required && ! $day->cancelled;
             $prefix = $direction === 'in' ? 'signin' : 'signout';
             $fields = [$prefix.'_method'=>'scanner', $prefix.'_scanned_by'=>auth()->id()];
+            $record = DailyAttendance::where('programme_id', $programme->id)->where('programme_day_id', $day->id)
+                ->where('user_id', $user->id)->lockForUpdate()->first();
             if ($direction === 'in') {
+                // The first sign-in is kept; later sign-in scans are logged but change nothing.
                 $late = $service->time($day, 'late_after');
-                abort_unless($late, 422, 'The late arrival threshold has not been configured.');
-                $record = DailyAttendance::create([
-                    ...$fields, 'programme_id'=>$programme->id, 'programme_day_id'=>$day->id,
-                    'user_id'=>$user->id, 'staff_name'=>$user->name, 'staff_number_snapshot'=>$user->staff_number,
-                    'attendance_date'=>$day->date, 'checked_in_at'=>$stamp,
-                    'status'=>$stamp->gt($late) ? 'late' : 'present',
-                    'punctuality_status'=>$stamp->gt($late) ? 'Late' : 'On Time', 'recorded_by'=>auth()->id(),
-                ]);
+                $signIn = [...$fields, 'checked_in_at'=>$stamp, 'status'=>$late && $stamp->gt($late) ? 'late' : 'present',
+                    'punctuality_status'=>$late ? ($stamp->gt($late) ? 'Late' : 'On Time') : null];
+                if ($record?->checked_in_at) {
+                    $repeat = true;
+                } elseif ($record) {
+                    // A sign-out was scanned before this sign-in.
+                    $record->update([...$signIn, 'duration_seconds'=>$record->checked_out_at ? max(0, (int) $stamp->diffInSeconds($record->checked_out_at)) : null]);
+                } else {
+                    $record = DailyAttendance::create([
+                        ...$signIn, 'programme_id'=>$programme->id, 'programme_day_id'=>$day->id,
+                        'user_id'=>$user->id, 'staff_name'=>$user->name, 'staff_number_snapshot'=>$user->staff_number,
+                        'attendance_date'=>$day->date, 'recorded_by'=>auth()->id(),
+                    ]);
+                }
             } else {
-                $record = DailyAttendance::where('programme_id', $programme->id)->where('programme_day_id', $day->id)
-                    ->where('user_id', $user->id)->lockForUpdate()->first();
+                // Each sign-out scan moves the sign-out to the latest time. Without a sign-in the record stays pending until one arrives.
+                $repeat = (bool) $record?->checked_out_at;
                 if ($record) {
                     $record->update([...$fields, 'checked_out_at'=>$stamp,
                         'duration_seconds'=>$record->checked_in_at ? max(0, (int) $record->checked_in_at->diffInSeconds($stamp)) : null]);
                 } else {
-                    // Venue server only: the sign-in is on the live site and arrives with the next sync.
                     $record = DailyAttendance::create([
                         ...$fields, 'programme_id'=>$programme->id, 'programme_day_id'=>$day->id,
                         'user_id'=>$user->id, 'staff_name'=>$user->name, 'staff_number_snapshot'=>$user->staff_number,
@@ -80,13 +99,24 @@ class AttendanceScannerController extends Controller
                     ]);
                 }
             }
-            $security->log('attendance.scanner.'.$direction, true, 'Staff badge scanned by attendance manager. Badge '.$badge->getRouteKey().'.', $user->id);
+            $note = match (true) {
+                $repeat && $direction === 'in' => ' Repeat sign-in scan; the first sign-in is kept.',
+                $repeat => ' Repeat sign-out scan; sign-out moved to this scan.',
+                default => '',
+            };
+            $security->log('attendance.scanner.'.$direction, true, $badgeNote.$note.($counts ? '' : ' Day does not count towards attendance.'), $user->id);
             return $record;
         });
-        $label = $direction === 'in' ? 'Sign-in' : 'Sign-out';
-        $time = ($direction === 'in' ? $record->checked_in_at : $record->checked_out_at)->timezone('Africa/Lagos')->format('H:i:s');
-        $message = $record->staff_name.' — '.$label.' recorded at '.$time.'.';
-        if ($request->expectsJson()) return response()->json(['message'=>$message, 'name'=>$record->staff_name, 'time'=>$time, 'status'=>$record->status])->header('Cache-Control','private, no-store');
+        $name = $record?->staff_name ?? $person->name;
+        $time = ($record ? ($direction === 'in' ? $record->checked_in_at : $record->checked_out_at) : $stamp)->timezone('Africa/Lagos')->format('H:i:s');
+        $message = match (true) {
+            ! $record => $name.' — scan logged at '.$time.'. Today is not a programme day, so it does not count towards attendance.',
+            $repeat && $direction === 'in' => $name.' — already signed in at '.$time.'. The first sign-in is kept.',
+            $repeat => $name.' — sign-out updated to '.$time.'.',
+            default => $name.' — '.($direction === 'in' ? 'Sign-in' : 'Sign-out').' recorded at '.$time.'.',
+        };
+        if ($record && ! $counts) $message .= ' Today does not count towards attendance.';
+        if ($request->expectsJson()) return response()->json(['message'=>$message, 'name'=>$name, 'time'=>$time, 'status'=>$record?->status])->header('Cache-Control','private, no-store');
         return back()->with('success', $message);
     }
 }
