@@ -63,6 +63,10 @@
             });
         });
         document.querySelectorAll('[data-open-week]').forEach(link => link.addEventListener('click', () => selectWeek(link.dataset.openWeek)));
+        // Hidden chapter photos are lazy; fetch them once the visitor starts exploring so switching weeks never shows an empty frame.
+        const warmPhotos = () => explorer.querySelectorAll('img[loading="lazy"]').forEach(img => { img.loading = 'eager'; });
+        explorer.addEventListener('pointerenter', warmPhotos, { once: true });
+        explorer.addEventListener('focusin', warmPhotos, { once: true });
         const hashWeek = /^#week-panel-([1-6])$/.exec(window.location.hash);
         selectWeek(hashWeek ? hashWeek[1] : '1');
     });

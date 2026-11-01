@@ -102,13 +102,21 @@
 
 #about .purpose-heading>.eyebrow{color:var(--green,#075332)}
 
-/* Lighter six-week journey and white chapter heading panels. */
+/* Lighter six-week journey; each chapter opens on a programme photograph with the week number floating over it. */
 #programme.journey-section{background:#fcfdfb}
-#programme .chapter-graphic{background:#fff;border-bottom:1px solid #e6ece3}
-#programme .chapter-graphic::before{opacity:.06}
-#programme .chapter-graphic>span{color:var(--green,#075332)}
-#programme .chapter-graphic>small{color:#62766a}
-#programme .chapter-lines{border-color:#0753320d;box-shadow:0 0 0 25px #07533203,0 0 0 50px #07533203}
+#programme .chapter-photo{flex:1 1 auto;min-height:290px;margin:0;display:block;background:var(--deep,#062d20)}
+#programme .chapter-photo::before{z-index:1;opacity:1;background:linear-gradient(180deg,#062d2000 58%,#062d20b3)}
+#programme .chapter-photo>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#programme .chapter-photo>.chapter-number{position:absolute;top:18px;right:18px;z-index:2;font:42px/1 var(--serif);letter-spacing:-2px;color:var(--green,#075332);background:#fffffff2;border-right:3px solid var(--gold,#d6ad68);padding:10px 12px 8px 14px;border-radius:2px;box-shadow:0 8px 22px #062d2026}
+#programme .chapter-photo>small{z-index:2;color:#ffffffd9}
+#programme .chapter-copy{position:relative;padding-top:28px;flex:0 0 auto}
+#programme .chapter-copy>.eyebrow{padding-right:180px;line-height:38px;margin-top:-6px}
+#programme .chapter-copy>.chapter-timetable{position:absolute;top:22px;right:28px;height:38px;margin:0;padding:0 15px 0 12px;border:1px solid var(--line,#dfe5db);border-radius:19px;display:flex;align-items:center;gap:8px;font-size:11px;font-weight:650;white-space:nowrap;color:var(--green,#075332);background:#fff;transition:background .2s,color .2s,border-color .2s}
+#programme .chapter-copy>.chapter-timetable:hover,#programme .chapter-copy>.chapter-timetable:focus-visible{background:var(--green,#075332);border-color:var(--green,#075332);color:#fff}
+#programme .chapter-copy h3{margin-top:12px}
+@media(max-width:1100px){#programme .chapter-photo{min-height:240px}#programme .chapter-copy>.chapter-timetable{right:22px}}
+@media(max-width:800px){#programme .chapter-photo{min-height:200px}#programme .chapter-photo>.chapter-number{font-size:32px;top:14px;right:14px;padding:8px 10px 6px 11px}#programme .chapter-copy>.eyebrow{line-height:1.6;margin-top:4px}}
+@media(max-width:560px){#programme .chapter-photo{min-height:0;aspect-ratio:16/10}#programme .chapter-copy .chapter-date{display:block;margin:5px 0 0}}
 
 /* More than an introduction: white, typography-led cards with restrained motion. */
 #experience.experience-section{background:#fff}
