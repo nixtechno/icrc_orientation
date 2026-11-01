@@ -7,9 +7,9 @@
 
 <h3>2. Information we collect</h3>
 <p><strong>Account and contact details.</strong> Your name (including any middle or preferred name), email address and phone number. Facilitators may also provide an organisation, title and alternative phone number.</p>
-<p><strong>Employment details.</strong> Staff number, department, designation, programme group, resumption date and duty location, usually assigned by ICRC.</p>
+<p><strong>Job details.</strong> Staff number, department, designation, programme group, resumption date and duty location, usually assigned by ICRC.</p>
 <p><strong>Orientation details.</strong> Accommodation information and any programme-specific information requested on the activation form.</p>
-<p><strong>Emergency contact.</strong> The name, relationship and phone number of an emergency contact. These fields are optional unless the Programme requires them.</p>
+<p><strong>Person to contact in an emergency.</strong> Their name, relationship to you and phone number. These fields are optional unless the Programme requires them.</p>
 <p><strong>Photograph.</strong> An optional profile photo, used on your programme badge and profile.</p>
 <p><strong>Attendance records.</strong> Your daily sign-in and sign-out times, punctuality, duration and the method used. Depending on the method:</p>
 <ul>
