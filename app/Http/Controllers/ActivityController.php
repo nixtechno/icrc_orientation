@@ -229,6 +229,68 @@ return view('activities', ['items' => $items, 'manager' => $manager, 'selectedKi
         return back()->with('success', 'Question added.');
     }
 
+    public function questionTemplate(\App\Services\QuestionImport $import)
+    {
+        Access::manage('assessments');
+        $book = $import->template();
+
+        return response()->streamDownload(fn () => (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($book))->save('php://output'), 'assessment-questions-template.xlsx', ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
+    }
+
+    /** Checks an uploaded question sheet and holds the questions for review; nothing is added until confirmed. */
+    public function importQuestions(Request $r, Activity $activity, \App\Services\QuestionImport $import)
+    {
+        $this->editableQuestions($activity);
+        $r->validate(['file' => 'required|file|mimes:xlsx|max:5120'], ['file.mimes' => 'Upload the Excel template (.xlsx).']);
+        try {
+            $result = $import->read($r->file('file'));
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->withErrors(['file' => 'This file could not be read as an Excel workbook. Save it as .xlsx from Excel and try again.']);
+        }
+        if ($result['errors']) {
+            session()->forget('question_import.'.$activity->id);
+
+            return back()->withErrors(['file' => $result['errors']]);
+        }
+        session()->put('question_import.'.$activity->id, $result['questions']);
+        $count = count($result['questions']);
+
+        return redirect('/activities/'.$activity->getRouteKey().'#question-import')->with('success', $count.' '.($count === 1 ? 'question is' : 'questions are').' ready. Check them below, then add them.');
+    }
+
+    public function confirmQuestionImport(Activity $activity)
+    {
+        $this->editableQuestions($activity);
+        $questions = session()->pull('question_import.'.$activity->id, []);
+        abort_if(! $questions, 422, 'There are no checked questions waiting. Upload the file again.');
+        DB::transaction(function () use ($activity, $questions) {
+            foreach ($questions as $question) {
+                Question::create([...$question, 'activity_id' => $activity->id]);
+            }
+        });
+        Access::audit('question.import', (string) $activity->id, null, ['count' => count($questions)]);
+
+        return redirect('/activities/'.$activity->getRouteKey())->with('success', count($questions).' '.(count($questions) === 1 ? 'question' : 'questions').' added from Excel.');
+    }
+
+    public function cancelQuestionImport(Activity $activity)
+    {
+        $this->editableQuestions($activity);
+        session()->forget('question_import.'.$activity->id);
+
+        return redirect('/activities/'.$activity->getRouteKey())->with('success', 'Upload cancelled. No questions were added.');
+    }
+
+    private function editableQuestions(Activity $activity): void
+    {
+        Access::manage('assessments');
+        $this->scope($activity);
+        abort_unless($activity->kind === 'quiz', 404);
+        abort_if($activity->published || $activity->submissions()->exists(), 422, 'Questions are locked after publication or an attempt.');
+    }
+
     public function publish(Activity $activity)
     {
         Access::manage('assessments');

@@ -53,6 +53,10 @@ Route::middleware(['auth', ActiveAccount::class])->group(function () {
     Route::post('/activities', [ActivityController::class, 'store']);
     Route::get('/activities/{activity}', [ActivityController::class, 'show']);
     Route::post('/activities/{activity}/questions', [ActivityController::class, 'question']);
+    Route::get('/assessments/question-template', [ActivityController::class, 'questionTemplate']);
+    Route::post('/activities/{activity}/questions/import', [ActivityController::class, 'importQuestions']);
+    Route::post('/activities/{activity}/questions/import/confirm', [ActivityController::class, 'confirmQuestionImport']);
+    Route::post('/activities/{activity}/questions/import/cancel', [ActivityController::class, 'cancelQuestionImport']);
     Route::post('/activities/{activity}/publish', [ActivityController::class, 'publish']);
     Route::post('/activities/{activity}', [ActivityController::class, 'update']);
     Route::post('/activities/{activity}/assignment', [ActivityController::class, 'assign']);

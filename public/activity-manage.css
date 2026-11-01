@@ -84,3 +84,4 @@ button.danger:hover{background:#86301f}
 .activity-card .activity-card-due{margin:0 0 8px;font-size:13px}
 .activity-card-badges{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 14px}
 .activity-card-badges .badge{padding:2px 7px;border-radius:4px;font-size:10px;letter-spacing:.2px;text-transform:capitalize}
+.question-import-steps{padding-left:20px;margin:14px 0;font-size:14px}.question-import-steps li{margin-bottom:6px}.question-import-preview h3{margin:18px 0 10px}.question-import-preview td{vertical-align:top}.question-import-options{margin:0;padding-left:18px}.question-import .question-import-preview .buttons form{margin:0;padding:0;background:none;border:0}

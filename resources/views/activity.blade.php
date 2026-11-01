@@ -8,7 +8,7 @@
 @include('partials.presentation-submit')
 @else<form method="post" action="/activities/{{ $activity->getRouteKey() }}/start">@csrf<button>Start / continue an attempt</button></form>
 @endif</section>
-@else<link rel="stylesheet" href="{{ asset('activity-manage.css') }}?v=20261101g"><script src="{{ asset('audience-picker.js') }}?v=20261101a" defer></script><script src="{{ asset('activity-delete.js') }}?v=20261101a" defer></script>
+@else<link rel="stylesheet" href="{{ asset('activity-manage.css') }}?v=20261101i"><script src="{{ asset('audience-picker.js') }}?v=20261101a" defer></script><script src="{{ asset('activity-delete.js') }}?v=20261101a" defer></script>
 <div class="manage-grid">
 <section class="card"><h2>Instructions</h2><p class="preline">{{ $activity->instructions }}</p>
 <details @if($errors->hasAny(['title','instructions','due_at'])) open @endif><summary>Edit details</summary><form method="post" action="/activities/{{ $activity->getRouteKey() }}" style="margin-top:16px">@csrf
@@ -36,6 +36,7 @@
 @unless($activity->published)<details><summary>Add question</summary><form method="post" action="/activities/{{ $activity->getRouteKey() }}/questions">@csrf<label>Type<select name="type">
 @foreach(['multiple_choice','multiple_answers','true_false','short_answer','long_answer'] as $type)<option value="{{ $type }}">{{ $type==='multiple_answers'?'Multiple Choice Multiple Answers':ucwords(str_replace('_',' ',$type)) }}</option>
 @endforeach</select></label><label>Question<textarea name="prompt" required></textarea></label><label>Options (one per line; True / False supplied automatically)<textarea name="options"></textarea></label><label>Correct answer(s)<textarea name="correct_answer"></textarea><small>Use exact option text. For Multiple Choice Multiple Answers, enter each correct option on a separate line (at least two). All correct options must be selected for full points.</small></label><label>Points<input type="number" name="points" value="1" min="1" max="100" required></label><button>Add question</button></form></details>
+@include('partials.question-import')
 @endunless</section>
 @endif
 @if($manager)
