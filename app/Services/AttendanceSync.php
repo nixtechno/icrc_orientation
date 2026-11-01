@@ -123,12 +123,12 @@ class AttendanceSync
         try {
             $client = $this->client();
             $ping = $client->get('ping')->throw()->json();
-            $uploaded = $this->upload($client);
-            $downloaded = $this->download($client);
+            $uploaded = config('attendance_sync.upload') ? $this->upload($client) : null;
+            [$downloaded, $unplaced] = $this->download($client);
             $status = [
                 'online' => true, 'checked_at' => now()->toIso8601String(), 'last_synced_at' => now()->toIso8601String(), 'error' => null,
                 'clock_offset' => now()->getTimestamp() - Carbon::parse($ping['time'])->getTimestamp(),
-                'uploaded' => $uploaded, 'downloaded' => $downloaded,
+                'uploaded' => $uploaded, 'downloaded' => $downloaded, 'unplaced' => $unplaced,
             ];
         } catch (Throwable $e) {
             Log::warning('Attendance sync failed: '.$e->getMessage());
@@ -149,8 +149,9 @@ class AttendanceSync
         $pending = $this->pending();
 
         return [
-            'mode' => 'venue', 'online' => null, 'checked_at' => null, 'last_synced_at' => null, 'error' => null, 'clock_offset' => null,
+            'mode' => 'venue', 'online' => null, 'checked_at' => null, 'last_synced_at' => null, 'error' => null, 'clock_offset' => null, 'unplaced' => 0,
             ...Cache::get(self::STATUS, []),
+            'upload' => (bool) config('attendance_sync.upload'),
             'waiting' => (clone $pending)->count() + DB::table('attendance_audit_logs')->whereNull('synced_at')->count(),
             'problems' => (clone $pending)->whereNotNull('sync_error')->count(),
         ];
@@ -213,7 +214,8 @@ class AttendanceSync
         return $sent;
     }
 
-    private function download(PendingRequest $client): int
+    /** @return array{int, int} records merged, and records that could not be placed here */
+    private function download(PendingRequest $client): array
     {
         $data = $client->get('snapshot', array_filter(['since' => Cache::get(self::CURSOR)]))->throw()->json();
         $programme = Access::programme();
@@ -230,13 +232,16 @@ class AttendanceSync
             }
         });
         $this->ids = [];
-        $merged = 0;
+        $merged = $unplaced = 0;
         foreach ($data['attendance'] as $in) {
-            $merged += $this->import($in, true) === null ? 1 : 0;
+            $this->import($in, true) === null ? $merged++ : $unplaced++;
         }
-        Cache::forever(self::CURSOR, $data['cursor']);
+        // Leave the cursor where it was if anything could not be placed, so those records download again next run.
+        if (! $unplaced) {
+            Cache::forever(self::CURSOR, $data['cursor']);
+        }
 
-        return $merged;
+        return [$merged, $unplaced];
     }
 
     private function savePerson(array $person, int $programmeId): void

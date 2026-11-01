@@ -15,8 +15,9 @@
     }
     const parts = [s.online === true ? 'Online' : s.online === false ? 'Offline' : 'Not synced yet'];
     parts.push(s.last_synced_at ? 'last synced ' + clock(s.last_synced_at) : 'never synced');
-    parts.push(s.waiting + ' waiting');
+    parts.push(s.upload === false ? 'pull only, uploads off' : s.waiting + ' waiting');
     if (s.problems) parts.push(plural(s.problems, 'problem'));
+    if (s.unplaced) parts.push(plural(s.unplaced, 'live record') + ' not placed yet');
     let line = parts.join(' · ');
     if (s.online === false && s.error) line += '. ' + s.error;
     if (s.online === true && Math.abs(s.clock_offset || 0) > 60) line += '. This computer\'s clock is ' + Math.round(Math.abs(s.clock_offset) / 60) + ' min off the live site; correct it so scan times are right.';

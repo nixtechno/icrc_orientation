@@ -7,6 +7,9 @@ return [
     // The same long random secret on the venue server and the live site (at least 32 characters).
     'token' => env('ATTENDANCE_SYNC_TOKEN'),
 
+    // Venue server only: false makes it download from the live site without ever uploading, e.g. for a dry run.
+    'upload' => (bool) env('ATTENDANCE_SYNC_UPLOAD', true),
+
     // A short name for this copy of the app, stored on every attendance record it writes.
     'origin' => env('ATTENDANCE_SYNC_ORIGIN', env('ATTENDANCE_SYNC_URL') ? 'venue' : 'online'),
 ];

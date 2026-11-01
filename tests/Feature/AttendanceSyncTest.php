@@ -257,6 +257,68 @@ class AttendanceSyncTest extends TestCase
         $this->assertNotNull(Cache::get(AttendanceSync::CURSOR));
     }
 
+    public function test_venue_scanner_signs_out_someone_whose_sign_in_is_still_on_the_live_site(): void
+    {
+        Badge::create(['programme_id' => Programme::first()->id, 'subject_key' => 'u:'.$this->staff->id, 'user_id' => $this->staff->id, 'category' => 'staff', 'snapshot' => ['name' => 'Amina Bello'], 'generated_at' => now(), 'generated_by' => $this->admin->id]);
+        $this->travelTo(Carbon::parse('2026-11-02 17:00:00', 'Africa/Lagos'));
+        $this->actingAs($this->admin);
+        // The live site still requires a sign-in first.
+        $this->postJson('/attendance/scanner/sign-out', ['code' => $this->staff->qr_code])->assertStatus(422);
+
+        $this->asVenue();
+        $this->postJson('/attendance/scanner/sign-out', ['code' => $this->staff->qr_code])->assertOk();
+        $record = DailyAttendance::firstOrFail();
+        $this->assertSame(['17:00:00', null, 'pending', 'scanner'], [$record->checked_out_at->format('H:i:s'), $record->checked_in_at, $record->status, $record->signout_method]);
+        $this->postJson('/attendance/scanner/sign-out', ['code' => $this->staff->qr_code])->assertStatus(409);
+
+        // The phone sign-in arrives from the live site and completes the day.
+        $this->assertNull(app(AttendanceSync::class)->import($this->venueRecord(['origin' => 'online', 'checked_in_at' => '2026-11-02T08:20:00+01:00', 'signin_method' => 'device', 'signin_device_verified' => true, 'signin_scanned_by' => null]), true));
+        $record->refresh();
+        $this->assertSame(['08:20:00', '17:00:00', 'present', 8 * 3600 + 40 * 60], [$record->checked_in_at->format('H:i:s'), $record->checked_out_at->format('H:i:s'), $record->status, $record->duration_seconds]);
+        $this->assertDatabaseCount('daily_attendance', 1);
+    }
+
+    public function test_a_pull_only_venue_downloads_without_uploading(): void
+    {
+        $this->asVenue();
+        config(['attendance_sync.upload' => false]);
+        DailyAttendance::create(['programme_id' => Programme::first()->id, 'programme_day_id' => $this->day->id, 'user_id' => $this->staff->id, 'staff_name' => 'Amina Bello', 'attendance_date' => $this->day->date, 'status' => 'present', 'checked_in_at' => now()]);
+        $urls = [];
+        Http::fake(function (ClientRequest $request) use (&$urls) {
+            $urls[] = $request->method().' '.$request->url();
+            return str_ends_with($request->url(), '/ping') ? Http::response(['time' => now()->toIso8601String()]) : Http::response($this->emptySnapshot());
+        });
+
+        $status = app(AttendanceSync::class)->run();
+        $this->assertTrue($status['online']);
+        $this->assertFalse($status['upload']);
+        $this->assertNull($status['uploaded']);
+        $this->assertSame([], array_values(array_filter($urls, fn ($url) => ! str_starts_with($url, 'GET '))));
+        $this->assertNull(DailyAttendance::first()->synced_version);
+        $this->actingAs($this->admin)->get('/attendance/scanner')->assertOk()->assertSee('Uploads are switched off');
+    }
+
+    public function test_live_records_the_venue_cannot_place_download_again_next_run(): void
+    {
+        $this->asVenue();
+        $person = ['name' => 'Ngozi Adeyemi', 'email' => 'ngozi@example.test', 'role' => 'staff', 'active' => true, 'permissions' => null, 'staff_number' => null, 'department' => null, 'designation' => null, 'group_name' => null, 'slug' => 'ngozi-adeyemi', 'qr_code' => '5555666677778888', 'print_code' => '9999000011112222', 'enrolled' => true];
+        $phone = $this->venueRecord(['email' => 'ngozi@example.test', 'qr_code' => '5555666677778888', 'origin' => 'online']);
+        $people = [];
+        Http::fake(function (ClientRequest $request) use (&$people, $phone) {
+            return str_ends_with($request->url(), '/ping') ? Http::response(['time' => now()->toIso8601String()]) : Http::response($this->emptySnapshot(['people' => $people, 'attendance' => [$phone]]));
+        });
+
+        $status = app(AttendanceSync::class)->run();
+        $this->assertSame([0, 1], [$status['downloaded'], $status['unplaced']]);
+        $this->assertNull(Cache::get(AttendanceSync::CURSOR));
+
+        $people = [$person];
+        $status = app(AttendanceSync::class)->run();
+        $this->assertSame([1, 0], [$status['downloaded'], $status['unplaced']]);
+        $this->assertNotNull(Cache::get(AttendanceSync::CURSOR));
+        $this->assertTrue(DailyAttendance::whereHas('user', fn ($q) => $q->where('email', 'ngozi@example.test'))->exists());
+    }
+
     public function test_scanner_pages_show_the_sync_line_and_sync_now_runs_on_the_venue_only(): void
     {
         $this->actingAs($this->admin);

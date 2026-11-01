@@ -73,7 +73,7 @@ class AttendanceSecurity
         return ['latitude' => $lat, 'longitude' => $lon, 'accuracy' => $accuracy, 'reported_at' => (float) $v['timestamp'], 'distance_meters' => round($distance, 2), 'venue' => $s['venue_name'] ?? 'Attendance venue'];
     }
 
-    public function eligible(User $user, string $mode)
+    public function eligible(User $user, string $mode, bool $signOutWithoutSignIn = false)
     {
         $this->staff($user);
         $p = Access::programme();
@@ -90,8 +90,8 @@ class AttendanceSecurity
         if ($mode === 'in') {
             abort_if($record, 409, 'Attendance is already recorded for today.');
         } else {
-            abort_unless($record?->checked_in_at, 422, 'Sign in before signing out.');
-            abort_if($record->checked_out_at, 409, 'You have already signed out today.');
+            abort_unless($record?->checked_in_at || $signOutWithoutSignIn, 422, 'Sign in before signing out.');
+            abort_if($record?->checked_out_at, 409, 'You have already signed out today.');
         }
 
         return $day;

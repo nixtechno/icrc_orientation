@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\{Badge, DailyAttendance, Programme, ProgrammeDay, User};
-use App\Services\{Access, AttendanceSecurity, AttendanceService};
+use App\Services\{Access, AttendanceSecurity, AttendanceService, AttendanceSync};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -50,7 +50,8 @@ class AttendanceScannerController extends Controller
             $programme = Programme::whereKey(Access::programme()->id)->lockForUpdate()->firstOrFail();
             $day = $service->days()->whereDate('date', now('Africa/Lagos')->toDateString())->first();
             if ($day) ProgrammeDay::whereKey($day->id)->lockForUpdate()->firstOrFail();
-            $day = $security->eligible($user, $direction);
+            // A venue server may not yet know about a sign-in made on the live site while it was offline; the sync merges the two.
+            $day = $security->eligible($user, $direction, AttendanceSync::venue());
             $stamp = now();
             $prefix = $direction === 'in' ? 'signin' : 'signout';
             $fields = [$prefix.'_method'=>'scanner', $prefix.'_scanned_by'=>auth()->id()];
@@ -66,9 +67,18 @@ class AttendanceScannerController extends Controller
                 ]);
             } else {
                 $record = DailyAttendance::where('programme_id', $programme->id)->where('programme_day_id', $day->id)
-                    ->where('user_id', $user->id)->lockForUpdate()->firstOrFail();
-                $record->update([...$fields, 'checked_out_at'=>$stamp,
-                    'duration_seconds'=>max(0, (int) $record->checked_in_at->diffInSeconds($stamp))]);
+                    ->where('user_id', $user->id)->lockForUpdate()->first();
+                if ($record) {
+                    $record->update([...$fields, 'checked_out_at'=>$stamp,
+                        'duration_seconds'=>$record->checked_in_at ? max(0, (int) $record->checked_in_at->diffInSeconds($stamp)) : null]);
+                } else {
+                    // Venue server only: the sign-in is on the live site and arrives with the next sync.
+                    $record = DailyAttendance::create([
+                        ...$fields, 'programme_id'=>$programme->id, 'programme_day_id'=>$day->id,
+                        'user_id'=>$user->id, 'staff_name'=>$user->name, 'staff_number_snapshot'=>$user->staff_number,
+                        'attendance_date'=>$day->date, 'checked_out_at'=>$stamp, 'status'=>'pending', 'recorded_by'=>auth()->id(),
+                    ]);
+                }
             }
             $security->log('attendance.scanner.'.$direction, true, 'Staff badge scanned by attendance manager. Badge '.$badge->getRouteKey().'.', $user->id);
             return $record;
