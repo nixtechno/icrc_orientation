@@ -8,7 +8,7 @@
         <a class="orientation-purpose-link" href="#programme">Explore your six-week journey <span aria-hidden="true">&#8599;</span></a>
     </div>
     <figure class="orientation-purpose-photo">
-        <img src="{{ asset('brand/certificate-celebration-v1.jpg') }}" alt="Colleagues cheering as a certificate of completion is presented during an ICRC training session" width="1600" height="1066" loading="lazy" decoding="async">
+        <img src="{{ asset('brand/certificate-celebration-v2.jpg') }}" alt="A staff member is presented with a certificate of completion during an ICRC training programme" width="1600" height="1066" loading="lazy" decoding="async">
         <figcaption><span>LEARN TOGETHER. SERVE WITH PURPOSE.</span></figcaption>
     </figure>
 </section>
