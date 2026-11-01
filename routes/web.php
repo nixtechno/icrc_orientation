@@ -23,6 +23,8 @@ Route::get('/forgot-password', fn () => view('auth', ['mode' => 'forgot']))->nam
 Route::post('/forgot-password', [AuthController::class, 'forgot'])->middleware('throttle:3,1')->name('password.email');
 Route::get('/reset-password/{token}', fn (string $token) => view('auth', ['mode' => 'reset', 'token' => $token]))->name('password.reset');
 Route::post('/reset-password', [AuthController::class, 'reset'])->middleware('throttle:5,1')->name('password.update');
+Route::view('/terms', 'legal.page', ['doc' => 'terms', 'heading' => 'Terms & Conditions']);
+Route::view('/privacy', 'legal.page', ['doc' => 'privacy', 'heading' => 'Privacy Policy']);
 Route::get('/invitation/{token}', [RegistrationController::class, 'activateForm']);
 Route::post('/invitation/{token}', [RegistrationController::class, 'activate'])->middleware('throttle:5,1');
 Route::middleware(['auth', ActiveAccount::class])->group(function () {

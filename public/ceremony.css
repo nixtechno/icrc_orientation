@@ -106,3 +106,32 @@ html{scroll-behavior:smooth;scroll-padding-top:110px}body{font-family:'Segoe UI'
 @media(max-width:1100px){.guest-body{--support-column-width:440px}.guest-body #contact.contact-section,.guest-body .footer-invitation{column-gap:25px}}
 @media(max-width:800px){.guest-body{--support-column-width:340px}.guest-body #contact.contact-section,.guest-body .footer-invitation{column-gap:20px}}
 @media(max-width:560px){.guest-body #contact.contact-section,.guest-body .footer-invitation{grid-template-columns:minmax(0,1fr)}.guest-body #contact .support-network{max-width:480px}.guest-body .footer-invitation>.button{margin-top:25px}}
+/* Footer invitation: a deep-green card that fades into a programme photograph behind the portal button. */
+.site-footer .footer-invitation,.guest-body .site-footer .footer-invitation{position:relative;isolation:isolate;overflow:hidden;margin:50px 0 40px;padding:58px 60px;min-height:250px;border:0;border-radius:4px;background:var(--deep);grid-template-columns:minmax(0,1fr) auto;column-gap:40px}
+.guest-body .site-footer .footer-invitation>.button{justify-self:end}
+.site-footer .footer-invitation-photo{position:absolute;z-index:-2;top:0;left:34%;width:76%;height:100%;object-fit:cover;object-position:center 55%}
+.site-footer .footer-invitation::before{content:'';position:absolute;z-index:-1;inset:0;background:linear-gradient(90deg,var(--deep) 36%,#062d20d9 52%,#062d2066 78%,#062d2040)}
+.site-footer .footer-invitation .eyebrow{color:var(--gold)}
+.site-footer .footer-invitation h2{color:#fff}
+.site-footer .footer-invitation .button{box-shadow:0 10px 26px #00000040}
+@media(max-width:800px){.site-footer .footer-invitation{padding:44px 36px;min-height:220px}.site-footer .footer-invitation::before{background:linear-gradient(90deg,var(--deep) 30%,#062d20cc 55%,#062d2073)}}
+@media(max-width:560px){.site-footer .footer-invitation{padding:34px 26px;margin:34px 0 30px}.site-footer .footer-invitation-photo{left:0;width:100%}.site-footer .footer-invitation::before{background:linear-gradient(180deg,#062d20eb 45%,#062d20b3)}.guest-body .site-footer .footer-invitation{grid-template-columns:minmax(0,1fr)}.guest-body .site-footer .footer-invitation>.button{justify-self:start}}
+/* Terms and privacy: modal dialogs opened from the footer and the activation form, plus the plain /terms and /privacy pages. */
+.legal-dialog{width:min(680px,calc(100vw - 32px));max-height:calc(100dvh - 48px);padding:0;border:0;border-radius:14px;box-shadow:0 30px 80px #0b2a1a40;color:#23362c;background:#fff;overflow:hidden}
+.legal-dialog[open]{display:flex;flex-direction:column}
+.legal-dialog::backdrop{background:#0c241866;backdrop-filter:blur(3px)}
+.legal-dialog-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:24px 28px 16px;border-bottom:1px solid var(--line)}
+.legal-dialog-head .eyebrow{font-size:9px;color:var(--green)}
+.legal-dialog-head h2{margin:6px 0 0;font:26px/1.2 var(--serif);color:var(--green)}
+.legal-dialog .legal-dialog-close{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;min-height:0;padding:0;border:0;border-radius:50%;background:#f0f3ee;color:#36584a;font-size:24px;line-height:1;flex-shrink:0;cursor:pointer}
+.legal-dialog .legal-dialog-close:hover{background:#e2e9df;transform:none;box-shadow:none}
+.legal-dialog-body{padding:8px 28px 24px;overflow-y:auto;overscroll-behavior:contain}
+.legal-dialog-foot{display:flex;justify-content:flex-end;padding:14px 28px;border-top:1px solid var(--line);background:#fafbf8}
+.legal-copy h3{margin:24px 0 8px;font-size:15px;color:var(--green)}
+.legal-copy p,.legal-copy li{font-size:14px;line-height:1.75;color:var(--muted)}
+.legal-copy .legal-updated{margin:16px 0 4px;font-size:12px;letter-spacing:.3px;color:#8d987e}
+.legal-copy ul{margin:0 0 12px;padding-left:20px}
+.legal-copy li{margin:4px 0}
+.legal-copy strong{color:#2f4a3b}
+.legal-page{max-width:820px;margin:auto}
+@media(max-width:560px){.legal-dialog-head{padding:20px 20px 14px}.legal-dialog-head h2{font-size:22px}.legal-dialog-body{padding:6px 20px 20px}.legal-dialog-foot{padding:12px 20px}}
