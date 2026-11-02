@@ -110,6 +110,8 @@ return $ids;
             $height = $data['settings']['height_mm'] * ($data['settings']['layout'] === 'folded' ? 2 : 1);
             $bytes = app(PdfService::class)->render(view('badges.artwork', $data)->render(), [0, 0, $data['settings']['width_mm'] * 72 / 25.4, $height * 72 / 25.4]);
             Access::audit('badge.pdf', implode(',', $badges->pluck('id')->all()));
+            // Opening the print-ready PDF is how badges are printed outside the print station, and they are handed over as they print.
+            $badges->whereNull('printed_at')->each(fn ($b) => $b->update(['printed_at' => now(), 'collected_at' => $b->collected_at ?? now()]));
 
             return response($bytes, 200, ['Content-Type' => 'application/pdf', 'Content-Disposition' => 'inline; filename="icrc-badges.pdf"', 'Cache-Control' => 'private, no-store']);
         }

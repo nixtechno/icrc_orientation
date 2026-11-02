@@ -57,6 +57,28 @@ class DataToolsTest extends TestCase
         $this->post('/settings/tools/database')->assertRedirect('/settings?tab=tools');
     }
 
+    public function test_badges_printed_from_their_pdf_are_recorded_as_printed_and_count_as_sign_ins(): void
+    {
+        $staff = $this->person();
+        $badge = Badge::create(['programme_id' => $this->programme->id, 'subject_key' => 'u:'.$staff->id, 'user_id' => $staff->id, 'category' => 'staff', 'snapshot' => ['name' => $staff->name],
+            'generated_at' => Carbon::parse('2026-11-02 08:00', 'Africa/Lagos'), 'generated_by' => $this->admin->id]);
+        $stale = Badge::create(['programme_id' => $this->programme->id, 'subject_key' => 'u:999', 'category' => 'staff', 'snapshot' => ['name' => 'Regenerated'],
+            'generated_at' => Carbon::parse('2026-11-02 10:00', 'Africa/Lagos'), 'generated_by' => $this->admin->id]);
+        // Opened before the fix, which only wrote the audit entry; the second badge's PDF predates its current version.
+        \Illuminate\Support\Facades\DB::table('audit_logs')->insert(['action' => 'badge.pdf', 'subject' => $badge->id.','.$stale->id, 'created_at' => Carbon::parse('2026-11-02 08:40', 'Africa/Lagos'), 'updated_at' => now()]);
+
+        $this->actingAs($this->admin)->get('/settings?tab=tools')->assertSee('Record 1 badge as printed');
+        $this->post('/settings/tools/badges-from-pdfs')->assertSessionHas('success', '1 badges are now marked printed and collected at the time their PDF was opened.');
+        $this->assertSame(['08:40', '08:40'], [$badge->fresh()->printed_at->timezone('Africa/Lagos')->format('H:i'), $badge->fresh()->collected_at->timezone('Africa/Lagos')->format('H:i')]);
+        $this->assertNull($stale->fresh()->printed_at);
+        $this->post('/settings/tools/signins', ['date' => '2026-11-02'])->assertSessionHas('success', fn ($m) => str_contains($m, '1 records were added'));
+
+        // From now on, opening the PDF records the print straight away.
+        $this->get('/badges/batch?'.http_build_query(['ids' => [$stale->getRouteKey()], 'pdf' => 1]))->assertOk();
+        $this->assertNotNull($stale->fresh()->printed_at);
+        $this->assertNotNull($stale->fresh()->collected_at);
+    }
+
     public function test_admins_can_point_an_account_at_the_badge_qr_id_the_person_is_wearing(): void
     {
         $staff = $this->person('facilitator', ['name' => 'Rahinah Sirika', 'email' => 'rahinah@example.test']);

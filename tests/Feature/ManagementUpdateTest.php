@@ -316,9 +316,9 @@ class ManagementUpdateTest extends TestCase
         $pdf = $this->get('/badges/batch?'.$query.'&pdf=1')->assertOk()->assertHeader('Content-Type', 'application/pdf')->getContent();
         $this->assertStringStartsWith('%PDF-', $pdf);
         $this->assertSame(3, preg_match_all('/\\/Type\\s*\\/Page\\b/', $pdf));
-        $this->assertNull(Badge::first()->printed_at);
-        $this->post('/badges/printed', ['ids' => $ids])->assertRedirect();
+        // Opening the print-ready PDF records the badges as printed.
         $this->assertNotNull(Badge::first()->printed_at);
+        $this->post('/badges/printed', ['ids' => $ids])->assertRedirect();
         $this->post('/badges/generate', ['subjects' => ['u:'.$staff->id]])->assertRedirect();
         $b = Badge::where('user_id', $staff->id)->first();
         $this->assertSame(2, $b->version);

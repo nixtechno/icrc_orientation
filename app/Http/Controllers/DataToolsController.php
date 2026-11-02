@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Artisan;
 
 /**
  * One-off maintenance jobs administrators run from Programme settings instead of the server command line:
- * attendance days, sign-ins from badge print times, collected badges and database updates.
+ * attendance days, sign-ins from badge print times, badges printed from their PDF, collected badges and database updates.
  */
 class DataToolsController extends Controller
 {
@@ -27,6 +27,7 @@ class DataToolsController extends Controller
             'signinDay' => $day,
             'signins' => $day ? $service->signInFromBadgePrints($day, false) : null,
             'uncollected' => app(BadgeService::class)->markPrintedCollected(false),
+            'unrecorded' => app(BadgeService::class)->markPrintedFromPdfs(false),
             'pending' => self::pendingMigrations(),
         ];
     }
@@ -53,7 +54,8 @@ class DataToolsController extends Controller
         return match ($job) {
             'attendance-days' => $back->with('success', 'Attendance is now taken all day, with no late time, on '.app(AttendanceService::class)->takeAttendanceAllDay().' programme days.'),
             'signins' => $this->signIns($r, $back),
-            'badges-collected' => $back->with('success', app(BadgeService::class)->markPrintedCollected().' printed badges are now marked as collected at their print time.'),
+            'badges-from-pdfs' => $back->with('success', app(BadgeService::class)->markPrintedFromPdfs().' badges are now marked printed and collected at the time their PDF was opened.'),
+            'badges-collected' =>$back->with('success', app(BadgeService::class)->markPrintedCollected().' printed badges are now marked as collected at their print time.'),
             'database' => $this->database($back),
             default => abort(404),
         };

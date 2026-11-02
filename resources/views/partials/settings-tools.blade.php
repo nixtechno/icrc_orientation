@@ -19,6 +19,14 @@
 @else<p class="muted">Every programme day already takes attendance all day.</p>@endif
 </section>
 
+<section class="card settings-tool" aria-labelledby="tool-pdfs">
+<h2 id="tool-pdfs">Record badges printed from Create badge</h2>
+<p class="muted">Badges printed by opening their PDF from Create badge or the batch preview were not recorded as printed. Each is marked printed and collected at the time its PDF was first opened. Run this before using badge print times as sign-ins.</p>
+@if($t['unrecorded'])<p>{{ $t['unrecorded'] }} {{ $t['unrecorded'] === 1 ? 'badge was' : 'badges were' }} opened for printing but {{ $t['unrecorded'] === 1 ? 'is' : 'are' }} not recorded as printed.</p>
+@unless($t['venue'])<form method="post" action="/settings/tools/badges-from-pdfs">@csrf<button>Record {{ $t['unrecorded'] }} {{ $t['unrecorded'] === 1 ? 'badge' : 'badges' }} as printed</button></form>@endunless
+@else<p class="muted">Every badge opened for printing is recorded as printed.</p>@endif
+</section>
+
 <section class="card settings-tool" aria-labelledby="tool-signins">
 <h2 id="tool-signins">Use badge print times as sign-ins</h2>
 <p class="muted">For a day when staff collected their badge on arrival: the badge print time becomes their sign-in. Staff with a printed badge but no scan get a record. Anyone who signed in earlier keeps their own time.</p>

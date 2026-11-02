@@ -57,6 +57,24 @@ class BadgeService
         }
     }
 
+    /**
+     * Badges whose print-ready PDF was opened but were never recorded as printed, as badges made with Create badge were:
+     * each is marked printed and collected when its PDF was first opened after its current version was generated.
+     */
+    public function markPrintedFromPdfs(bool $save = true): int
+    {
+        $badges = Badge::where('programme_id', Access::programme()->id)->whereNull('printed_at')->get();
+        $opened = \Illuminate\Support\Facades\DB::table('audit_logs')->where('action', 'badge.pdf')->orderBy('created_at')->get(['subject', 'created_at'])
+            ->flatMap(fn ($log) => array_map(fn ($id) => ['id' => (int) $id, 'at' => \Illuminate\Support\Carbon::parse($log->created_at)], explode(',', $log->subject)))->groupBy('id');
+        $printed = $badges->mapWithKeys(fn ($badge) => [$badge->id => $opened->get($badge->id, collect())->first(fn ($o) => ! $badge->generated_at || $o['at']->gte($badge->generated_at))['at'] ?? null])->filter();
+        if ($save && $printed->isNotEmpty()) {
+            $badges->only($printed->keys()->all())->each(fn ($badge) => $badge->update(['printed_at' => $printed[$badge->id], 'collected_at' => $badge->collected_at ?? $printed[$badge->id]]));
+            Access::audit('badge.printed_from_pdf', 'programme:'.Access::programme()->id, null, ['badges' => $printed->count()]);
+        }
+
+        return $printed->count();
+    }
+
     /** Badges handed out as they were printed: each printed badge is marked collected at its print time. */
     public function markPrintedCollected(bool $save = true): int
     {
