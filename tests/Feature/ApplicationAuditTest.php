@@ -142,7 +142,7 @@ class ApplicationAuditTest extends TestCase
         $submission = Submission::where('activity_id', $activity->id)->firstOrFail();
         $this->post('/activities/'.$activity->id.'/start')->assertRedirect('/submissions/'.$submission->getRouteKey().'/complete');
         $this->assertSame(1, Submission::where('activity_id', $activity->id)->count());
-        $this->get('/submissions/'.$submission->id.'/complete')->assertOk()->assertSee('Choose B')->assertDontSee('correct_answer');
+        $this->get('/submissions/'.$submission->id.'/complete')->assertOk()->assertSee('Choose B')->assertSee('Submit your final answers?')->assertSee('data-quiz-confirm-submit', false)->assertDontSee('correct_answer');
         $this->post('/submissions/'.$submission->id.'/complete', ['answers' => [$question->id => 'B', 999999 => 'injected']])->assertRedirect('/activities/'.$activity->getRouteKey())->assertSessionHas('success', 'Assessment submitted. Your score: 5 / 5.');
         $this->assertEquals(5, $submission->fresh()->score);
         $this->assertNotNull($submission->fresh()->released_at);
@@ -154,10 +154,10 @@ class ApplicationAuditTest extends TestCase
         $this->get('/submissions/'.$submission->id.'/complete')->assertRedirect('/activities/'.$activity->getRouteKey());
         $this->post('/activities/'.$activity->id.'/start')->assertUnprocessable();
         // Multiple choice is marked and shown at once; a reviewer can still add feedback afterwards.
-        $this->get('/activities/'.$activity->id)->assertSee('Score: 5 / 5')->assertDontSee('Awaiting');
+        $this->get('/activities/'.$activity->id)->assertSeeInOrder(['Your score', '5', '/ 5', '100%'])->assertDontSee('Awaiting');
         $this->get('/activities?kind=quiz')->assertSee('View score');
         $this->actingAs($admin)->post('/submissions/'.$submission->id.'/review', ['score' => 5, 'feedback' => 'QA released feedback', 'release' => 1])->assertRedirect();
-        $this->actingAs($staff)->get('/activities/'.$activity->id)->assertSee('Score: 5 / 5')->assertSee('QA released feedback');
+        $this->actingAs($staff)->get('/activities/'.$activity->id)->assertSeeInOrder(['Your score', '5', '/ 5'])->assertSee('QA released feedback');
         $activity->update(['due_at' => now()->subMinute()]);
         $this->post('/submissions/'.$submission->id.'/complete', [])->assertRedirect('/activities/'.$activity->getRouteKey());
         $this->assertSame('B', $submission->fresh()->answers[$question->id]);

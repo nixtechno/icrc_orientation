@@ -133,7 +133,7 @@ class FullscreenQuizTest extends TestCase
         $written=Question::create(['activity_id'=>$this->quiz->id,'type'=>'long_answer','prompt'=>'Explain','points'=>10]);$submission=$this->start();$base='/submissions/'.$submission->slug;
         $this->postJson($base.'/complete',['answers'=>[$this->question->id=>'B',$written->id=>'My explanation'],'draft_version'=>1])->assertOk()->assertJson(['submitted'=>true]);
         $this->assertNull($submission->fresh()->score);$this->assertNull($submission->fresh()->released_at);$this->assertSame('manual',$submission->fresh()->submission_reason);
-        $this->get('/activities/'.$this->quiz->slug)->assertSee('Awaiting marking of your written answers')->assertDontSee('Score:');
+        $this->get('/activities/'.$this->quiz->slug)->assertSee('Your answers are with a facilitator for marking.')->assertDontSee('quiz-review-score');
         $this->postJson($base.'/auto-submit',['reason'=>'fullscreen_exit'])->assertOk();
         $this->assertSame('My explanation',$submission->fresh()->answers[$written->id]);$this->assertSame('manual',$submission->fresh()->submission_reason);
     }

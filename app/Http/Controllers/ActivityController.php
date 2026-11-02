@@ -42,6 +42,11 @@ class ActivityController extends Controller
                 'submissions as staff_started' => fn ($query) => $query->where('user_id', $r->user()->id)->whereNull('submitted_at'),
                 'submissions as staff_released' => fn ($query) => $query->where('user_id', $r->user()->id)->whereNotNull('released_at'),
             ]);
+            if ($kind === 'quiz') {
+                // The person's released score for the card, from their latest released attempt.
+                $q->addSelect(['staff_score' => Submission::select('score')->whereColumn('activity_id', 'activities.id')->where('user_id', $r->user()->id)->whereNotNull('released_at')->latest('submitted_at')->limit(1)])
+                    ->withSum('questions as total_points', 'points');
+            }
         }
 
         // Managers see presentations in two tabs: the presentations themselves and every submission.
@@ -213,7 +218,8 @@ return view('activities', ['items' => $items, 'manager' => $manager, 'selectedKi
         Access::manage('assessments');
         $this->scope($activity);
         abort_if($activity->published || $activity->submissions()->exists(), 422, 'Questions are locked after publication or an attempt.');
-        $v = $r->validate(['type' => 'required|in:multiple_choice,multiple_answers,true_false,short_answer,long_answer', 'prompt' => 'required|string|max:10000', 'options' => 'nullable|string|max:10000', 'correct_answer' => 'nullable|string|max:5000', 'points' => 'required|integer|between:1,100']);
+        $v = $r->validate(['type' => 'required|in:multiple_choice,multiple_answers,true_false,short_answer,long_answer', 'prompt' => 'required|string|max:10000', 'options' => 'nullable|string|max:10000', 'correct_answer' => 'nullable|string|max:5000', 'points' => 'required|integer|between:1,100', 'explanation' => 'nullable|string|max:5000']);
+        if (! Question::hasExplanations()) unset($v['explanation']);
         $options = $v['type'] === 'true_false' ? ['True', 'False'] : array_values(array_unique(array_filter(array_map('trim', explode("\n", $v['options'] ?? '')), fn ($option) => $option !== '')));
         if (in_array($v['type'], ['multiple_choice', 'true_false'])) {
             abort_unless(count($options) >= 2 && in_array($v['correct_answer'] ?? null, $options, true), 422, 'Provide at least two options and an exact matching correct answer.');
@@ -267,6 +273,7 @@ return view('activities', ['items' => $items, 'manager' => $manager, 'selectedKi
         abort_if(! $questions, 422, 'There are no checked questions waiting. Upload the file again.');
         DB::transaction(function () use ($activity, $questions) {
             foreach ($questions as $question) {
+                if (! Question::hasExplanations()) unset($question['explanation']);
                 Question::create([...$question, 'activity_id' => $activity->id]);
             }
         });

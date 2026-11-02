@@ -62,8 +62,25 @@
    state.draftUrl=payload.draft_url;state.finishUrl=payload.finish_url;state.returnUrl=payload.return_url;
    const submit=state.form.querySelector('[data-quiz-submit]');
    state.form.addEventListener('input',()=>{if(state.ending)return;state.version++;clearTimeout(saveTimer);saveTimer=setTimeout(save,350);});
-   state.form.addEventListener('submit',async event=>{
+   // Submitting asks for confirmation in an in-page dialog; a browser confirm() could drop fullscreen and auto-submit.
+   const confirmBox=state.form.querySelector('[data-quiz-confirm]');
+   const askToSubmit=()=>{
+    const questions=[...state.form.querySelectorAll('fieldset')];
+    const blank=questions.filter(field=>!field.querySelector('input:checked')&&![...field.querySelectorAll('textarea')].some(box=>box.value.trim())).length;
+    confirmBox.querySelector('[data-quiz-confirm-summary]').textContent=blank
+     ?`You have answered ${questions.length-blank} of ${questions.length} questions. ${blank} ${blank===1?'question is':'questions are'} unanswered and will score nothing.`
+     :`You have answered all ${questions.length} questions.`;
+    confirmBox.showModal();
+    confirmBox.querySelector(blank?'[data-quiz-confirm-cancel]':'[data-quiz-confirm-submit]').focus();
+   };
+   confirmBox?.querySelector('[data-quiz-confirm-cancel]').addEventListener('click',()=>confirmBox.close());
+   confirmBox?.querySelector('[data-quiz-confirm-submit]').addEventListener('click',()=>{confirmBox.close();submitFinal();});
+   state.form.addEventListener('submit',event=>{
     event.preventDefault();if(state.ending)return;
+    if(confirmBox?.showModal)askToSubmit();else submitFinal();
+   });
+   const submitFinal=async()=>{
+    if(state.ending)return;
     const data=capture();state.ending=true;state.manual=true;submit.disabled=true;submit.textContent='Submitting your answers…';stopTimers();
     try{returnToActivity(await json(state.form.action,data,smallEnough(data)));}
     catch(error){
@@ -71,7 +88,7 @@
      const status=stage.querySelector('[data-quiz-save-status]');status.textContent=error.message;status.classList.add('quiz-save-error');
      if(document.fullscreenElement!==stage)finish('fullscreen_exit');else startTimers(payload);
     }
-   });
+   };
    state.form.querySelector('input:not([type="hidden"]),textarea')?.focus();startTimers(payload);save();
   };
   const startTimers=payload=>{

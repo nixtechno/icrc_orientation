@@ -31,11 +31,11 @@
 @include('partials.presentation-submissions',$presentationTable)
 @endif
 @if($manager&&$activity->kind==='quiz')<section class="card"><h2>Questions</h2>
-@foreach($activity->questions as $q)<div class="activity-row"><div><strong>{{ $q->prompt }}</strong><p>{{ $q->type }} · {{ $q->points }} points · Correct answer: {{ $q->type==='multiple_answers'?implode(', ',$q->correctAnswers()):($q->correct_answer??'Manual review') }}</p><p>{{ implode(' / ',$q->options??[]) }}</p></div></div>
+@foreach($activity->questions as $q)<div class="activity-row"><div><strong>{{ $q->prompt }}</strong><p>{{ $q->type }} · {{ $q->points }} points · Correct answer: {{ $q->type==='multiple_answers'?implode(', ',$q->correctAnswers()):($q->correct_answer??'Manual review') }}</p><p>{{ implode(' / ',$q->options??[]) }}</p>@if(\App\Models\Question::hasExplanations()&&filled($q->explanation))<p class="muted"><strong>Explanation:</strong> {{ $q->explanation }}</p>@endif</div></div>
 @endforeach
 @unless($activity->published)<details><summary>Add question</summary><form method="post" action="/activities/{{ $activity->getRouteKey() }}/questions">@csrf<label>Type<select name="type">
 @foreach(['multiple_choice','multiple_answers','true_false','short_answer','long_answer'] as $type)<option value="{{ $type }}">{{ $type==='multiple_answers'?'Multiple Choice Multiple Answers':ucwords(str_replace('_',' ',$type)) }}</option>
-@endforeach</select></label><label>Question<textarea name="prompt" required></textarea></label><label>Options (one per line; True / False supplied automatically)<textarea name="options"></textarea></label><label>Correct answer(s)<textarea name="correct_answer"></textarea><small>Use exact option text. For Multiple Choice Multiple Answers, enter each correct option on a separate line (at least two). All correct options must be selected for full points.</small></label><label>Points<input type="number" name="points" value="1" min="1" max="100" required></label><button>Add question</button></form></details>
+@endforeach</select></label><label>Question<textarea name="prompt" required></textarea></label><label>Options (one per line; True / False supplied automatically)<textarea name="options"></textarea></label><label>Correct answer(s)<textarea name="correct_answer"></textarea><small>Use exact option text. For Multiple Choice Multiple Answers, enter each correct option on a separate line (at least two). All correct options must be selected for full points.</small></label><label>Points<input type="number" name="points" value="1" min="1" max="100" required></label>@if(\App\Models\Question::hasExplanations())<label>Explanation (optional)<textarea name="explanation" maxlength="5000"></textarea><small>Why the correct answer is right. Staff see it beside their answer once their result is released.</small></label>@endif<button>Add question</button></form></details>
 @include('partials.question-import')
 @endunless</section>
 @endif
@@ -47,18 +47,21 @@
 <script src="{{ asset('review-dialogs.js') }}?v=20261101a" defer></script>
 @foreach($submissions as $s)@include('partials.review-dialog')@endforeach
 @else
+@if($activity->kind==='quiz')<link rel="stylesheet" href="{{ asset('quiz-review.css') }}?v=20261102b"><script src="{{ asset('quiz-review.js') }}?v=20261102a" defer></script>@endif
 <h2>My submissions</h2>
 @forelse($submissions as $s)<section class="card" id="submission-{{ $s->getRouteKey() }}"><h3>{{ $activity->kind==='presentation'?'My presentation':'My attempt' }}@unless($activity->kind==='presentation') · Attempt {{ $s->attempt }}@endunless</h3><p class="muted">{{ $s->submitted_at?'Submitted '.$s->submitted_at->format('j M H:i'):'Started; not submitted' }}{{ ($activity->due_at&&$s->submitted_at?->gt($activity->due_at))?' · Late':'' }}</p>
 @if($s->submitted_at)
 @if($s->submission_reason&&$s->submission_reason!=='manual')<p class="badge warning">Automatically submitted &middot; {{ ucwords(str_replace('_',' ',$s->submission_reason)) }}</p>
-@endif<p class="preline">{{ $s->body }}</p>
-@foreach($activity->questions as $q)<p><strong>{{ $q->prompt }}</strong><br>{{ is_array($s->answers[$q->id]??null)?implode(', ',$s->answers[$q->id]):($s->answers[$q->id]??'No response') }}</p>
-@endforeach
+@endif
+@if($activity->kind==='quiz')
+@include('partials.quiz-review')
+@if($s->released_at&&filled($s->feedback))<div class="quiz-review-feedback"><strong>Facilitator feedback</strong><p class="preline">{{ $s->feedback }}</p></div>@endif
+@else<p class="preline">{{ $s->body }}</p>
 @if($s->path)<p><a href="/submissions/{{ $s->getRouteKey() }}/download">Download submitted file</a></p>
 @endif
-@if($s->released_at)<p><strong>Score: {{ +$s->score }}@if($activity->kind==='quiz'&&$activity->questions->sum('points')) / {{ +$activity->questions->sum('points') }}@endif</strong></p>@if(filled($s->feedback))<p class="preline">{{ $s->feedback }}</p>@endif
-@elseif($activity->kind==='quiz')<p class="badge warning">Awaiting marking of your written answers</p>
+@if($s->released_at)<p><strong>Score: {{ +$s->score }}</strong></p>@if(filled($s->feedback))<p class="preline">{{ $s->feedback }}</p>@endif
 @else<p class="badge warning">Awaiting review / result release</p>
+@endif
 @endif
 @endif</section>
 @empty<div class="empty">{{ $activity->kind==='presentation'?'No submissions yet.':'No attempts yet.' }}</div>

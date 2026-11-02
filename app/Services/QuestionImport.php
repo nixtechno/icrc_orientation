@@ -13,6 +13,9 @@ class QuestionImport
 {
     public const COLUMNS = ['type', 'question', 'option_a', 'option_b', 'option_c', 'option_d', 'option_e', 'option_f', 'correct_answer', 'points'];
 
+    /** Optional columns after the required ones; older templates without them still import. */
+    public const EXTRA_COLUMNS = ['explanation'];
+
     public const MAX_ROWS = 300;
 
     /** Friendly names shown in the template, keyed by the stored question type. */
@@ -22,14 +25,15 @@ class QuestionImport
     {
         $book = new Spreadsheet;
         $sheet = $book->getActiveSheet()->setTitle('Questions');
-        $sheet->fromArray(self::COLUMNS);
-        $sheet->getStyle('A1:J1')->getFont()->setBold(true);
-        $sheet->getStyle('A1:J1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('E6EEE5');
+        $sheet->fromArray([...self::COLUMNS, ...self::EXTRA_COLUMNS]);
+        $sheet->getStyle('A1:K1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:K1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('E6EEE5');
         $sheet->freezePane('A2');
-        foreach (['A' => 18, 'B' => 60, 'C' => 22, 'D' => 22, 'E' => 22, 'F' => 22, 'G' => 22, 'H' => 22, 'I' => 18, 'J' => 9] as $column => $width) {
+        foreach (['A' => 18, 'B' => 60, 'C' => 22, 'D' => 22, 'E' => 22, 'F' => 22, 'G' => 22, 'H' => 22, 'I' => 18, 'J' => 9, 'K' => 50] as $column => $width) {
             $sheet->getColumnDimension($column)->setWidth($width);
         }
         $sheet->getStyle('B:B')->getAlignment()->setWrapText(true);
+        $sheet->getStyle('K:K')->getAlignment()->setWrapText(true);
         // A drop-down for the type column so people pick a type the import understands.
         $list = (new DataValidation)->setType(DataValidation::TYPE_LIST)->setAllowBlank(true)->setShowDropDown(true)
             ->setShowErrorMessage(true)->setErrorTitle('Unknown type')->setError('Pick a type from the list.')
@@ -47,21 +51,22 @@ class QuestionImport
             ['option_a … option_f', 'The answer choices for Multiple choice and Multiple answers (at least two). Leave blank for True/False and written answers.'],
             ['correct_answer', 'The letter of the right option (e.g. B), or its exact text. For Multiple answers, list two or more letters separated by commas (e.g. A, C). For True/False enter True or False. Leave blank for Short and Long answer; a facilitator marks those.'],
             ['points', 'Whole number from 1 to 100. Leave blank for 1 point.'],
+            ['explanation', 'Optional. Why the correct answer is right. Staff see it beside their answer once their result is released.'],
             [''],
             ['Examples (copy the layout, not these rows)'],
-            self::COLUMNS,
-            ['Multiple choice', 'What does ICRC stand for?', 'Infrastructure Concession Regulatory Commission', 'International Committee of the Red Cross', 'Industrial Credit Regulatory Council', '', '', '', 'A', 2],
+            [...self::COLUMNS, ...self::EXTRA_COLUMNS],
+            ['Multiple choice', 'What does ICRC stand for?', 'Infrastructure Concession Regulatory Commission', 'International Committee of the Red Cross', 'Industrial Credit Regulatory Council', '', '', '', 'A', 2, 'ICRC regulates infrastructure concessions in Nigeria.'],
             ['Multiple answers', 'Which of these are PPP models?', 'Build-Operate-Transfer', 'Sole proprietorship', 'Concession', 'Lease', '', '', 'A, C, D', 3],
             ['True/False', 'A concession agreement transfers ownership of public assets permanently.', '', '', '', '', '', '', 'False', 1],
             ['Short answer', 'Name one benefit of public-private partnerships.', '', '', '', '', '', '', '', 5],
         ], null, 'A1', true);
         $help->getStyle('A1')->getFont()->setBold(true)->setSize(13);
         $help->getStyle('A4:B4')->getFont()->setBold(true);
-        $help->getStyle('A11')->getFont()->setBold(true);
-        $help->getStyle('A12:J12')->getFont()->setBold(true);
+        $help->getStyle('A12')->getFont()->setBold(true);
+        $help->getStyle('A13:K13')->getFont()->setBold(true);
         $help->getColumnDimension('A')->setWidth(22);
         $help->getColumnDimension('B')->setWidth(90);
-        $help->getStyle('B5:B9')->getAlignment()->setWrapText(true);
+        $help->getStyle('B5:B10')->getAlignment()->setWrapText(true);
         $book->setActiveSheetIndex(0);
 
         return $book;
@@ -82,6 +87,7 @@ class QuestionImport
         $book->disconnectWorksheets();
 
         $header = array_map(fn ($cell) => strtolower(trim(ltrim((string) $cell, "\xEF\xBB\xBF"))), array_shift($rows) ?? []);
+        $explanationAt = array_search('explanation', array_slice($header, count(self::COLUMNS), null, true), true);
         $header = array_slice($header, 0, count(self::COLUMNS));
         if ($header !== self::COLUMNS) {
             return ['questions' => [], 'errors' => ['The first row must be the template headers: '.implode(', ', self::COLUMNS).'. Download the template and copy your questions into it.']];
@@ -90,18 +96,19 @@ class QuestionImport
         $errors = [];
         foreach ($rows as $i => $row) {
             $values = array_map(fn ($cell) => $cell === null ? '' : trim((string) $cell), array_slice(array_pad($row, count(self::COLUMNS), null), 0, count(self::COLUMNS)));
-            if (implode('', $values) === '') {
+            $explanation = $explanationAt === false ? '' : trim((string) ($row[$explanationAt] ?? ''));
+            if (implode('', $values).$explanation === '') {
                 continue;
             }
             if (count($questions) + count($errors) >= self::MAX_ROWS) {
                 $errors[] = 'A file can hold up to '.self::MAX_ROWS.' questions. Split the rest into another file.';
                 break;
             }
-            $result = $this->question(array_combine(self::COLUMNS, $values));
+            $result = mb_strlen($explanation) > 5000 ? 'The explanation is longer than 5,000 characters.' : $this->question(array_combine(self::COLUMNS, $values));
             if (is_string($result)) {
                 $errors[] = 'Row '.($i + 2).': '.$result;
             } else {
-                $questions[] = $result;
+                $questions[] = [...$result, 'explanation' => $explanation !== '' ? $explanation : null];
             }
         }
         if (! $questions && ! $errors) {

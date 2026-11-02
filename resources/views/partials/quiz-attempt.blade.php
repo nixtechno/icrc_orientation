@@ -11,4 +11,10 @@
 @else<label>Your response<textarea name="answers[{{ $q->id }}]" maxlength="10000">{{ old('answers.'.$q->id,$submission->answers[$q->id]??'') }}</textarea></label>@endif
 </fieldset>@endforeach
 <button type="submit" data-quiz-submit>Submit final answers</button><p class="muted">Submitting completes this attempt. Multiple-choice answers are marked straight away; written answers are marked by a facilitator.</p>
+<dialog class="quiz-confirm" data-quiz-confirm aria-labelledby="quiz-confirm-title" aria-describedby="quiz-confirm-summary">
+<h2 id="quiz-confirm-title">Submit your final answers?</h2>
+<p id="quiz-confirm-summary" data-quiz-confirm-summary></p>
+<p class="quiz-confirm-warning">You cannot change your answers after you submit.</p>
+<div class="quiz-confirm-actions"><button type="button" class="secondary" data-quiz-confirm-cancel>Go back to my answers</button><button type="button" data-quiz-confirm-submit>Yes, submit</button></div>
+</dialog>
 </form></div>

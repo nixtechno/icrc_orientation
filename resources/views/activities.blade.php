@@ -4,9 +4,9 @@
 <div class="page-heading"><div><div class="eyebrow">APPLY YOUR LEARNING</div><h1>{{ ['quiz'=>'Assessments','assignment'=>'Assignments','presentation'=>'Presentations'][$selectedKind] }}</h1><p class="muted">{{ $manager?'Create activities, manage submissions and release feedback.':'Your assigned work, deadlines and released feedback.' }}</p></div>@if($manager)<a class="button secondary" href="/assessment-groups">Manage staff groups</a>@endif</div>
 <div class="buttons" style="margin-bottom:24px"><a href="/activities?kind=quiz">Assessments</a><a href="/activities?kind=assignment">Assignments</a><a href="/activities?kind=presentation">Presentations</a></div>
 @if($tabbed)<nav class="view-tabs" aria-label="Presentation views"><a href="/activities?kind=presentation" @if($view==='activities') aria-current="page" @endif><strong>Presentations</strong><span>{{ $items->count() }}</span></a><a href="/activities?kind=presentation&amp;view=submissions" @if($view==='submissions') aria-current="page" @endif><strong>Submitted presentations</strong><span>{{ $submittedTotal }}</span></a></nav>@endif
-@unless($manager)<link rel="stylesheet" href="{{ asset('activity-manage.css') }}?v=20261101i">@endunless
+@unless($manager)<link rel="stylesheet" href="{{ asset('activity-manage.css') }}?v=20261102b">@endunless
 @if($manager)
-<script src="{{ asset('activity-editor.js') }}?v=20261101a" defer></script><script src="{{ asset('audience-picker.js') }}?v=20261101a" defer></script><script src="{{ asset('activity-delete.js') }}?v=20261101a" defer></script><link rel="stylesheet" href="{{ asset('activity-manage.css') }}?v=20261101i">
+<script src="{{ asset('activity-editor.js') }}?v=20261101a" defer></script><script src="{{ asset('audience-picker.js') }}?v=20261101a" defer></script><script src="{{ asset('activity-delete.js') }}?v=20261101a" defer></script><link rel="stylesheet" href="{{ asset('activity-manage.css') }}?v=20261102b">
 @if($view==='activities')<details class="card" @if($errors->any()) open @endif><summary>{{ $createLabel }}</summary>
 <form method="post" action="/activities?kind={{ $selectedKind }}" data-activity-editor style="margin-top:20px">@csrf
 <div class="form-grid">
@@ -30,7 +30,7 @@
 </div><button>Create draft</button></form></details>@endif
 @endif
 @if($presentationTable)@include('partials.presentation-submissions',$presentationTable)@else
-<div class="grid">@forelse($items as $a)<article class="card activity-card"><h3 class="activity-card-title">{{ $a->title }}</h3><p class="muted activity-card-due">{{ $a->due_at?'Due '.$a->due_at->format('j M Y · H:i'):'No deadline' }}@unless($manager)<br>{{ match($a->kind){'quiz'=>'One submission only','presentation'=>'PowerPoint file or written text',default=>$a->attempts.' allowed attempt(s)'} }}@endunless</p>
+<div class="grid">@forelse($items as $a)<article class="card activity-card">@if(!$manager&&$a->kind==='quiz')@include('partials.assessment-card-score')@endif<h3 class="activity-card-title">{{ $a->title }}</h3><p class="muted activity-card-due">{{ $a->due_at?'Due '.$a->due_at->format('j M Y · H:i'):'No deadline' }}@unless($manager)<br>{{ match($a->kind){'quiz'=>'One submission only','presentation'=>'PowerPoint file or written text',default=>$a->attempts.' allowed attempt(s)'} }}@endunless</p>
 <div class="activity-card-badges"><span class="badge">{{ $a->label() }}</span>
 @if(!$manager && in_array($a->kind, ['quiz', 'presentation'], true))
 @include('partials.assessment-card-status')

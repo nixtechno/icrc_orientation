@@ -33,6 +33,35 @@ class QuizAttemptService
         return $score;
     }
 
+    /**
+     * Each question with the person's answer and how it was marked, using the same rules as score().
+     * Status is correct, wrong, unanswered or written (marked by a facilitator as part of the overall score).
+     *
+     * @return list<array{question: \App\Models\Question, selected: list<string>, response: string, correct: list<string>, status: string}>
+     */
+    public function review(Activity $activity, Submission $submission): array
+    {
+        return $activity->questions->map(function ($question) use ($submission) {
+            $answer = $submission->answers[$question->id] ?? null;
+            if (in_array($question->type, ['short_answer', 'long_answer'], true)) {
+                $response = trim((string) $answer);
+
+                return ['question' => $question, 'selected' => [], 'response' => $response, 'correct' => [], 'status' => $response === '' ? 'unanswered' : 'written'];
+            }
+            $selected = array_values(array_filter(array_map('strval', (array) $answer), fn ($value) => $value !== ''));
+            $correct = $question->type === 'multiple_answers' ? $question->correctAnswers() : array_filter([(string) $question->correct_answer], fn ($value) => $value !== '');
+            [$mine, $right] = [$selected, $correct];
+            sort($mine); sort($right);
+            $status = match (true) {
+                ! $selected => 'unanswered',
+                $right && $mine === $right => 'correct',
+                default => 'wrong',
+            };
+
+            return ['question' => $question, 'selected' => $selected, 'response' => '', 'correct' => array_values($correct), 'status' => $status];
+        })->all();
+    }
+
     public function expiresAt(Submission $submission): ?\Carbon\CarbonInterface
     {
         $expires = $submission->activity->due_at?->copy();
