@@ -24,6 +24,7 @@
  <a href="{{ url($href) }}" @class(['portal-nav-link','selected'=>$active]) @if($active) aria-current="page" @endif><span class="portal-icon" data-icon="{{ $icon }}" aria-hidden="true"></span><span>{{ $label }}</span>@if($navCounts[$href][0]??0)<b class="portal-nav-count" aria-label="{{ $navCounts[$href][0] }} {{ $navCounts[$href][1] }}">{{ $navCounts[$href][0]>99?'99+':$navCounts[$href][0] }}</b>@endif @if($active)<i aria-hidden="true"></i>@endif</a>
  @endforeach</nav>@endif
  @endforeach
+ <button type="button" class="portal-nav-link portal-install" data-install-app hidden><span class="portal-icon" data-icon="grid" aria-hidden="true"></span>Install the app</button>
  <a class="portal-nav-link" href="{{ url('/').'#contact' }}"><span class="portal-icon" data-icon="chat" aria-hidden="true"></span>Help & support</a>
  <form action="{{ url('/logout') }}" method="post" class="portal-signout">@csrf<button type="submit"><span class="portal-icon" data-icon="logout" aria-hidden="true"></span>Sign out</button></form>
  </div>

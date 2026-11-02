@@ -6,3 +6,4 @@
 .quiz-confirm-warning{padding:10px 12px;border-radius:6px;background:#fbf6ec;border:1px solid #ead9b8;color:#7a5c25;font-weight:600;font-size:14px}
 .quiz-confirm-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:10px;margin-top:18px}
 @media (max-width:480px){.quiz-confirm-actions button{flex:1 1 100%}}
+.quiz-focus-mode,.quiz-focus-mode body{overflow:hidden;overscroll-behavior:none}.quiz-focus-mode .quiz-stage{height:100%;height:100dvh;-webkit-overflow-scrolling:touch}

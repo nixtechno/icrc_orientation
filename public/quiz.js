@@ -6,6 +6,16 @@
   const token=entry.querySelector('[name="_token"]').value;
   const state={starting:false,active:false,ending:false,finished:false,manual:false,exitRequested:false,version:0,form:null,finishUrl:null,launchToken:null};
   let saveTimer,saveInterval,clockInterval,saving=false,saveAgain=false,finalPayload;
+  // Real fullscreen is used wherever the device allows it, in the browser or the installed app. iPhones never allow it,
+  // so the installed app runs in focus mode instead: the app already fills the screen, and leaving it (another app,
+  // the home screen, or locking the phone) submits, just as leaving fullscreen does. An iPhone browser is asked to install.
+  const installed=()=>window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  const fullscreenElement=()=>document.fullscreenElement??document.webkitFullscreenElement??null;
+  const canFullscreen=()=>Boolean((stage.requestFullscreen&&document.fullscreenEnabled!==false)||(stage.webkitRequestFullscreen&&document.webkitFullscreenEnabled!==false));
+  const enterFullscreen=()=>stage.requestFullscreen?stage.requestFullscreen():Promise.resolve(stage.webkitRequestFullscreen());
+  const inside=()=>state.focus?document.visibilityState==='visible':fullscreenElement()===stage;
+  const exitReason=()=>state.focus?'page_exit':'fullscreen_exit';
+  const setFocus=on=>document.documentElement.classList.toggle('quiz-focus-mode',on);
   const stopTimers=()=>{clearTimeout(saveTimer);clearInterval(saveInterval);clearInterval(clockInterval);};
   const capture=reason=>{
    const data=state.form?new FormData(state.form):new FormData();
@@ -34,7 +44,7 @@
   const sendFinal=async()=>{
    endingScreen('Submitting your current answers. Please keep this page open.');
    try{returnToActivity(await json(state.finishUrl,finalPayload,smallEnough(finalPayload)));}
-   catch{endingScreen('Your attempt has ended, but the server has not confirmed submission. Reconnect and retry. Answers cannot be edited after leaving fullscreen.',true);}
+   catch{endingScreen('Your attempt has ended, but the server has not confirmed submission. Reconnect and retry. Answers cannot be edited after leaving the assessment.',true);}
   };
   const finish=reason=>{
    if(state.finished||state.ending)return;
@@ -45,7 +55,7 @@
   };
   const save=async()=>{
    if(!state.active||state.ending||!state.form)return;
-   if(document.fullscreenElement!==stage){finish('fullscreen_exit');return;}
+   if(!inside()){finish(exitReason());return;}
    if(saving){saveAgain=true;return;}saving=true;
    const status=stage.querySelector('[data-quiz-save-status]');
    try{
@@ -86,7 +96,7 @@
     catch(error){
      state.ending=false;state.manual=false;submit.disabled=false;submit.textContent='Submit final answers';
      const status=stage.querySelector('[data-quiz-save-status]');status.textContent=error.message;status.classList.add('quiz-save-error');
-     if(document.fullscreenElement!==stage)finish('fullscreen_exit');else startTimers(payload);
+     if(!inside())finish(exitReason());else startTimers(payload);
     }
    };
    state.form.querySelector('input:not([type="hidden"]),textarea')?.focus();startTimers(payload);save();
@@ -105,28 +115,33 @@
   start.addEventListener('click',async()=>{
    if(state.starting||state.active||state.ending)return;
    if(!ack.checked){ack.reportValidity();launchStatus.textContent='Please acknowledge the assessment notice before starting.';return;}
-   if(!stage.requestFullscreen||document.fullscreenEnabled===false){launchStatus.textContent='Fullscreen is unavailable in this browser. Use a browser that supports fullscreen assessments.';return;}
-   state.starting=true;state.exitRequested=false;start.disabled=true;stage.hidden=false;stage.textContent='Entering fullscreen…';
-   try{await stage.requestFullscreen();}
-   catch{state.starting=false;start.disabled=false;stage.hidden=true;launchStatus.textContent='Fullscreen was not allowed. No assessment attempt has been started. Allow fullscreen and try again.';return;}
+   state.focus=!canFullscreen()&&installed();
+   if(!state.focus&&!canFullscreen()){launchStatus.textContent='This browser cannot run the assessment in fullscreen. On an iPhone, install the SCODEX app (Share, then Add to Home Screen, or Install the app in the menu), open it from your home screen and start the assessment there.';document.querySelector('[data-install-app]')?.click();return;}
+   state.starting=true;state.exitRequested=false;start.disabled=true;stage.hidden=false;stage.textContent=state.focus?'Starting the assessment…':'Entering fullscreen…';
+   if(state.focus)setFocus(true);
+   else{
+    try{await enterFullscreen();}
+    catch{state.starting=false;start.disabled=false;stage.hidden=true;launchStatus.textContent='Fullscreen was not allowed. No assessment attempt has been started. Allow fullscreen and try again.';return;}
+   }
    try{
     state.launchToken??=window.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}-quiz`;
     const data=await json(entry.dataset.startUrl,new URLSearchParams({_token:token,fullscreen:'1',policy_acknowledged:'1',launch_token:state.launchToken}));
     if(data.submitted){returnToActivity(data);return;}
     state.finishUrl=data.url.replace(/\/complete(?:\?.*)?$/,'/auto-submit');state.returnUrl=data.return_url;
-    if(state.exitRequested||document.fullscreenElement!==stage){finish('fullscreen_exit');return;}
+    if(state.exitRequested||!inside()){finish(exitReason());return;}
     const payload=await json(data.url);
     if(payload.submitted){returnToActivity(payload);return;}
-    if(state.exitRequested||document.fullscreenElement!==stage){finish('fullscreen_exit');return;}
+    if(state.exitRequested||!inside()){finish(exitReason());return;}
     bindForm(payload);
    }catch(error){
     if(state.finishUrl){finish('load_failed');}
-    else{stage.textContent=error.message;launchStatus.textContent=error.message;state.starting=false;start.disabled=false;stage.hidden=true;if(document.fullscreenElement===stage)document.exitFullscreen?.().catch(()=>{});}
+    else{stage.textContent=error.message;launchStatus.textContent=error.message;state.starting=false;start.disabled=false;stage.hidden=true;setFocus(false);if(fullscreenElement()===stage)(document.exitFullscreen?.()??document.webkitExitFullscreen?.())?.catch?.(()=>{});}
    }finally{state.starting=false;}
   });
-  document.addEventListener('fullscreenchange',()=>{
-   if(document.fullscreenElement!==stage&&(state.starting||state.active)&&!state.ending)finish('fullscreen_exit');
-  });
+  const left=()=>{if(!inside()&&(state.starting||state.active)&&!state.ending)finish(exitReason());};
+  document.addEventListener('fullscreenchange',()=>{if(!state.focus)left();});
+  document.addEventListener('webkitfullscreenchange',()=>{if(!state.focus)left();});
+  document.addEventListener('visibilitychange',()=>{if(state.focus)left();});
   window.addEventListener('pagehide',()=>{
    if(state.finished||state.manual||!state.finishUrl)return;
    const payload=finalPayload||capture('page_exit');
