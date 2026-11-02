@@ -48,6 +48,12 @@ class User extends Authenticatable
             $user->qr_code ??= self::newCode();
             $user->print_code ??= self::newCode();
         });
+        // Badges copy these details when generated, so keep them current wherever the profile is edited.
+        static::updated(function (User $user): void {
+            if ($user->wasChanged(['name', 'role', 'department', 'staff_number', 'designation', 'photo_path', 'profile'])) {
+                app(\App\Services\BadgeService::class)->refresh($user);
+            }
+        });
     }
 
     /**

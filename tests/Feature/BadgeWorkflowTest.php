@@ -69,6 +69,33 @@ class BadgeWorkflowTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'badge.profile_updated', 'subject' => (string) $badge->id]);
     }
 
+    public function test_editing_a_person_elsewhere_updates_their_badge_and_asks_for_a_reprint(): void
+    {
+        $admin = $this->user('admin'); $this->actingAs($admin);
+        $staff = $this->user(); $badge = $this->badge($staff);
+        $badge->update(['printed_at' => now(), 'collected_at' => now()]); $version = $badge->version;
+        $this->post('/manage/staff/'.$staff->slug, ['first_name' => 'Ngozi', 'surname' => 'Eze', 'email' => $staff->email, 'designation' => 'Senior Analyst', 'role' => 'facilitator', 'active' => 1])->assertSessionHasNoErrors()->assertRedirect();
+        $badge->refresh();
+        $this->assertSame(['Ngozi', 'Eze', 'Senior Analyst', 'facilitator'], [$badge->snapshot['first_name'], $badge->snapshot['last_name'], $badge->snapshot['designation'], $badge->category]);
+        $this->assertSame($version + 1, $badge->version);
+        $this->assertNull($badge->printed_at); $this->assertNull($badge->collected_at);
+        $this->get('/badges/'.$badge->slug.'/edit')->assertSee('Ngozi')->assertSee('Senior Analyst');
+
+        // Saving without changing anything on the badge leaves a printed badge alone.
+        $badge->update(['printed_at' => now()]);
+        $staff->fresh()->forceFill(['phone' => '08000000009'])->save();
+        $this->assertNotNull($badge->fresh()->printed_at);
+
+        // Facilitator directory badges follow the directory entry, keeping a name split made in the editor.
+        $person = Facilitator::create(['programme_id' => Programme::first()->id, 'name' => 'Mary Ann Smith']);
+        $this->post('/badges/generate', ['single_subject' => 'f:'.$person->id])->assertRedirect();
+        $directoryBadge = Badge::where('facilitator_id', $person->id)->firstOrFail();
+        $this->post('/badges/'.$directoryBadge->slug, ['first_name' => 'Mary Ann', 'last_name' => 'Smith'])->assertRedirect();
+        $this->post('/facilitators/'.$person->slug, ['name' => 'Mary Ann Smith', 'job_title' => 'Consultant', 'organisation' => 'Example Institute'])->assertSessionHasNoErrors();
+        $snapshot = $directoryBadge->fresh()->snapshot;
+        $this->assertSame(['Mary Ann', 'Smith', 'Consultant'], [$snapshot['first_name'], $snapshot['last_name'], $snapshot['designation']]);
+    }
+
     public function test_print_and_collection_confirmation_are_explicit_independent_and_idempotent(): void
     {
         $this->actingAs($this->user('admin')); $badge = $this->badge($this->user()); $url = '/badges/'.$badge->slug.'/collection';

@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\User;
+use App\Models\{Badge, Facilitator, User};
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -34,6 +34,27 @@ class BadgeService
             'category' => $type === 'u' ? $person->role : 'facilitator',
             'programme' => 'ICRC SCODEX 2026',
         ];
+    }
+
+    /**
+     * Brings a person's badges in line with their current details after a profile edit.
+     * A badge whose details change is a new version that must be printed and collected again.
+     */
+    public function refresh(User|Facilitator $person): void
+    {
+        $type = $person instanceof User ? 'u' : 'f';
+        foreach (Badge::where('subject_key', $type.':'.$person->id)->get() as $badge) {
+            $snapshot = $this->snapshot($person, $type);
+            // Keep a facilitator's name split from the badge editor while the name itself is unchanged.
+            if ($type === 'f' && ($badge->snapshot['name'] ?? null) === $snapshot['name']) {
+                $snapshot['first_name'] = $badge->snapshot['first_name'] ?? $snapshot['first_name'];
+                $snapshot['last_name'] = $badge->snapshot['last_name'] ?? $snapshot['last_name'];
+            }
+            if ($badge->snapshot === $snapshot) continue;
+            $before = $badge->toArray();
+            $badge->fill(['snapshot' => $snapshot, 'category' => $snapshot['category'], 'version' => $badge->version + 1, 'printed_at' => null, 'collected_at' => null, 'generated_at' => now(), 'generated_by' => auth()->id() ?? $badge->generated_by])->save();
+            Access::audit('badge.profile_updated', (string) $badge->id, $before, $badge->toArray());
+        }
     }
 
     public function data($badges, ?Request $request = null): array

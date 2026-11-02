@@ -86,7 +86,8 @@ return $rules;
         foreach (['organisation', 'alternative_phone'] as $field) {
             if (array_key_exists($field, $user->profile ?? [])) $contact[$field] = $user->profile[$field];
         }
-        \App\Models\Facilitator::where('user_id', $user->id)->update($contact);
+        // Saved one by one so their badges are refreshed too.
+        \App\Models\Facilitator::where('user_id', $user->id)->get()->each->update($contact);
     }
 
     public function photo(Request $r, User $u): void

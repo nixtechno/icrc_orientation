@@ -163,7 +163,7 @@ return redirect('/badges')->with('success','Printing status recorded.');
                 $person->designation = $data['designation'] ?? null;
                 $person->save();
                 app(\App\Services\ProfileService::class)->syncFacilitator($person);
-                if ($person->role === 'facilitator') Facilitator::where('user_id', $person->id)->update(['name' => $person->name]);
+                if ($person->role === 'facilitator') Facilitator::where('user_id', $person->id)->get()->each->update(['name' => $person->name]);
                 $snapshot = app(\App\Services\BadgeService::class)->snapshot($person, 'u');
             } else {
                 $person = Facilitator::whereKey($locked->facilitator_id)->where('programme_id', $locked->programme_id)->lockForUpdate()->firstOrFail();
@@ -171,6 +171,8 @@ return redirect('/badges')->with('success','Printing status recorded.');
                 $snapshot = app(\App\Services\BadgeService::class)->snapshot($person, 'f');
                 $snapshot['first_name'] = $data['first_name']; $snapshot['last_name'] = $data['last_name'] ?? '';
             }
+            // Saving the person may already have refreshed this badge.
+            $locked->refresh();
             if ($locked->snapshot !== $snapshot) {
                 $locked->fill(['snapshot' => $snapshot, 'category' => $snapshot['category'], 'version' => $locked->version + 1, 'printed_at' => null, 'collected_at' => null, 'generated_at' => now(), 'generated_by' => auth()->id()])->save();
                 Access::audit('badge.profile_updated', (string) $locked->id, $before, $locked->toArray());
