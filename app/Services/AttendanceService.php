@@ -20,6 +20,55 @@ class AttendanceService
         return $d->$f ? Carbon::parse($d->date->toDateString().' '.$d->$f, 'Africa/Lagos') : null;
     }
 
+    /** Every programme day takes attendance for the whole day with no late time; cancelled days are left alone. */
+    public function takeAttendanceAllDay(): int
+    {
+        $whole = ['attendance_required' => true, 'checkin_opens' => '00:00', 'checkin_closes' => '23:59', 'late_after' => null, 'checkout_opens' => '00:00', 'checkout_closes' => '23:59'];
+        $days = $this->days()->where('cancelled', false)->get();
+        foreach ($days as $day) {
+            $before = $day->only(array_keys($whole));
+            $day->update($whole);
+            Access::audit('day_policy.whole_day', (string) $day->id, $before, $whole);
+        }
+
+        return $days->count();
+    }
+
+    /**
+     * Uses badge print times as sign-ins for a day when staff received their badge on arrival. A staff member's
+     * record gets the print time as its sign-in when it has none or a later one, and staff with a printed badge but
+     * no record get one. Earlier real sign-ins are kept.
+     *
+     * @return array{updated: int, created: int, unchanged: int}
+     */
+    public function signInFromBadgePrints(ProgrammeDay $day, bool $save = true): array
+    {
+        $date = $day->date->toDateString();
+        $counts = ['updated' => 0, 'created' => 0, 'unchanged' => 0];
+        $badges = \App\Models\Badge::where('programme_id', Access::programme()->id)->whereNotNull('printed_at')->whereNotNull('user_id')
+            ->whereHas('user', fn ($q) => $q->where('role', 'staff')->whereHas('programmes', fn ($p) => $p->where('programmes.id', Access::programme()->id)))
+            ->with('user')->get()->filter(fn ($b) => $b->printed_at->copy()->timezone('Africa/Lagos')->toDateString() === $date);
+        foreach ($badges as $badge) {
+            $printed = $badge->printed_at;
+            $record = DailyAttendance::where('programme_id', Access::programme()->id)->where('programme_day_id', $day->id)->where('user_id', $badge->user_id)->first();
+            if ($record?->checked_in_at && $record->checked_in_at->lte($printed)) {
+                $counts['unchanged']++;
+                continue;
+            }
+            $counts[$record ? 'updated' : 'created']++;
+            if (! $save) continue;
+            $record ??= new DailyAttendance(['programme_id' => Access::programme()->id, 'programme_day_id' => $day->id, 'user_id' => $badge->user_id,
+                'staff_name' => $badge->user->name, 'staff_number_snapshot' => $badge->user->staff_number, 'attendance_date' => $day->date]);
+            $late = $this->time($day, 'late_after');
+            $record->fill(['checked_in_at' => $printed, 'signin_method' => 'badge_print', 'signin_scanned_by' => null, 'signin_device_verified' => false, 'signin_location_verified' => false,
+                'status' => in_array($record->status, [null, 'pending', 'present', 'late'], true) ? ($late && $printed->gt($late) ? 'late' : 'present') : $record->status,
+                'punctuality_status' => $late ? ($printed->gt($late) ? 'Late' : 'On Time') : null,
+                'duration_seconds' => $record->checked_out_at ? max(0, (int) $printed->diffInSeconds($record->checked_out_at)) : null])->save();
+        }
+
+        return $counts;
+    }
+
     public function assertDay(ProgrammeDay $d): void
     {
         abort_unless($d->week->programme_id === Access::programme()->id, 404);

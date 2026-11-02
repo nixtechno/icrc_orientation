@@ -84,6 +84,10 @@ class AttendanceSync
             'merges' => DB::table('audit_logs')->where('action', 'user.merge')->orderBy('id')->pluck('after')
                 ->map(fn ($after) => Arr::only(json_decode($after, true) ?: [], ['from_email', 'into_email', 'badge_from_email']))
                 ->filter(fn ($m) => isset($m['from_email'], $m['into_email']))->values()->all(),
+            // People deleted here, so the venue deletes its copy too.
+            'deletions' => DB::table('audit_logs')->where('action', 'user.delete')->orderBy('id')->get(['after', 'created_at'])
+                ->map(fn ($log) => ['email' => json_decode($log->after, true)['email'] ?? null, 'deleted_at' => Carbon::parse($log->created_at, config('app.timezone'))->toIso8601String()])
+                ->filter(fn ($d) => $d['email'])->values()->all(),
         ];
     }
 
@@ -263,6 +267,9 @@ class AttendanceSync
             foreach ($data['merges'] ?? [] as $merge) {
                 $this->applyMerge($merge);
             }
+            foreach ($data['deletions'] ?? [] as $deletion) {
+                $this->applyDeletion($deletion);
+            }
             foreach ($data['people'] as $person) {
                 $this->savePerson($person, $programme->id);
             }
@@ -281,6 +288,19 @@ class AttendanceSync
         }
 
         return [$merged, $unplaced];
+    }
+
+    /**
+     * Repeats a deletion made on the live site. Someone added again later with the same email is a new account and
+     * is left alone, as is anyone this venue cannot delete.
+     */
+    private function applyDeletion(array $deletion): void
+    {
+        $user = User::where('email', $deletion['email'])->first();
+        $deletions = app(PersonDeletion::class);
+        if ($user && $user->created_at?->lte(Carbon::parse($deletion['deleted_at'])) && ! $deletions->blocker($user)) {
+            $deletions->delete($user);
+        }
     }
 
     /** Repeats a merge made on the live site. Without the kept profile here yet, the duplicate simply becomes it. */

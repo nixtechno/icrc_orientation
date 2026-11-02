@@ -1,0 +1,84 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Services\{Access, AttendanceService, AttendanceSync, BadgeService};
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
+
+/**
+ * One-off maintenance jobs administrators run from Programme settings instead of the server command line:
+ * attendance days, sign-ins from badge print times, collected badges and database updates.
+ */
+class DataToolsController extends Controller
+{
+    /** Figures for the Data tools tab, showing what each job would change before it runs. */
+    public static function overview(Request $r): array
+    {
+        $service = app(AttendanceService::class);
+        $days = $service->days()->orderBy('date')->get();
+        $date = $r->query('signin_date') ?: now('Africa/Lagos')->toDateString();
+        $day = $days->first(fn ($d) => $d->date->toDateString() === $date) ?? $days->first();
+
+        return [
+            'venue' => AttendanceSync::venue(),
+            'days' => $days,
+            'notAllDay' => $days->where('cancelled', false)->filter(fn ($d) => ! $d->attendance_required || substr((string) $d->checkin_opens, 0, 5) !== '00:00' || substr((string) $d->checkout_closes, 0, 5) !== '23:59' || $d->late_after)->count(),
+            'signinDay' => $day,
+            'signins' => $day ? $service->signInFromBadgePrints($day, false) : null,
+            'uncollected' => app(BadgeService::class)->markPrintedCollected(false),
+            'pending' => self::pendingMigrations(),
+        ];
+    }
+
+    /** @return list<string> database updates that have not been applied yet */
+    public static function pendingMigrations(): array
+    {
+        $migrator = app('migrator');
+        if (! $migrator->repositoryExists()) {
+            return array_keys($migrator->getMigrationFiles([database_path('migrations')]));
+        }
+
+        return array_values(array_diff(array_keys($migrator->getMigrationFiles([database_path('migrations')])), $migrator->getRepository()->getRan()));
+    }
+
+    public function run(Request $r, string $job)
+    {
+        abort_unless($r->user()->role === 'admin', 403);
+        Access::enrolled();
+        // Day settings, attendance and badge state belong to the live site; venues copy them on the next sync.
+        abort_if($job !== 'database' && AttendanceSync::venue(), 422, 'Run this on the live site. The venue copies the result on its next sync.');
+        $back = redirect('/settings?tab=tools');
+
+        return match ($job) {
+            'attendance-days' => $back->with('success', 'Attendance is now taken all day, with no late time, on '.app(AttendanceService::class)->takeAttendanceAllDay().' programme days.'),
+            'signins' => $this->signIns($r, $back),
+            'badges-collected' => $back->with('success', app(BadgeService::class)->markPrintedCollected().' printed badges are now marked as collected at their print time.'),
+            'database' => $this->database($back),
+            default => abort(404),
+        };
+    }
+
+    private function signIns(Request $r, $back)
+    {
+        $date = $r->validate(['date' => 'required|date_format:Y-m-d'])['date'];
+        $day = app(AttendanceService::class)->days()->whereDate('date', $date)->first();
+        abort_unless($day, 422, 'Choose a programme day.');
+        $counts = app(AttendanceService::class)->signInFromBadgePrints($day);
+        Access::audit('attendance.signin_from_badges', (string) $day->id, null, $counts);
+
+        return redirect('/settings?tab=tools&signin_date='.$date)->with('success', $day->date->format('l j F').': '.$counts['updated'].' records got their sign-in from the badge print time and '.$counts['created'].' records were added for staff with a printed badge and no scan.');
+    }
+
+    private function database($back)
+    {
+        $pending = self::pendingMigrations();
+        if (! $pending) {
+            return $back->with('success', 'The database is already up to date.');
+        }
+        Artisan::call('migrate', ['--force' => true]);
+        Access::audit('database.migrate', 'migrations', null, ['applied' => $pending]);
+
+        return $back->with('success', 'Database updated: '.count($pending).' '.(count($pending) === 1 ? 'update' : 'updates').' applied.');
+    }
+}

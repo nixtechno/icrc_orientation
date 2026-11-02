@@ -57,6 +57,18 @@ class BadgeService
         }
     }
 
+    /** Badges handed out as they were printed: each printed badge is marked collected at its print time. */
+    public function markPrintedCollected(bool $save = true): int
+    {
+        $badges = Badge::where('programme_id', Access::programme()->id)->whereNotNull('printed_at')->whereNull('collected_at')->get();
+        if ($save && $badges->isNotEmpty()) {
+            $badges->each(fn ($badge) => $badge->update(['collected_at' => $badge->printed_at]));
+            Access::audit('badge.collected_when_printed', 'programme:'.Access::programme()->id, null, ['badges' => $badges->count()]);
+        }
+
+        return $badges->count();
+    }
+
     public function data($badges, ?Request $request = null): array
     {
         $p = Access::programme();

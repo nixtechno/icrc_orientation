@@ -46,6 +46,7 @@ Route::middleware(['auth', ActiveAccount::class])->group(function () {
     Route::post('/announcements/{announcement}/archive', [ManagementController::class, 'archiveAnnouncement']);
     Route::get('/settings', [ManagementController::class, 'settings']);
     Route::post('/settings', [ManagementController::class, 'saveSettings']);
+    Route::post('/settings/tools/{job}', [\App\Http\Controllers\DataToolsController::class, 'run']);
     Route::get('/audit', [ManagementController::class, 'audit']);
     Route::get('/activities', [ActivityController::class, 'index']);
     Route::get('/assessment-groups', [\App\Http\Controllers\AssessmentGroupController::class, 'index']);
@@ -86,6 +87,7 @@ Route::middleware(['auth', ActiveAccount::class])->group(function () {
     Route::post('/manage/staff/invitations/template', [PeopleController::class, 'invitationTemplate']);
     Route::get('/manage/staff/{user}',[PeopleController::class, 'form']);
     Route::post('/manage/staff/{user}', [PeopleController::class, 'save']);
+    Route::delete('/manage/staff/{user}', [PeopleController::class, 'destroy']);
     Route::post('/manage/staff/{user}/invite', [PeopleController::class, 'invite']);
     Route::post('/manage/staff/{user}/revoke', [PeopleController::class, 'revoke']);
     Route::get('/people/{user}/photo', [PeopleController::class, 'photo']);

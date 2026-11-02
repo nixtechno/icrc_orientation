@@ -132,7 +132,8 @@ return back()->with('success', 'Announcement saved.');
 
         return view('settings', [
             'p' => Access::programme(),
-            'tab' => request('tab') === 'sync' ? 'sync' : 'programme',
+            'tab' => in_array(request('tab'), ['sync', 'tools'], true) ? request('tab') : 'programme',
+            'tools' => DataToolsController::overview(request()),
             'sync' => [
                 'status' => $sync->status(),
                 'history' => $sync->history(),

@@ -17,3 +17,9 @@
 .sync-result.is-ok{background:#e4f2e8;color:#1d6a3b}
 .sync-result.is-off{background:#f7e6e3;color:#93362a}
 .sync-log td{vertical-align:top}
+.settings-tool{margin-bottom:18px}
+.settings-tool h2{margin:0 0 8px;font-size:18px}
+.settings-tool p{margin:0 0 12px}
+.settings-tool-list{margin:0 0 14px;padding-left:20px;font-size:13px}
+.settings-tool-row{margin:0 0 12px}
+.settings-tool-row label{max-width:260px}

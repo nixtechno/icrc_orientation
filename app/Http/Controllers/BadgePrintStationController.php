@@ -44,6 +44,8 @@ class BadgePrintStationController extends Controller
             }
             $reprint = $badge->printed_at;
             $badge->printed_at ??= now();
+            // The print station hands the badge straight to the person who scanned their invitation, so it is collected too.
+            $badge->collected_at ??= $badge->printed_at;
             $badge->save();
             Access::audit('badge.print_station', (string) $badge->id, null, ['reprint' => (bool) $reprint]);
             return [$badge, $reprint];

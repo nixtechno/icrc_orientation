@@ -72,6 +72,10 @@ return view('people.form', compact('user'));
         $rules['permissions'] = 'nullable|array';
         $rules['permissions.*'] = Rule::in(self::PERMISSIONS);
         $rules['responsibilities'] = 'nullable|string|max:5000';
+        if ($user && $r->user()->role === 'admin') {
+            // Administrators can point a person's account at the badge they are wearing; QR IDs and print codes never repeat.
+            $rules['qr_code'] = ['nullable', 'digits:16', Rule::unique('users', 'qr_code')->ignore($user->id), Rule::unique('users', 'print_code')];
+        }
         if ($quick) {
             $rules['name'] = 'required|string|max:255';
         } else {
@@ -87,6 +91,9 @@ return view('people.form', compact('user'));
             $profiles->assign($user, $v, true, $v['role']);
             $profiles->photo($r, $user);
             $user->role = $v['role'];
+            if (filled($v['qr_code'] ?? null) && $v['qr_code'] !== $user->qr_code) {
+                $user->qr_code = $v['qr_code'];
+            }
             if (auth()->user()->role === 'admin') {
                 $user->permissions = $v['permissions'] ?? ($new && $v['role'] === 'facilitator' && ! $r->boolean('permissions_present') ? User::FACILITATOR_DEFAULT_PERMISSIONS : []);
                 $user->responsibilities = $v['responsibilities'] ?? null;
@@ -335,6 +342,23 @@ return response()->streamDownload(fn () => (new Xlsx($sheet))->save('php://outpu
         }
 
 return redirect('/manage/staff')->with('success', "Import complete: {$summary['created']} created, {$summary['skipped']} skipped after revalidation, {$summary['failed']} failed validation. Invitation delivery failures: {$mailFailures}.");
+    }
+
+    /** Permanently deletes a person. Administrators only, never their own account, and only on the live site venues copy from. */
+    public function destroy(Request $r, User $user, \App\Services\PersonDeletion $deletion)
+    {
+        Access::manage('staff');
+        $this->allowed($user);
+        abort_unless($r->user()->role === 'admin', 403);
+        abort_if($user->is($r->user()), 422, 'You cannot delete your own account.');
+        abort_if(\App\Services\AttendanceSync::venue(), 422, 'Delete people on the live site. The deletion reaches this venue on the next sync.');
+        $r->validate(['confirmed' => 'accepted'], ['confirmed.accepted' => 'Tick the box to confirm the deletion.']);
+        if ($reason = $deletion->blocker($user)) {
+            return back()->withErrors(['confirmed' => $reason]);
+        }
+        $backup = $deletion->delete($user);
+
+        return redirect('/manage/staff')->with('success', $user->name.' ('.$user->email.') was deleted. A backup was saved to storage/app/private/'.$backup.'.');
     }
 
     public function photo(User $user)

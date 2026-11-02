@@ -16,6 +16,11 @@ class Badge extends Model
         });
     }
 
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
     protected function casts(): array
     {
         return ['snapshot' => 'array', 'generated_at' => 'datetime', 'printed_at' => 'datetime', 'collected_at' => 'datetime', 'materials_collected_at' => 'datetime'];

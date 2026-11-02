@@ -88,15 +88,28 @@ Artisan::command('attendance:venue-password {email}', function (string $email) {
 Artisan::command('attendance:configure-days', function () {
     // Every programme day takes attendance for the whole day with no late time: each scan is simply recorded with its time.
     // Run it on the live site; venues copy day settings from there. Cancelled days are left alone.
-    $whole = ['attendance_required' => true, 'checkin_opens' => '00:00', 'checkin_closes' => '23:59', 'late_after' => null, 'checkout_opens' => '00:00', 'checkout_closes' => '23:59'];
-    $saved = 0;
-    foreach (app(\App\Services\AttendanceService::class)->days()->where('cancelled', false)->get() as $day) {
-        $before = $day->only(array_keys($whole));
-        $day->update($whole);
-        Access::audit('day_policy.whole_day', (string) $day->id, $before, $whole);
-        $saved++;
-    }
+    $saved = app(\App\Services\AttendanceService::class)->takeAttendanceAllDay();
     $this->info("Attendance is now taken all day, with no late time, on {$saved} programme days.");
+});
+
+Artisan::command('attendance:signin-from-badges {date : The programme day, e.g. 2026-11-02} {--dry-run : Show what would change without saving}', function (string $date) {
+    // For a day when staff received their badge on arrival: the badge print time becomes their sign-in.
+    $service = app(\App\Services\AttendanceService::class);
+    $day = $service->days()->whereDate('date', $date)->first();
+    if (! $day) {
+        $this->error("$date is not a programme day.");
+
+        return 1;
+    }
+    $counts = $service->signInFromBadgePrints($day, ! $this->option('dry-run'));
+    $this->info(($this->option('dry-run') ? 'Dry run, nothing saved. Would give ' : 'Gave ').$counts['updated'].' existing records a sign-in from the badge print time and '
+        .($this->option('dry-run') ? 'create ' : 'created ').$counts['created'].' records for staff with a printed badge and no scan. '.$counts['unchanged'].' already had an earlier sign-in.');
+});
+
+Artisan::command('badges:collected-when-printed {--dry-run : Show how many would change without saving}', function () {
+    // Badges handed out as they were printed: mark each printed badge collected at its print time.
+    $count = app(\App\Services\BadgeService::class)->markPrintedCollected(! $this->option('dry-run'));
+    $this->info(($this->option('dry-run') ? 'Dry run, nothing saved. Would mark ' : 'Marked ').$count.' printed badges as collected at their print time.');
 });
 
 Artisan::command('attendance:sync', function (AttendanceSync $sync) {

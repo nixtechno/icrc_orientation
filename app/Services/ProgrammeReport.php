@@ -109,7 +109,7 @@ class ProgrammeReport
     private function badges(): array
     {
         $p = Access::programme();
-        $badges = Badge::where('programme_id', $p->id)->get(['user_id', 'category', 'printed_at', 'collected_at', 'materials_collected_at']);
+        $badges = Badge::where('programme_id', $p->id)->get(['user_id', 'category', 'printed_at', 'collected_at']);
         $people = User::whereIn('role', User::ROLES)->whereHas('programmes', fn ($q) => $q->where('programmes.id', $p->id))->pluck('id');
 
         return [
@@ -119,7 +119,6 @@ class ProgrammeReport
                 ['label' => 'Generated', 'value' => $badges->count()],
                 ['label' => 'Printed', 'value' => $badges->whereNotNull('printed_at')->count()],
                 ['label' => 'Collected', 'value' => $badges->whereNotNull('collected_at')->count()],
-                ['label' => 'Materials collected', 'value' => $badges->whereNotNull('materials_collected_at')->count()],
             ],
             'categories' => $badges->countBy('category')->map(fn ($count, $category) => ['label' => ucfirst($category), 'value' => $count])->values()->all(),
         ];
