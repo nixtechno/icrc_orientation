@@ -66,6 +66,7 @@ class QuizReviewTest extends TestCase
         $this->assertStringContainsString('Correct answer', $page);
         $this->assertStringContainsString('ICRC was set up to regulate concessions.', $page);
         $this->assertSame(1, substr_count($page, 'class="quiz-review-explanation"'));
+        $this->assertStringNotContainsString('<h2>Instructions</h2>', $page);
     }
 
     public function test_results_awaiting_marking_hide_correct_answers_and_explanations(): void
@@ -79,7 +80,7 @@ class QuizReviewTest extends TestCase
 
         $this->actingAs($this->staff)->get('/activities?kind=quiz')->assertSee('Awaiting marking')->assertDontSee('<small>/', false);
         $this->get('/activities/'.$quiz->slug)->assertOk()
-            ->assertSee('Your answers are with a facilitator for marking.')->assertSee('Faster delivery')->assertSee('quiz-review-tile is-answered', false)
+            ->assertSee('Your answers are with a facilitator for marking.')->assertSee('<h2>Instructions</h2>', false)->assertSee('Faster delivery')->assertSee('quiz-review-tile is-answered', false)
             ->assertDontSee('Correct answer')->assertDontSee('Hidden until release.')->assertDontSee('is-wrong', false);
     }
 

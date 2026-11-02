@@ -67,7 +67,7 @@ class FullscreenQuizTest extends TestCase
         $submission=$this->start();
         app(\App\Services\QuizAttemptService::class)->finalize($submission,'fullscreen_exit');
         $this->get('/activities/'.$this->quiz->slug)->assertOk()
-            ->assertSee('No attempts remaining.')->assertDontSee('data-quiz-start',false);
+            ->assertDontSee('<h2>Instructions</h2>',false)->assertDontSee('data-quiz-start',false)->assertSee('data-quiz-review',false);
         $this->quiz->update(['attempts'=>2]);
         $this->get('/activities/'.$this->quiz->slug)->assertOk()->assertDontSee('data-quiz-start',false);
         $this->postJson('/activities/'.$this->quiz->slug.'/start', ['fullscreen'=>1,'policy_acknowledged'=>1,'launch_token'=>'another-fullscreen-launch-token'])

@@ -1,13 +1,15 @@
 @extends('layout')
 
 @section('content')<div class="page-heading"><div><span class="eyebrow">{{ $activity->label() }}@if($manager) · {{ $activity->published?'PUBLISHED':'DRAFT' }}@endif</span><h1>{{ $activity->title }}</h1><p class="muted">{{ $activity->due_at?'Due '.$activity->due_at->format('j F Y · H:i'):'No deadline' }}{{ $activity->kind==='presentation'?'':' · '.$activity->attempts.' attempt(s)' }}{{ $activity->time_limit?' · '.$activity->time_limit.' minute limit':'' }}</p></div><div class="buttons">@if($manager)<form method="post" action="/activities/{{ $activity->getRouteKey() }}/publish">@csrf<button class="{{ $activity->published?'secondary':'' }}">{{ $activity->published?'Unpublish':'Publish' }} {{ $activity->label() }}</button></form>@endif</div></div>
-@if(!$manager)<section class="card"><h2>Instructions</h2><p class="preline">{{ $activity->instructions }}</p>
+@if(!$manager)
+{{-- Once an assessment is submitted and marked there is nothing left to start, so only the result is shown. --}}
+@unless($activity->kind==='quiz'&&$submissions->whereNotNull('released_at')->isNotEmpty())<section class="card"><h2>Instructions</h2><p class="preline">{{ $activity->instructions }}</p>
 @if($activity->kind==='quiz')
 @include('partials.quiz-launch')
 @elseif($activity->kind==='presentation')
 @include('partials.presentation-submit')
 @else<form method="post" action="/activities/{{ $activity->getRouteKey() }}/start">@csrf<button>Start / continue an attempt</button></form>
-@endif</section>
+@endif</section>@endunless
 @else<link rel="stylesheet" href="{{ asset('activity-manage.css') }}?v=20261101i"><script src="{{ asset('audience-picker.js') }}?v=20261101a" defer></script><script src="{{ asset('activity-delete.js') }}?v=20261101a" defer></script>
 <div class="manage-grid">
 <section class="card"><h2>Instructions</h2><p class="preline">{{ $activity->instructions }}</p>
