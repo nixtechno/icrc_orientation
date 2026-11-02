@@ -74,7 +74,7 @@
 <section class="card report-section" id="badges" aria-labelledby="badges-title">
 <h2 id="badges-title">Badges</h2>
 <div class="report-tiles">
-<div class="report-tile"><span>People enrolled</span><strong>{{ $bad['people'] }}</strong></div>
+<div class="report-tile"><span>People in the programme</span><strong>{{ $bad['people'] }}</strong><small>staff, facilitators and admins</small></div>
 <div class="report-tile"><span>Without a badge</span><strong>{{ $bad['without'] }}</strong></div>
 <div class="report-tile"><span>Printed</span><strong>{{ $printed }}</strong><small>{{ $pct($printed, $bad['stages'][0]['value']) }}% of badges</small></div>
 <div class="report-tile"><span>Collected</span><strong>{{ $collected }}</strong><small>{{ $pct($collected, $bad['stages'][0]['value']) }}% of badges</small></div>
@@ -82,7 +82,7 @@
 @if($bad['stages'][0]['value'])
 <h3>From generated to collected</h3>
 <div class="report-chart" data-chart="{{ json_encode(['type' => 'bar', 'horizontal' => true, 'name' => 'Badges', ...$pairs($bad['stages'])]) }}"></div>
-<details class="report-table"><summary>Show the figures</summary><table><thead><tr><th>Stage</th><th>Badges</th></tr></thead><tbody>@foreach($bad['stages'] as $row)<tr><td>{{ $row['label'] }}</td><td>{{ $row['value'] }}</td></tr>@endforeach</tbody></table><table><thead><tr><th>Badge type</th><th>Badges</th></tr></thead><tbody>@foreach($bad['categories'] as $row)<tr><td>{{ $row['label'] }}</td><td>{{ $row['value'] }}</td></tr>@endforeach</tbody></table></details>
+<details class="report-table"><summary>Show the figures</summary><table><thead><tr><th>Stage</th><th>Badges</th></tr></thead><tbody>@foreach($bad['stages'] as $row)<tr><td>{{ $row['label'] }}</td><td>{{ $row['value'] }}</td></tr>@endforeach</tbody></table><table><thead><tr><th>Type</th><th>People</th><th>With a badge</th><th>Without</th><th>Printed</th><th>Collected</th></tr></thead><tbody>@foreach($bad['types'] as $row)<tr><td>{{ $row['label'] }}</td><td>{{ $row['people'] }}</td><td>{{ $row['generated'] }}</td><td>{{ $row['without'] }}</td><td>{{ $row['printed'] }}</td><td>{{ $row['collected'] }}</td></tr>@endforeach<tr><th>Total</th><th>{{ $bad['people'] }}</th><th>{{ $bad['stages'][0]['value'] }}</th><th>{{ $bad['without'] }}</th><th>{{ $printed }}</th><th>{{ $collected }}</th></tr></tbody></table></details>
 @else<p class="report-empty">No badges have been generated yet.</p>@endif
 </section>
 

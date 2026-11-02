@@ -75,6 +75,29 @@ class ProgrammeReportTest extends TestCase
         $this->actingAs($amina)->get('/reports')->assertForbidden();
     }
 
+    public function test_assessment_and_badge_figures_add_up_to_the_people_they_are_out_of(): void
+    {
+        [$amina, $grace] = [$this->person('Amina Bello'), $this->person('Grace Okafor')];
+        $tunde = $this->person('Tunde Facilitator', 'facilitator');
+        $former = User::factory()->create(['role' => 'staff', 'active' => true]);
+        $quiz = Activity::create(['programme_id' => $this->programme->id, 'kind' => 'quiz', 'title' => 'Day 1', 'instructions' => 'Go', 'due_at' => now()->addDay(), 'attempts' => 2, 'published' => true]);
+        // A facilitator and someone no longer enrolled are on the activity too; neither is assigned staff.
+        $quiz->participants()->attach([$amina->id, $grace->id, $tunde->id, $former->id]);
+        Question::create(['activity_id' => $quiz->id, 'type' => 'true_false', 'prompt' => 'True?', 'options' => ['True', 'False'], 'correct_answer' => 'True', 'points' => 4]);
+        foreach ([[$amina, 1, 0], [$amina, 2, 4], [$tunde, 1, 4], [$former, 1, 4]] as [$who, $attempt, $score]) {
+            Submission::create(['activity_id' => $quiz->id, 'user_id' => $who->id, 'attempt' => $attempt, 'started_at' => now(), 'submitted_at' => now(), 'released_at' => now(), 'score' => $score]);
+        }
+        $this->badge($amina, true);
+        $this->badge($tunde, false);
+        $this->badge($former, true);
+
+        $report = app(ProgrammeReport::class)->data();
+        $this->assertSame(['assigned' => 2, 'submitted' => 1, 'outstanding' => 1, 'released' => 1, 'average' => 100], array_intersect_key($report['assessments']['rows'][0], array_flip(['assigned', 'submitted', 'outstanding', 'released', 'average'])));
+        $this->assertSame(2, $report['registration']['staff']);
+        $this->assertSame([4, 2, 2, 1], [$report['badges']['people'], $report['badges']['without'], $report['badges']['stages'][0]['value'], $report['badges']['stages'][1]['value']]);
+        $this->assertSame([['Staff', 2, 1, 1], ['Facilitator', 1, 1, 0], ['Admin', 1, 0, 1]], array_map(fn ($row) => [$row['label'], $row['people'], $row['generated'], $row['without']], $report['badges']['types']));
+    }
+
     public function test_any_scan_counts_as_attended_even_on_a_day_not_set_to_take_attendance(): void
     {
         [$amina, $grace, $tunde] = [$this->person('Amina Bello'), $this->person('Grace Okafor'), $this->person('Tunde Ade')];

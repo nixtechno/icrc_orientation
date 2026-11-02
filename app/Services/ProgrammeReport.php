@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\{Activity, Badge, DailyAttendance, Resource, User};
+use App\Models\{Activity, Badge, DailyAttendance, Facilitator, Resource, User};
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -23,7 +23,7 @@ class ProgrammeReport
     private function registration(): array
     {
         $staff = Access::staff()->get(['users.id', 'active', 'department']);
-        $facilitators = User::where('role', 'facilitator')->whereHas('programmes', fn ($q) => $q->where('programmes.id', Access::programme()->id))->count();
+        $facilitators = $this->people()->where('type', 'facilitator')->count();
 
         return [
             'staff' => $staff->count(),
@@ -77,23 +77,28 @@ class ProgrammeReport
         ];
     }
 
-    /** Each published activity with how many assigned staff submitted, and the average released score for assessments. */
+    /**
+     * Each published activity with how many assigned staff submitted, and the average released score for assessments.
+     * Only enrolled staff on the activity count, each person once on their latest attempt, so every figure is out of the same assigned staff.
+     */
     private function assessments(): array
     {
+        $staffIds = Access::staff()->pluck('users.id');
         $activities = Activity::where('programme_id', Access::programme()->id)->where('published', true)
-            ->withCount('participants')->withSum('questions as total_points', 'points')->latest()->get();
-        $submitted = DB::table('submissions')->whereIn('activity_id', $activities->modelKeys())->whereNotNull('submitted_at')
-            ->selectRaw('activity_id, count(distinct user_id) people')->groupBy('activity_id')->pluck('people', 'activity_id');
-        $scores = DB::table('submissions')->whereIn('activity_id', $activities->modelKeys())->whereNotNull('released_at')->whereNotNull('score')
-            ->selectRaw('activity_id, avg(score) average, count(*) released')->groupBy('activity_id')->get()->keyBy('activity_id');
-        $rows = $activities->map(function (Activity $a) use ($submitted, $scores) {
-            $done = min((int) ($submitted[$a->id] ?? 0), $a->participants_count);
-            $score = $scores->get($a->id);
+            ->withCount(['participants' => fn ($q) => $q->whereIn('users.id', $staffIds)])->withSum('questions as total_points', 'points')->latest()->get();
+        $attempts = DB::table('submissions')
+            ->join('activity_assignments', fn ($j) => $j->on('activity_assignments.activity_id', '=', 'submissions.activity_id')->on('activity_assignments.user_id', '=', 'submissions.user_id'))
+            ->whereIn('submissions.activity_id', $activities->modelKeys())->whereIn('submissions.user_id', $staffIds)
+            ->orderByDesc('submissions.attempt')->get(['submissions.activity_id', 'submissions.user_id', 'submitted_at', 'released_at', 'score'])->groupBy('activity_id');
+        $rows = $activities->map(function (Activity $a) use ($attempts) {
+            $mine = $attempts->get($a->id, collect());
+            $submitted = $mine->whereNotNull('submitted_at')->unique('user_id')->count();
+            $released = $mine->whereNotNull('released_at')->whereNotNull('score')->unique('user_id');
             $total = (float) $a->total_points;
 
-            return ['title' => $a->title, 'kind' => ucfirst($a->label()), 'assigned' => $a->participants_count, 'submitted' => $done,
-                'outstanding' => max(0, $a->participants_count - $done), 'released' => (int) ($score->released ?? 0),
-                'average' => $a->kind === 'quiz' && $score && $total ? (int) round($score->average / $total * 100) : null];
+            return ['title' => $a->title, 'kind' => ucfirst($a->label()), 'assigned' => $a->participants_count, 'submitted' => $submitted,
+                'outstanding' => max(0, $a->participants_count - $submitted), 'released' => $released->count(),
+                'average' => $a->kind === 'quiz' && $released->isNotEmpty() && $total ? (int) round($released->avg('score') / $total * 100) : null];
         })->values();
         $assigned = $rows->sum('assigned');
 
@@ -105,22 +110,42 @@ class ProgrammeReport
         ];
     }
 
+    /**
+     * Badges for everyone who can hold one, by type. Badges left from people no longer in the programme are not counted,
+     * so for each type the people with a badge plus those without add up to its people.
+     */
     private function badges(): array
     {
-        $p = Access::programme();
-        $badges = Badge::where('programme_id', $p->id)->get(['user_id', 'category', 'printed_at', 'collected_at']);
-        $people = User::whereIn('role', User::ROLES)->whereHas('programmes', fn ($q) => $q->where('programmes.id', $p->id))->pluck('id');
+        $badges = Badge::where('programme_id', Access::programme()->id)->get(['subject_key', 'printed_at', 'collected_at'])->keyBy('subject_key');
+        $byType = $this->people()->groupBy('type');
+        $types = collect(['staff', 'facilitator', 'admin'])->filter(fn ($type) => $byType->has($type))->map(function ($type) use ($byType, $badges) {
+            $people = $byType[$type];
+            $held = $people->map(fn ($person) => $badges->get($person['key']))->filter();
+
+            return ['label' => ucfirst($type), 'people' => $people->count(), 'generated' => $held->count(), 'without' => $people->count() - $held->count(),
+                'printed' => $held->whereNotNull('printed_at')->count(), 'collected' => $held->whereNotNull('collected_at')->count()];
+        })->values();
 
         return [
-            'people' => $people->count(),
-            'without' => $people->diff($badges->pluck('user_id')->filter())->count(),
+            'people' => $types->sum('people'),
+            'without' => $types->sum('without'),
             'stages' => [
-                ['label' => 'Generated', 'value' => $badges->count()],
-                ['label' => 'Printed', 'value' => $badges->whereNotNull('printed_at')->count()],
-                ['label' => 'Collected', 'value' => $badges->whereNotNull('collected_at')->count()],
+                ['label' => 'Generated', 'value' => $types->sum('generated')],
+                ['label' => 'Printed', 'value' => $types->sum('printed')],
+                ['label' => 'Collected', 'value' => $types->sum('collected')],
             ],
-            'categories' => $badges->countBy('category')->map(fn ($count, $category) => ['label' => ucfirst($category), 'value' => $count])->values()->all(),
+            'types' => $types->all(),
         ];
+    }
+
+    /** Everyone in the programme who can hold a badge: enrolled accounts, and facilitator profiles without one. */
+    private function people(): Collection
+    {
+        $p = Access::programme();
+        $users = User::whereIn('role', User::ROLES)->whereHas('programmes', fn ($q) => $q->where('programmes.id', $p->id))->get(['id', 'role'])
+            ->map(fn ($u) => ['key' => 'u:'.$u->id, 'type' => $u->role]);
+
+        return $users->concat(Facilitator::where('programme_id', $p->id)->whereNull('user_id')->pluck('id')->map(fn ($id) => ['key' => 'f:'.$id, 'type' => 'facilitator']));
     }
 
     /** Largest first, with everything past the limit folded into "Other". */

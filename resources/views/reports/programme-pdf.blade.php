@@ -194,7 +194,7 @@ thead { display: table-header-group; }
 <div class="section keep">
 <div class="section-head"><h2><span class="number">5</span>Badges</h2></div>
 <table class="tiles"><tr>
-<td><div class="label">People enrolled</div><div class="value">{{ $bad['people'] }}</div></td>
+<td><div class="label">People in the programme</div><div class="value">{{ $bad['people'] }}</div><div class="note">staff, facilitators and admins</div></td>
 <td><div class="label">Without a badge</div><div class="value">{{ $bad['without'] }}</div></td>
 <td><div class="label">Printed</div><div class="value">{{ $printed }}</div><div class="note">{{ $pct($printed, $badgeTotal) }}% of badges</div></td>
 <td><div class="label">Collected</div><div class="value">{{ $bad['stages'][2]['value'] }}</div><div class="note">{{ $pct($bad['stages'][2]['value'], $badgeTotal) }}% of badges</div></td>
@@ -202,7 +202,7 @@ thead { display: table-header-group; }
 @if($badgeTotal)
 <h3>From generated to collected</h3>
 <table class="chart">@foreach($bars($bad['stages']) as $row)<tr><td class="label">{{ $row['label'] }}</td><td class="track"><div class="bar" style="width: {{ $row['width'] }}%"></div></td><td class="value">{{ $row['shown'] }}</td></tr>@endforeach</table>
-@if($bad['categories'])<table class="figures"><thead><tr><th>Badge type</th><th class="num">Badges</th></tr></thead><tbody>@foreach($bad['categories'] as $row)<tr><td>{{ $row['label'] }}</td><td class="num">{{ $row['value'] }}</td></tr>@endforeach</tbody></table>@endif
+<table class="figures"><thead><tr><th>Type</th><th class="num">People</th><th class="num">With a badge</th><th class="num">Without</th><th class="num">Printed</th><th class="num">Collected</th></tr></thead><tbody>@foreach($bad['types'] as $row)<tr><td>{{ $row['label'] }}</td><td class="num">{{ $row['people'] }}</td><td class="num">{{ $row['generated'] }}</td><td class="num">{{ $row['without'] }}</td><td class="num">{{ $row['printed'] }}</td><td class="num">{{ $row['collected'] }}</td></tr>@endforeach<tr><th>Total</th><th class="num">{{ $bad['people'] }}</th><th class="num">{{ $badgeTotal }}</th><th class="num">{{ $bad['without'] }}</th><th class="num">{{ $printed }}</th><th class="num">{{ $bad['stages'][2]['value'] }}</th></tr></tbody></table>
 @else<p class="empty">No badges have been generated yet.</p>@endif
 </div>
 
