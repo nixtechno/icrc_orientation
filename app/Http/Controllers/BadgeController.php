@@ -133,6 +133,18 @@ return view('badges.preview', ['badges' => $badges, 'data' => $this->data($badge
 return redirect('/badges')->with('success','Printing status recorded.');
     }
 
+    /** Print badge on the editor: the badge is recorded as printed and handed over as the print dialog opens. */
+    public function printing(Badge $badge)
+    {
+        $this->scope($badge);
+        if (! $badge->printed_at) {
+            $badge->update(['printed_at' => now(), 'collected_at' => $badge->collected_at ?? now()]);
+            Access::audit('badge.print_confirmed', (string) $badge->id, null, ['source' => 'editor']);
+        }
+
+        return response()->noContent();
+    }
+
     public function edit(Request $r, Badge $badge)
     {
         $this->scope($badge);

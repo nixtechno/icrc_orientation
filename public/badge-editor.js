@@ -48,7 +48,8 @@
   pdf.href=url.href;window.history.replaceState({},'',page);
  });
  pdf.addEventListener('click',event=>{if(dirty)event.preventDefault();});
- print.addEventListener('click',()=>{if(!dirty){fit();window.print();}});
+ // Record the print on the server as the dialog opens; the badge is handed over as it prints.
+ print.addEventListener('click',()=>{if(!dirty){fit();fetch(print.dataset.printedUrl,{method:'POST',keepalive:true,headers:{'X-CSRF-TOKEN':print.dataset.csrf,'Accept':'application/json'}}).catch(()=>{});window.print();}});
  window.addEventListener('beforeprint',fit);
  if(document.fonts?.ready)document.fonts.ready.then(fit);else fit();
 })();

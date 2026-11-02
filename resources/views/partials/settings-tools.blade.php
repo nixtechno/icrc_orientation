@@ -21,10 +21,13 @@
 
 <section class="card settings-tool" aria-labelledby="tool-pdfs">
 <h2 id="tool-pdfs">Record badges printed from Create badge</h2>
-<p class="muted">Badges printed by opening their PDF from Create badge or the batch preview were not recorded as printed. Each is marked printed and collected at the time its PDF was first opened. Run this before using badge print times as sign-ins.</p>
-@if($t['unrecorded'])<p>{{ $t['unrecorded'] }} {{ $t['unrecorded'] === 1 ? 'badge was' : 'badges were' }} opened for printing but {{ $t['unrecorded'] === 1 ? 'is' : 'are' }} not recorded as printed.</p>
-@unless($t['venue'])<form method="post" action="/settings/tools/badges-from-pdfs">@csrf<button>Record {{ $t['unrecorded'] }} {{ $t['unrecorded'] === 1 ? 'badge' : 'badges' }} as printed</button></form>@endunless
-@else<p class="muted">Every badge opened for printing is recorded as printed.</p>@endif
+<p class="muted">Badges printed with Print badge on the badge editor, before it recorded prints, still show as not printed. Tick the badges that were printed and handed over. Each is marked printed and collected at the time it was made at the desk, or when its PDF was opened. Run this before using badge print times as sign-ins.</p>
+@if($t['unrecorded']->isNotEmpty())
+@if($t['venue'])<p>{{ $t['unrecorded']->count() }} {{ $t['unrecorded']->count() === 1 ? 'badge is' : 'badges are' }} not recorded as printed.</p>
+@else<form method="post" action="/settings/tools/badges-printed">@csrf
+<ul class="settings-tool-list">@foreach($t['unrecorded'] as $row)<li><label><input type="checkbox" name="badges[]" value="{{ $row['badge']->id }}"> {{ $row['badge']->snapshot['name'] ?? 'Badge '.$row['badge']->id }} <span class="muted">· {{ ucfirst($row['badge']->category) }} · printed {{ $row['at']->timezone('Africa/Lagos')->format('D j M, H:i') }}</span></label></li>@endforeach</ul>
+<button>Record the ticked badges as printed</button></form>@endif
+@else<p class="muted">Every badge is recorded as printed.</p>@endif
 </section>
 
 <section class="card settings-tool" aria-labelledby="tool-signins">

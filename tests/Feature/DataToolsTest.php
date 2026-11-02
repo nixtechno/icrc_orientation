@@ -57,26 +57,28 @@ class DataToolsTest extends TestCase
         $this->post('/settings/tools/database')->assertRedirect('/settings?tab=tools');
     }
 
-    public function test_badges_printed_from_their_pdf_are_recorded_as_printed_and_count_as_sign_ins(): void
+    public function test_ticked_badges_printed_without_a_record_are_marked_printed_and_count_as_sign_ins(): void
     {
-        $staff = $this->person();
-        $badge = Badge::create(['programme_id' => $this->programme->id, 'subject_key' => 'u:'.$staff->id, 'user_id' => $staff->id, 'category' => 'staff', 'snapshot' => ['name' => $staff->name],
-            'generated_at' => Carbon::parse('2026-11-02 08:00', 'Africa/Lagos'), 'generated_by' => $this->admin->id]);
-        $stale = Badge::create(['programme_id' => $this->programme->id, 'subject_key' => 'u:999', 'category' => 'staff', 'snapshot' => ['name' => 'Regenerated'],
-            'generated_at' => Carbon::parse('2026-11-02 10:00', 'Africa/Lagos'), 'generated_by' => $this->admin->id]);
-        // Opened before the fix, which only wrote the audit entry; the second badge's PDF predates its current version.
-        \Illuminate\Support\Facades\DB::table('audit_logs')->insert(['action' => 'badge.pdf', 'subject' => $badge->id.','.$stale->id, 'created_at' => Carbon::parse('2026-11-02 08:40', 'Africa/Lagos'), 'updated_at' => now()]);
+        [$mary, $joy, $tunde] = [$this->person('staff', ['name' => 'Mary Dare']), $this->person('staff', ['name' => 'Joy Omobo']), $this->person('staff', ['name' => 'Tunde Ade'])];
+        $badge = fn (User $u, string $made) => Badge::create(['programme_id' => $this->programme->id, 'subject_key' => 'u:'.$u->id, 'user_id' => $u->id, 'category' => 'staff', 'snapshot' => ['name' => $u->name],
+            'generated_at' => Carbon::parse("2026-11-02 $made", 'Africa/Lagos'), 'generated_by' => $this->admin->id]);
+        // Made with Create badge and printed from the editor, which left no record; Joy's PDF was opened later.
+        [$maryBadge, $joyBadge, $tundeBadge] = [$badge($mary, '08:05'), $badge($joy, '08:10'), $badge($tunde, '08:15')];
+        \Illuminate\Support\Facades\DB::table('audit_logs')->insert(['action' => 'badge.pdf', 'subject' => (string) $joyBadge->id, 'created_at' => Carbon::parse('2026-11-02 08:40', 'Africa/Lagos'), 'updated_at' => now()]);
 
-        $this->actingAs($this->admin)->get('/settings?tab=tools')->assertSee('Record 1 badge as printed');
-        $this->post('/settings/tools/badges-from-pdfs')->assertSessionHas('success', '1 badges are now marked printed and collected at the time their PDF was opened.');
-        $this->assertSame(['08:40', '08:40'], [$badge->fresh()->printed_at->timezone('Africa/Lagos')->format('H:i'), $badge->fresh()->collected_at->timezone('Africa/Lagos')->format('H:i')]);
-        $this->assertNull($stale->fresh()->printed_at);
-        $this->post('/settings/tools/signins', ['date' => '2026-11-02'])->assertSessionHas('success', fn ($m) => str_contains($m, '1 records were added'));
+        $this->actingAs($this->admin)->get('/settings?tab=tools')->assertSee('Record the ticked badges as printed')->assertSeeInOrder(['Joy Omobo', 'Mary Dare', 'Tunde Ade'])->assertSee('printed Mon 2 Nov, 08:05');
+        $this->post('/settings/tools/badges-printed', ['badges' => [$maryBadge->id, $joyBadge->id]])->assertSessionHas('success', '2 badges are now marked printed and collected.');
+        $this->assertSame(['08:05', '08:05', '08:40'], [$maryBadge->fresh()->printed_at->timezone('Africa/Lagos')->format('H:i'), $maryBadge->fresh()->collected_at->timezone('Africa/Lagos')->format('H:i'), $joyBadge->fresh()->printed_at->timezone('Africa/Lagos')->format('H:i')]);
+        $this->assertNull($tundeBadge->fresh()->printed_at);
+        $this->post('/settings/tools/signins', ['date' => '2026-11-02'])->assertSessionHas('success', fn ($m) => str_contains($m, '2 records were added'));
 
-        // From now on, opening the PDF records the print straight away.
-        $this->get('/badges/batch?'.http_build_query(['ids' => [$stale->getRouteKey()], 'pdf' => 1]))->assertOk();
-        $this->assertNotNull($stale->fresh()->printed_at);
-        $this->assertNotNull($stale->fresh()->collected_at);
+        // From now on, Print badge on the editor and opening the PDF record the print straight away.
+        $this->post('/badges/'.$tundeBadge->getRouteKey().'/print')->assertNoContent();
+        $this->assertNotNull($tundeBadge->fresh()->collected_at);
+        $tundeBadge->update(['printed_at' => null, 'collected_at' => null]);
+        $this->get('/badges/batch?'.http_build_query(['ids' => [$tundeBadge->getRouteKey()], 'pdf' => 1]))->assertOk();
+        $this->assertNotNull($tundeBadge->fresh()->printed_at);
+        $this->get('/settings?tab=tools')->assertSee('Every badge is recorded as printed.');
     }
 
     public function test_admins_can_point_an_account_at_the_badge_qr_id_the_person_is_wearing(): void

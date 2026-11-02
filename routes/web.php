@@ -130,6 +130,7 @@ Route::middleware(['auth', ActiveAccount::class])->group(function () {
     Route::post('/badges/print-station', [\App\Http\Controllers\BadgePrintStationController::class, 'scan'])->middleware('throttle:120,1');
     Route::get('/badges/print-station/{badge}', [\App\Http\Controllers\BadgePrintStationController::class, 'artwork']);
     Route::get('/badges/{badge}/edit', [BadgeController::class, 'edit']);
+    Route::post('/badges/{badge}/print', [BadgeController::class, 'printing']);
     Route::post('/badges/{badge}', [BadgeController::class, 'update']);
     Route::get('/badges/{badge}/verify', [BadgeController::class, 'verify']);
     Route::post('/badges/{badge}/collection', [BadgeController::class, 'collection']);
