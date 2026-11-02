@@ -31,3 +31,5 @@ body.station-sign-out{--accent:#8b6726;--accent-soft:#f6efe2}
 /* Venue sync status under the station date. */
 .station-sync{margin:10px 0 0;font-size:13px;color:#7d8a80}
 .station-sync[data-state=offline],.station-sync[data-state=problems]{color:#9a5b12}
+.station-sound{margin:18px 0 0}.station-sound button{background:transparent;color:#53635b;border:1px solid #cfd8d3;border-radius:999px;padding:6px 16px;font-size:13px;font-weight:600}.station-sound button:hover{background:#eef1ef;color:#0b4838}
+.station-sound{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:10px}.station-sound label{display:flex;align-items:center;gap:8px;margin:0;font-size:13px;font-weight:600;color:#53635b}.station-sound select{width:auto;padding:5px 10px;font-size:13px;border:1px solid #cfd8d3;border-radius:999px;background:#fff;color:#182e28}
