@@ -63,14 +63,14 @@ class ProgrammeReportTest extends TestCase
 
         $report = app(ProgrammeReport::class)->data();
         $this->assertSame([2, 1, 1, 1], [$report['registration']['staff'], $report['registration']['activated'], $report['registration']['awaiting'], $report['registration']['facilitators']]);
-        $this->assertSame([['label' => 'Legal', 'value' => 2]], $report['registration']['departments']);
         $this->assertEquals(['signed_in' => 1, 'signed_out' => 1, 'expected' => 2, 'rate' => 50], array_intersect_key($report['attendance']['days'][0], array_flip(['signed_in', 'signed_out', 'expected', 'rate'])));
         $this->assertSame([2, 1], [$report['materials']['total'], $report['materials']['published']]);
         $this->assertSame(['assigned' => 2, 'submitted' => 1, 'outstanding' => 1, 'average' => 100], array_intersect_key($report['assessments']['rows'][0], array_flip(['assigned', 'submitted', 'outstanding', 'average'])));
         $this->assertEquals([1, 1], [$report['badges']['stages'][0]['value'], $report['badges']['stages'][1]['value']]);
 
-        $this->actingAs($this->admin)->get('/reports')->assertOk()->assertSee('Programme report')->assertSee('Staff by department')
+        $this->actingAs($this->admin)->get('/reports')->assertOk()->assertSee('Programme report')->assertDontSee('Staff by department')->assertSee('Download PDF report')
             ->assertSee('apexcharts.min.js', false)->assertSee('data-chart=', false)->assertSee('Show the figures');
+        $this->get('/reports/pdf')->assertOk()->assertHeader('Content-Type', 'application/pdf');
         $this->get('/reports?tab=exports')->assertOk()->assertSee('Download report')->assertDontSee('data-chart=', false);
         $this->actingAs($amina)->get('/reports')->assertForbidden();
     }

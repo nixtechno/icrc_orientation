@@ -21,9 +21,6 @@
 <div class="report-meter-bar"><span style="width:{{ $pct($reg['activated'], $reg['staff']) }}%"></span></div>
 <ul class="report-legend"><li><i class="is-primary"></i>Activated {{ $reg['activated'] }}</li><li><i class="is-rest"></i>Awaiting activation {{ $reg['awaiting'] }}</li></ul>
 </div>
-<h3>Staff by department</h3>
-<div class="report-chart" data-chart="{{ json_encode(['type' => 'bar', 'horizontal' => true, 'name' => 'Staff', ...$pairs($reg['departments'])]) }}"></div>
-<details class="report-table"><summary>Show the figures</summary><table><thead><tr><th>Department</th><th>Staff</th></tr></thead><tbody>@foreach($reg['departments'] as $row)<tr><td>{{ $row['label'] }}</td><td>{{ $row['value'] }}</td></tr>@endforeach</tbody></table></details>
 @else<p class="report-empty">No staff are enrolled yet.</p>@endif
 </section>
 

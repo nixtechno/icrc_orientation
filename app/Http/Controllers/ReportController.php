@@ -40,6 +40,20 @@ class ReportController extends Controller
             'canMerge' => $r->user()->role === 'admin' && ! \App\Services\AttendanceSync::venue()]);
     }
 
+    /** The programme report as a designed A4 PDF, drawn from the same figures as the report tab. */
+    public function pdf()
+    {
+        Access::manage('reports');
+        $p = Access::programme();
+        $html = view('reports.programme-pdf', ['report' => app(\App\Services\ProgrammeReport::class)->data(), 'p' => $p,
+            'duplicates' => app(\App\Services\PersonMerge::class)->candidates()->map(fn ($group) => ['name' => $group->first()->name, 'count' => $group->count()])->values(),
+            'logo' => PdfService::image(public_path('brand/ICRC_Logo.png')), 'generated' => now($p->timezone)])->render();
+        Access::audit('report.programme_pdf', (string) $p->id);
+
+        return response(app(PdfService::class)->render($html), 200, ['Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="icrc-scodex-programme-report-'.now($p->timezone)->format('Y-m-d').'.pdf"', 'Cache-Control' => 'private, no-store']);
+    }
+
     /** Merges every other profile in a duplicate group into the one chosen to keep. */
     public function mergeDuplicates(Request $r, \App\Services\PersonMerge $merge)
     {

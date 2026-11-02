@@ -30,7 +30,6 @@ class ProgrammeReport
             'activated' => $staff->where('active', true)->count(),
             'awaiting' => $staff->where('active', false)->count(),
             'facilitators' => $facilitators,
-            'departments' => $this->ranked($staff->countBy(fn ($u) => trim((string) $u->department) ?: 'Not set'), 8),
         ];
     }
 
