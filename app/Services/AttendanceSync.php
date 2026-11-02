@@ -129,12 +129,12 @@ class AttendanceSync
         try {
             $client = $this->client();
             $ping = $client->get('ping')->throw()->json();
-            $uploaded = config('attendance_sync.upload') ? $this->upload($client) : null;
+            [$uploaded, $uploadedLogs] = config('attendance_sync.upload') ? $this->upload($client) : [null, null];
             [$downloaded, $unplaced] = $this->download($client);
             $status = [
                 'online' => true, 'checked_at' => now()->toIso8601String(), 'last_synced_at' => now()->toIso8601String(), 'error' => null,
                 'clock_offset' => now()->getTimestamp() - Carbon::parse($ping['time'])->getTimestamp(),
-                'uploaded' => $uploaded, 'downloaded' => $downloaded, 'unplaced' => $unplaced,
+                'uploaded' => $uploaded, 'uploaded_logs' => $uploadedLogs, 'downloaded' => $downloaded, 'unplaced' => $unplaced,
             ];
         } catch (Throwable $e) {
             Log::warning('Attendance sync failed: '.$e->getMessage());
@@ -143,7 +143,7 @@ class AttendanceSync
             $lock->release();
         }
         Cache::forever(self::STATUS, $status);
-        $this->remember(['online' => $status['online'], 'upload' => (bool) config('attendance_sync.upload'), 'uploaded' => $uploaded ?? null,
+        $this->remember(['online' => $status['online'], 'upload' => (bool) config('attendance_sync.upload'), 'uploaded' => $uploaded ?? null, 'uploaded_logs' => $uploadedLogs ?? null,
             'downloaded' => $downloaded ?? 0, 'unplaced' => $unplaced ?? 0, 'error' => $status['online'] ? null : $status['error']]);
 
         return $this->status();
@@ -160,7 +160,7 @@ class AttendanceSync
     {
         $entry = ['at' => now()->toIso8601String(), ...$entry];
         $history = $this->history();
-        $quiet = fn (array $e) => ! ($e['uploaded'] ?? 0) && ! ($e['downloaded'] ?? 0) && ! ($e['unplaced'] ?? 0) && ! ($e['records'] ?? 0) && ! ($e['logs'] ?? 0);
+        $quiet = fn (array $e) => ! ($e['uploaded'] ?? 0) && ! ($e['uploaded_logs'] ?? 0) && ! ($e['downloaded'] ?? 0) && ! ($e['unplaced'] ?? 0) && ! ($e['records'] ?? 0) && ! ($e['logs'] ?? 0);
         $last = $history[0] ?? null;
         $same = fn (array $a, array $b) => Arr::except($a, ['at', 'since', 'repeats']) == Arr::except($b, ['at', 'since', 'repeats']);
         if ($last && $quiet($entry) && $quiet($last) && $same($entry, $last)) {
@@ -204,9 +204,10 @@ class AttendanceSync
             ->acceptJson()->connectTimeout(5)->timeout(30);
     }
 
-    private function upload(PendingRequest $client): int
+    /** @return array{int, int} attendance records and scan log entries the live site accepted */
+    private function upload(PendingRequest $client): array
     {
-        $sent = 0;
+        $sent = $logsSent = 0;
         $after = 0;
         do {
             $rows = $this->pending()->with('day')->where('id', '>', $after)->orderBy('id')->limit(self::BATCH)->get();
@@ -239,9 +240,10 @@ class AttendanceSync
                 'created_at' => Carbon::parse($log->created_at, config('app.timezone'))->toIso8601String(),
             ])->values()->all()])->throw()->json('logs');
             $done = DB::table('attendance_audit_logs')->whereIn('sync_uuid', (array) $accepted)->update(['synced_at' => now()]);
+            $logsSent += $done;
         } while ($done && $logs->count() === self::BATCH * 2);
 
-        return $sent;
+        return [$sent, $logsSent];
     }
 
     /** @return array{int, int} records merged, and records that could not be placed here */

@@ -37,7 +37,8 @@ class SupplementController extends Controller
                 if ($session) {
                     $overlap->where('id', '!=', $session->id);
                 }
-                abort_if($overlap->exists(), 422, 'This proposal overlaps an existing entry. Review the 2–3 p.m. change first, or resolve the overlap manually.');
+                $clash = $overlap->orderBy('starts_at')->first();
+                abort_if($clash, 422, 'This proposal overlaps "'.($clash?->title ?? 'To be confirmed').'" ('.$clash?->starts_at?->format('H:i').'–'.$clash?->ends_at?->format('H:i').', '.$clash?->status.'). Change that entry\'s times or status first, then accept again.');
                 $before = $session?->toArray();
                 $source = $session?->source ?? ['cells' => $p->source['cells'], 'day' => $p->source['day']];
                 $source['supplements'][] = [...$p->source, 'review_note' => $values['review_note'], 'reviewed_by' => auth()->id()];

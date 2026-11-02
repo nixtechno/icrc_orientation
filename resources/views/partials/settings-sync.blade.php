@@ -53,7 +53,7 @@
             <td>{{ $when($entry['at']) }}@if(($entry['repeats'] ?? 1) > 1)<br><small class="muted">×{{ $entry['repeats'] }} since {{ $when($entry['since']) }}</small>@endif</td>
             @if($venue)
                 <td><span class="sync-result {{ $entry['online'] ? 'is-ok' : 'is-off' }}">{{ $entry['online'] ? 'Synced' : 'Offline' }}</span></td>
-                <td>{{ $entry['upload'] ? ($entry['uploaded'] ?? '—') : 'Off' }}</td>
+                <td>{{ $entry['upload'] ? ($entry['uploaded'] ?? '—') : 'Off' }}@if($entry['uploaded_logs'] ?? 0)<br><small class="muted">{{ $entry['uploaded_logs'] }} scan log {{ $entry['uploaded_logs'] === 1 ? 'entry' : 'entries' }}</small>@endif</td>
                 <td>{{ $entry['downloaded'] }}</td>
                 <td>{{ $entry['error'] ?? ($entry['unplaced'] ? $entry['unplaced'].' live record(s) not placed yet; will retry' : '') }}</td>
             @else

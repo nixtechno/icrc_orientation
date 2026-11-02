@@ -183,6 +183,8 @@ class AttendanceSyncTest extends TestCase
         $this->assertTrue($status['online']);
         $this->assertSame('amina@example.test', $sent[0]['records'][0]['email']);
         $this->assertSame('operator@example.test', $sent[0]['records'][0]['signin_scanned_by']);
+        $this->assertSame([1, 1], [$status['uploaded'], $status['uploaded_logs']]);
+        $this->assertSame(1, app(AttendanceSync::class)->history()[0]['uploaded_logs']);
         $this->assertNotNull(DB::table('attendance_audit_logs')->value('synced_at'));
         $record->refresh();
         $this->assertSame([1, 2], [$record->synced_version, $record->sync_version]);

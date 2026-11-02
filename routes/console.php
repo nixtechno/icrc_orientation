@@ -93,7 +93,7 @@ Artisan::command('attendance:sync', function (AttendanceSync $sync) {
     }
     $status = $sync->run();
     $status['online']
-        ? $this->info('Synced. '.($status['upload'] ? 'Uploaded '.($status['uploaded'] ?? 0) : 'Uploads are off (pull only)')
+        ? $this->info('Synced. '.($status['upload'] ? 'Uploaded '.($status['uploaded'] ?? 0).' records and '.($status['uploaded_logs'] ?? 0).' scan log entries' : 'Uploads are off (pull only)')
             .', merged '.($status['downloaded'] ?? 0).' from the live site'.($status['unplaced'] ? ' ('.$status['unplaced'].' could not be placed and will retry)' : '').', '.$status['waiting'].' waiting.')
         : $this->warn(($status['error'] ?? 'Sync did not run.').' '.$status['waiting'].' waiting.');
 
