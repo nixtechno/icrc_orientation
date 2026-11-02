@@ -21,6 +21,7 @@
 <div class="report-meter-bar"><span style="width:{{ $pct($reg['activated'], $reg['staff']) }}%"></span></div>
 <ul class="report-legend"><li><i class="is-primary"></i>Activated {{ $reg['activated'] }}</li><li><i class="is-rest"></i>Awaiting activation {{ $reg['awaiting'] }}</li></ul>
 </div>
+@include('partials.report-people', ['title' => 'Staff awaiting activation', 'people' => $reg['awaiting_people']])
 @else<p class="report-empty">No staff are enrolled yet.</p>@endif
 </section>
 
@@ -36,6 +37,10 @@
 <h3>Share of staff who attended each day (scanned in or out)</h3>
 <div class="report-chart" data-chart="{{ json_encode(['type' => 'bar', 'name' => 'Attended', 'unit' => '%', 'max' => 100, 'categories' => array_column($att['days'], 'label'), 'values' => array_map(fn ($d) => $d['rate'] ?? 0, $att['days']), 'notes' => array_map(fn ($d) => $d['attended'].' of '.$d['expected'].' staff · '.$d['signed_in'].' in, '.$d['signed_out'].' out', $att['days'])]) }}"></div>
 <details class="report-table"><summary>Show the figures</summary><table><thead><tr><th>Day</th><th>Expected</th><th>Attended</th><th>Signed in</th><th>Signed out</th><th>Attendance</th></tr></thead><tbody>@foreach($att['days'] as $d)<tr><td>{{ $d['label'] }}</td><td>{{ $d['expected'] }}</td><td>{{ $d['attended'] }}</td><td>{{ $d['signed_in'] }}</td><td>{{ $d['signed_out'] }}</td><td>{{ $d['rate'] === null ? '—' : $d['rate'].'%' }}</td></tr>@endforeach</tbody></table></details>
+<h3>Who is behind the figures for {{ $att['gaps']['label'] }}</h3>
+@include('partials.report-people', ['title' => 'Signed in but not out', 'people' => $att['gaps']['in_only']])
+@include('partials.report-people', ['title' => 'Signed out but not in', 'people' => $att['gaps']['out_only']])
+@include('partials.report-people', ['title' => 'Did not attend', 'people' => $att['gaps']['absent']])
 @else<p class="report-empty">No attendance days have taken place yet.</p>@endif
 </section>
 
@@ -74,7 +79,7 @@
 <section class="card report-section" id="badges" aria-labelledby="badges-title">
 <h2 id="badges-title">Badges</h2>
 <div class="report-tiles">
-<div class="report-tile"><span>People in the programme</span><strong>{{ $bad['people'] }}</strong><small>staff, facilitators and admins</small></div>
+<div class="report-tile"><span>People in the programme</span><strong>{{ $bad['people'] }}</strong><small>staff and facilitators</small></div>
 <div class="report-tile"><span>Without a badge</span><strong>{{ $bad['without'] }}</strong></div>
 <div class="report-tile"><span>Printed</span><strong>{{ $printed }}</strong><small>{{ $pct($printed, $bad['stages'][0]['value']) }}% of badges</small></div>
 <div class="report-tile"><span>Collected</span><strong>{{ $collected }}</strong><small>{{ $pct($collected, $bad['stages'][0]['value']) }}% of badges</small></div>
@@ -84,6 +89,9 @@
 <div class="report-chart" data-chart="{{ json_encode(['type' => 'bar', 'horizontal' => true, 'name' => 'Badges', ...$pairs($bad['stages'])]) }}"></div>
 <details class="report-table"><summary>Show the figures</summary><table><thead><tr><th>Stage</th><th>Badges</th></tr></thead><tbody>@foreach($bad['stages'] as $row)<tr><td>{{ $row['label'] }}</td><td>{{ $row['value'] }}</td></tr>@endforeach</tbody></table><table><thead><tr><th>Type</th><th>People</th><th>With a badge</th><th>Without</th><th>Printed</th><th>Collected</th></tr></thead><tbody>@foreach($bad['types'] as $row)<tr><td>{{ $row['label'] }}</td><td>{{ $row['people'] }}</td><td>{{ $row['generated'] }}</td><td>{{ $row['without'] }}</td><td>{{ $row['printed'] }}</td><td>{{ $row['collected'] }}</td></tr>@endforeach<tr><th>Total</th><th>{{ $bad['people'] }}</th><th>{{ $bad['stages'][0]['value'] }}</th><th>{{ $bad['without'] }}</th><th>{{ $printed }}</th><th>{{ $collected }}</th></tr></tbody></table></details>
 @else<p class="report-empty">No badges have been generated yet.</p>@endif
+@include('partials.report-people', ['title' => 'No badge generated', 'people' => $bad['gaps']['without'], 'type' => true])
+@include('partials.report-people', ['title' => 'Badge not printed yet', 'people' => $bad['gaps']['unprinted'], 'type' => true])
+@include('partials.report-people', ['title' => 'Printed but not collected', 'people' => $bad['gaps']['uncollected'], 'type' => true])
 </section>
 
 @include('partials.report-duplicates')

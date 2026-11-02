@@ -22,13 +22,14 @@ class ProgrammeReport
 
     private function registration(): array
     {
-        $staff = Access::staff()->get(['users.id', 'active', 'department']);
+        $staff = Access::staff()->get(['users.id', 'name', 'staff_number', 'active', 'department']);
         $facilitators = $this->people()->where('type', 'facilitator')->count();
 
         return [
             'staff' => $staff->count(),
             'activated' => $staff->where('active', true)->count(),
             'awaiting' => $staff->where('active', false)->count(),
+            'awaiting_people' => $this->listed($staff->where('active', false)->map(fn ($u) => $this->person($u, 'staff'))),
             'facilitators' => $facilitators,
         ];
     }
@@ -41,7 +42,7 @@ class ProgrammeReport
     {
         $p = Access::programme();
         $staffIds = Access::staff()->pluck('users.id');
-        $enrolled = DB::table('enrolments')->where('programme_id', $p->id)->whereIn('user_id', $staffIds)->pluck('created_at');
+        $enrolled = DB::table('enrolments')->where('programme_id', $p->id)->whereIn('user_id', $staffIds)->pluck('created_at', 'user_id');
         $records = DailyAttendance::where('programme_id', $p->id)->whereIn('user_id', $staffIds)->toBase()
             ->selectRaw('programme_day_id, sum(checked_in_at is not null or checked_out_at is not null) attended, sum(checked_in_at is not null) signed_in, sum(checked_out_at is not null) signed_out')
             ->groupBy('programme_day_id')->get()->keyBy('programme_day_id');
@@ -61,7 +62,25 @@ class ProgrammeReport
         })->values();
         $rated = $rows->whereNotNull('rate');
 
-        return ['days' => $rows->all(), 'average' => $rated->isEmpty() ? null : (int) round($rated->avg('rate')), 'today' => $rows->firstWhere('date', now('Africa/Lagos')->toDateString())];
+        return ['days' => $rows->all(), 'average' => $rated->isEmpty() ? null : (int) round($rated->avg('rate')), 'today' => $rows->firstWhere('date', now('Africa/Lagos')->toDateString()),
+            'gaps' => $days->isEmpty() ? null : $this->attendanceGaps($days->last(), $enrolled)];
+    }
+
+    /** The staff behind the latest day's figures: scanned in but not out, out but not in, and not scanned at all. */
+    private function attendanceGaps($day, Collection $enrolled): array
+    {
+        $date = $day->date->toDateString();
+        $expected = $enrolled->filter(fn ($at) => ! $at || substr((string) $at, 0, 10) <= $date)->keys();
+        $staff = Access::staff()->whereIn('users.id', $expected)->get(['users.id', 'name', 'staff_number', 'department'])->keyBy('id');
+        $records = DailyAttendance::where('programme_day_id', $day->id)->whereIn('user_id', $staff->keys())->get(['user_id', 'checked_in_at', 'checked_out_at'])->keyBy('user_id');
+        $pick = fn ($test) => $this->listed($staff->filter(fn ($u) => $test($records->get($u->id)))->map(fn ($u) => $this->person($u, 'staff')));
+
+        return [
+            'label' => $day->date->format('l j F'),
+            'in_only' => $pick(fn ($r) => $r && $r->checked_in_at && ! $r->checked_out_at),
+            'out_only' => $pick(fn ($r) => $r && ! $r->checked_in_at && $r->checked_out_at),
+            'absent' => $pick(fn ($r) => ! $r || (! $r->checked_in_at && ! $r->checked_out_at)),
+        ];
     }
 
     private function materials(): array
@@ -111,14 +130,15 @@ class ProgrammeReport
     }
 
     /**
-     * Badges for everyone who can hold one, by type. Badges left from people no longer in the programme are not counted,
+     * Badges for staff and facilitators, by type. Badges left from people no longer in the programme are not counted,
      * so for each type the people with a badge plus those without add up to its people.
      */
     private function badges(): array
     {
         $badges = Badge::where('programme_id', Access::programme()->id)->get(['subject_key', 'printed_at', 'collected_at'])->keyBy('subject_key');
-        $byType = $this->people()->groupBy('type');
-        $types = collect(['staff', 'facilitator', 'admin'])->filter(fn ($type) => $byType->has($type))->map(function ($type) use ($byType, $badges) {
+        $people = $this->people();
+        $byType = $people->groupBy('type');
+        $types = collect(['staff', 'facilitator'])->filter(fn ($type) => $byType->has($type))->map(function ($type) use ($byType, $badges) {
             $people = $byType[$type];
             $held = $people->map(fn ($person) => $badges->get($person['key']))->filter();
 
@@ -135,17 +155,38 @@ class ProgrammeReport
                 ['label' => 'Collected', 'value' => $types->sum('collected')],
             ],
             'types' => $types->all(),
+            // Everyone who has not collected a badge, by how far their badge got.
+            'gaps' => [
+                'without' => $this->listed($people->filter(fn ($person) => ! $badges->has($person['key']))),
+                'unprinted' => $this->listed($people->filter(fn ($person) => $badges->has($person['key']) && ! $badges[$person['key']]->printed_at)),
+                'uncollected' => $this->listed($people->filter(fn ($person) => ($badge = $badges->get($person['key'])) && $badge->printed_at && ! $badge->collected_at)),
+            ],
         ];
     }
 
-    /** Everyone in the programme who can hold a badge: enrolled accounts, and facilitator profiles without one. */
+    /** Everyone in the programme who needs a badge: enrolled staff and facilitators, and facilitator profiles without an account. Admins are left out. */
     private function people(): Collection
     {
         $p = Access::programme();
-        $users = User::whereIn('role', User::ROLES)->whereHas('programmes', fn ($q) => $q->where('programmes.id', $p->id))->get(['id', 'role'])
-            ->map(fn ($u) => ['key' => 'u:'.$u->id, 'type' => $u->role]);
+        $users = User::whereIn('role', ['staff', 'facilitator'])->whereHas('programmes', fn ($q) => $q->where('programmes.id', $p->id))->get(['id', 'name', 'role', 'staff_number', 'department'])
+            ->map(fn ($u) => $this->person($u, $u->role) + ['key' => 'u:'.$u->id]);
+        $profiles = Facilitator::where('programme_id', $p->id)->whereNull('user_id')->get(['id', 'name', 'department', 'organisation'])
+            ->map(fn ($f) => $this->person($f, 'facilitator') + ['key' => 'f:'.$f->id]);
 
-        return $users->concat(Facilitator::where('programme_id', $p->id)->whereNull('user_id')->pluck('id')->map(fn ($id) => ['key' => 'f:'.$id, 'type' => 'facilitator']));
+        return $users->concat($profiles);
+    }
+
+    /** A person as listed under a figure: name, type, and what identifies them. */
+    private function person(User|Facilitator $person, string $type): array
+    {
+        $detail = $person instanceof User ? [$person->staff_number, $person->department] : [$person->department, $person->organisation];
+
+        return ['name' => $person->name, 'type' => $type, 'detail' => implode(' · ', array_filter(array_map('trim', array_map('strval', $detail))))];
+    }
+
+    private function listed(Collection $people): array
+    {
+        return $people->sortBy(fn ($person) => mb_strtolower($person['name']))->map(fn ($person) => array_intersect_key($person, array_flip(['name', 'type', 'detail'])))->values()->all();
     }
 
     /** Largest first, with everything past the limit folded into "Other". */

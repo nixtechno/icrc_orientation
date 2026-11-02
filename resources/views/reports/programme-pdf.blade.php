@@ -132,6 +132,7 @@ thead { display: table-header-group; }
 @if($reg['staff'])
 <div class="meter"><div style="width: {{ $pct($reg['activated'], $reg['staff']) }}%"></div></div>
 <div class="legend"><span class="swatch first" style="background:#1f7a4d"></span>Activated {{ $reg['activated'] }} ({{ $pct($reg['activated'], $reg['staff']) }}%)<span class="swatch" style="background:#c5cfc9"></span>Awaiting activation {{ $reg['awaiting'] }}</div>
+@include('reports.people-pdf', ['title' => 'Staff awaiting activation', 'people' => $reg['awaiting_people']])
 @else<p class="empty">No staff are enrolled yet.</p>@endif
 </div>
 
@@ -150,6 +151,9 @@ thead { display: table-header-group; }
 <table class="figures"><thead><tr><th>Day</th><th class="num">Expected</th><th class="num">Attended</th><th class="num">Signed in</th><th class="num">Signed out</th><th class="num">Attendance</th></tr></thead><tbody>
 @foreach($att['days'] as $d)<tr><td>{{ $d['label'] }}</td><td class="num">{{ $d['expected'] }}</td><td class="num">{{ $d['attended'] }}</td><td class="num">{{ $d['signed_in'] }}</td><td class="num">{{ $d['signed_out'] }}</td><td class="num">{{ $dash($d['rate'], '%') }}</td></tr>@endforeach
 </tbody></table>
+@include('reports.people-pdf', ['title' => 'Signed in but not out on '.$att['gaps']['label'], 'people' => $att['gaps']['in_only']])
+@include('reports.people-pdf', ['title' => 'Signed out but not in on '.$att['gaps']['label'], 'people' => $att['gaps']['out_only']])
+@include('reports.people-pdf', ['title' => 'Did not attend on '.$att['gaps']['label'], 'people' => $att['gaps']['absent']])
 @else<p class="empty">No attendance days have taken place yet.</p>@endif
 </div>
 
@@ -194,7 +198,7 @@ thead { display: table-header-group; }
 <div class="section keep">
 <div class="section-head"><h2><span class="number">5</span>Badges</h2></div>
 <table class="tiles"><tr>
-<td><div class="label">People in the programme</div><div class="value">{{ $bad['people'] }}</div><div class="note">staff, facilitators and admins</div></td>
+<td><div class="label">People in the programme</div><div class="value">{{ $bad['people'] }}</div><div class="note">staff and facilitators</div></td>
 <td><div class="label">Without a badge</div><div class="value">{{ $bad['without'] }}</div></td>
 <td><div class="label">Printed</div><div class="value">{{ $printed }}</div><div class="note">{{ $pct($printed, $badgeTotal) }}% of badges</div></td>
 <td><div class="label">Collected</div><div class="value">{{ $bad['stages'][2]['value'] }}</div><div class="note">{{ $pct($bad['stages'][2]['value'], $badgeTotal) }}% of badges</div></td>
@@ -204,6 +208,11 @@ thead { display: table-header-group; }
 <table class="chart">@foreach($bars($bad['stages']) as $row)<tr><td class="label">{{ $row['label'] }}</td><td class="track"><div class="bar" style="width: {{ $row['width'] }}%"></div></td><td class="value">{{ $row['shown'] }}</td></tr>@endforeach</table>
 <table class="figures"><thead><tr><th>Type</th><th class="num">People</th><th class="num">With a badge</th><th class="num">Without</th><th class="num">Printed</th><th class="num">Collected</th></tr></thead><tbody>@foreach($bad['types'] as $row)<tr><td>{{ $row['label'] }}</td><td class="num">{{ $row['people'] }}</td><td class="num">{{ $row['generated'] }}</td><td class="num">{{ $row['without'] }}</td><td class="num">{{ $row['printed'] }}</td><td class="num">{{ $row['collected'] }}</td></tr>@endforeach<tr><th>Total</th><th class="num">{{ $bad['people'] }}</th><th class="num">{{ $badgeTotal }}</th><th class="num">{{ $bad['without'] }}</th><th class="num">{{ $printed }}</th><th class="num">{{ $bad['stages'][2]['value'] }}</th></tr></tbody></table>
 @else<p class="empty">No badges have been generated yet.</p>@endif
+</div>
+<div class="section">
+@include('reports.people-pdf', ['title' => 'No badge generated', 'people' => $bad['gaps']['without'], 'type' => true])
+@include('reports.people-pdf', ['title' => 'Badge not printed yet', 'people' => $bad['gaps']['unprinted'], 'type' => true])
+@include('reports.people-pdf', ['title' => 'Printed but not collected', 'people' => $bad['gaps']['uncollected'], 'type' => true])
 </div>
 
 {{-- 6 · Duplicates --}}
