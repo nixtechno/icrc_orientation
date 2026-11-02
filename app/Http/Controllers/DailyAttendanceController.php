@@ -41,7 +41,8 @@ class DailyAttendanceController extends Controller
         $r->validate(['date' => 'nullable|date', 'department' => 'nullable|string|max:255', 'name' => 'nullable|string|max:255', 'status' => 'nullable|in:present,late,absent,excused,pending,in,out', 'per_page' => 'sometimes|integer|in:10,25,50,100', 'attendance_page' => 'sometimes|integer|min:1', 'sort' => 'sometimes|in:name,department,status,signin', 'direction' => 'sometimes|in:asc,desc']);
         $date = $r->input('date') ?: now('Africa/Lagos')->toDateString();
         $day = app(AttendanceService::class)->days()->whereDate('date', $date)->first();
-        $q = Access::staff()->where('active', true)->whereHas('programmes', fn ($q) => $q->where('programmes.id', Access::programme()->id)->where(fn ($q) => $q->whereNull('enrolments.created_at')->orWhereDate('enrolments.created_at', '<=', $date)));
+        // Every enrolled staff member is expected, whether or not they have activated a portal account; badges are scanned either way.
+        $q = Access::staff()->whereHas('programmes', fn ($q) => $q->where('programmes.id', Access::programme()->id)->where(fn ($q) => $q->whereNull('enrolments.created_at')->orWhereDate('enrolments.created_at', '<=', $date)));
         if ($r->filled('department')) {
             $q->where('department', $r->department);
         }
@@ -76,7 +77,7 @@ class DailyAttendanceController extends Controller
     {
         Access::manage('attendance');
         $service->assertDay($day);
-        $v = $r->validate(['checkin_opens' => 'nullable|required_if:attendance_required,1|date_format:H:i', 'checkin_closes' => 'nullable|required_if:attendance_required,1|date_format:H:i|after:checkin_opens', 'late_after' => 'nullable|required_if:attendance_required,1|date_format:H:i|after_or_equal:checkin_opens|before_or_equal:checkin_closes', 'checkout_opens' => 'nullable|required_if:attendance_required,1|date_format:H:i|after_or_equal:checkin_opens', 'checkout_closes' => 'nullable|required_if:attendance_required,1|date_format:H:i|after:checkout_opens']);
+        $v = $r->validate(['checkin_opens' => 'nullable|required_if:attendance_required,1|date_format:H:i', 'checkin_closes' => 'nullable|required_if:attendance_required,1|date_format:H:i|after:checkin_opens', 'late_after' => 'nullable|date_format:H:i|after_or_equal:checkin_opens|before_or_equal:checkin_closes', 'checkout_opens' => 'nullable|required_if:attendance_required,1|date_format:H:i|after_or_equal:checkin_opens', 'checkout_closes' => 'nullable|required_if:attendance_required,1|date_format:H:i|after:checkout_opens']);
         $day->update([...$v, 'attendance_required' => $r->boolean('attendance_required'), 'cancelled' => $r->boolean('cancelled')]);
         app(AttendanceSecurity::class)->log('day_policy.updated', true, 'Day '.$day->id.' attendance windows updated.');
 

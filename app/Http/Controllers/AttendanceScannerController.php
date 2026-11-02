@@ -40,9 +40,9 @@ class AttendanceScannerController extends Controller
             $badge = $badges->where('slug', $slug)->first();
         }
         abort_unless($badge && $badge->category === 'staff' && $badge->user_id, 422, 'This QR code is not an enrolled staff badge for this programme.');
-        // Explain account problems by name; the shared enrolment check rejects without a reason.
+        // Badge attendance does not need a portal account: staff who have not activated yet can still be scanned.
         $person = User::find($badge->user_id);
-        abort_unless($person?->active, 403, ($person?->name ?? 'This person').' has not activated their account yet. Attendance can be recorded once they accept their invitation.');
+        abort_unless($person, 422, 'This QR code is not an enrolled staff badge for this programme.');
         abort_unless($person->programmes()->where('programmes.id', Access::programme()->id)->exists(), 403, $person->name.' is not enrolled in this programme.');
         $direction = $mode === 'sign-in' ? 'in' : 'out';
         $repeat = false;
@@ -53,7 +53,7 @@ class AttendanceScannerController extends Controller
         $record = DB::transaction(function () use ($badge, $direction, $security, $service, $stamp, &$repeat, &$counts) {
             $user = User::whereKey($badge->user_id)->lockForUpdate()->firstOrFail();
             $programme = Programme::whereKey(Access::programme()->id)->lockForUpdate()->firstOrFail();
-            $security->staff($user);
+            abort_unless($user->role === 'staff', 403, $user->name.' is not a staff member, so attendance cannot be recorded.');
             $day = $service->days()->whereDate('date', $stamp->copy()->timezone('Africa/Lagos')->toDateString())->first();
             $badgeNote = 'Staff badge scanned by attendance manager. Badge '.$badge->getRouteKey().'.';
             if (! $day) {

@@ -84,18 +84,38 @@ class AttendanceScannerTest extends TestCase
         $this->actingAs($this->user('facilitator',['attendance']))->scan()->assertOk();
     }
 
-    public function test_only_current_programme_active_enrolled_staff_badges_are_accepted(): void
+    public function test_only_current_programme_enrolled_staff_badges_are_accepted(): void
     {
         $this->scan('sign-in','not a QR code')->assertUnprocessable();
         $this->scan('sign-in','https://example.test/badges/unknown/verify')->assertUnprocessable();
         $this->badge->update(['category'=>'facilitator']); $this->scan()->assertUnprocessable();
         $this->badge->update(['category'=>'staff']);
-        $this->staff->forceFill(['active'=>false])->save(); $this->scan()->assertForbidden()->assertJsonPath('message',$this->staff->name.' has not activated their account yet. Attendance can be recorded once they accept their invitation.');
-        $this->staff->forceFill(['active'=>true])->save(); $this->staff->programmes()->detach(); $this->scan()->assertForbidden()->assertJsonPath('message',$this->staff->name.' is not enrolled in this programme.');
+        $this->staff->programmes()->detach(); $this->scan()->assertForbidden()->assertJsonPath('message',$this->staff->name.' is not enrolled in this programme.');
         $this->staff->programmes()->attach(Programme::first()->id);
         $this->badge->update(['programme_id'=>Programme::create(['code'=>'OTHER','title'=>'Other','starts_on'=>'2026-11-02','ends_on'=>'2026-12-31'])->id]);
         $this->scan()->assertUnprocessable();
         $this->assertDatabaseCount('daily_attendance',0);
+    }
+
+    public function test_staff_who_have_not_activated_their_account_can_still_be_scanned_and_are_listed(): void
+    {
+        $this->staff->forceFill(['active'=>false])->save();
+        $this->scan()->assertOk()->assertJsonPath('message',fn ($m)=>str_contains($m,'Sign-in recorded'));
+        $this->travel(8)->hours(); $this->scan('sign-out')->assertOk();
+        $record=DailyAttendance::where('user_id',$this->staff->id)->firstOrFail();
+        $this->assertNotNull($record->checked_in_at); $this->assertNotNull($record->checked_out_at);
+        $this->get('/attendance/live?date=2026-11-02')->assertOk()->assertSee($this->staff->name);
+    }
+
+    public function test_whole_day_attendance_records_every_scan_as_present_with_no_late_time(): void
+    {
+        $this->day->update(['attendance_required'=>false]);
+        $this->artisan('attendance:configure-days')->assertSuccessful();
+        $this->assertSame(0, ProgrammeDay::where('attendance_required',false)->where('cancelled',false)->count());
+        $this->assertSame(['00:00','23:59',null], [substr($this->day->fresh()->checkin_opens,0,5), substr($this->day->fresh()->checkout_closes,0,5), $this->day->fresh()->late_after]);
+        $this->travelTo(Carbon::parse('2026-11-02 11:45:00', 'Africa/Lagos'));
+        $this->scan()->assertOk()->assertJsonPath('status','present')->assertJsonPath('message',fn ($m)=>!str_contains($m,'does not count'));
+        $this->assertNull(DailyAttendance::firstOrFail()->punctuality_status);
     }
 
     public function test_scans_outside_windows_and_programme_days_are_kept_without_changing_the_calculation(): void

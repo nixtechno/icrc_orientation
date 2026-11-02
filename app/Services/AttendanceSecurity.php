@@ -200,9 +200,9 @@ class AttendanceSecurity
                 $prefix = $purpose === 'in' ? 'signin' : 'signout';
                 $fields = [$prefix.'_method' => 'device', $prefix.'_device_id' => $device->id, $prefix.'_device_verified' => true, $prefix.'_location_verified' => true, $prefix.'_location' => $location];
                 if ($purpose === 'in') {
+                    // Without a late time every sign-in is simply present, as with badge scans.
                     $late = app(AttendanceService::class)->time($day, 'late_after');
-                    abort_unless($late, 422, 'The late arrival threshold has not been configured.');
-                    DailyAttendance::create([...$fields, 'programme_id' => Access::programme()->id, 'programme_day_id' => $day->id, 'user_id' => $u->id, 'staff_name' => $fresh->name, 'staff_number_snapshot' => $fresh->staff_number, 'attendance_date' => $day->date, 'checked_in_at' => $stamp, 'status' => $stamp->gt($late) ? 'late' : 'present', 'punctuality_status' => $stamp->gt($late) ? 'Late' : 'On Time', 'recorded_by' => $u->id]);
+                    DailyAttendance::create([...$fields, 'programme_id' => Access::programme()->id, 'programme_day_id' => $day->id, 'user_id' => $u->id, 'staff_name' => $fresh->name, 'staff_number_snapshot' => $fresh->staff_number, 'attendance_date' => $day->date, 'checked_in_at' => $stamp, 'status' => $late && $stamp->gt($late) ? 'late' : 'present', 'punctuality_status' => $late ? ($stamp->gt($late) ? 'Late' : 'On Time') : null, 'recorded_by' => $u->id]);
                 } else {
                     $record = DailyAttendance::where('programme_day_id', $day->id)->where('programme_id', Access::programme()->id)->where('user_id', $u->id)->lockForUpdate()->firstOrFail();
                     $record->update([...$fields, 'checked_out_at' => $stamp, 'duration_seconds' => max(0, (int) $record->checked_in_at->diffInSeconds($stamp))]);

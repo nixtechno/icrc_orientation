@@ -85,6 +85,20 @@ Artisan::command('attendance:venue-password {email}', function (string $email) {
     $this->info('Password set for '.$user->name.' on this venue server only. The live site password is unchanged, and syncing does not overwrite it.');
 })->purpose('Set a venue-server password for a scanner operator downloaded from the live site');
 
+Artisan::command('attendance:configure-days', function () {
+    // Every programme day takes attendance for the whole day with no late time: each scan is simply recorded with its time.
+    // Run it on the live site; venues copy day settings from there. Cancelled days are left alone.
+    $whole = ['attendance_required' => true, 'checkin_opens' => '00:00', 'checkin_closes' => '23:59', 'late_after' => null, 'checkout_opens' => '00:00', 'checkout_closes' => '23:59'];
+    $saved = 0;
+    foreach (app(\App\Services\AttendanceService::class)->days()->where('cancelled', false)->get() as $day) {
+        $before = $day->only(array_keys($whole));
+        $day->update($whole);
+        Access::audit('day_policy.whole_day', (string) $day->id, $before, $whole);
+        $saved++;
+    }
+    $this->info("Attendance is now taken all day, with no late time, on {$saved} programme days.");
+});
+
 Artisan::command('attendance:sync', function (AttendanceSync $sync) {
     if (! AttendanceSync::venue()) {
         $this->error('Set ATTENDANCE_SYNC_URL and ATTENDANCE_SYNC_TOKEN on the venue server to sync with the live site.');
