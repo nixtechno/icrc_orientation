@@ -8,6 +8,9 @@
  if($user->role==='admin')$management=array_merge($management,[['/settings','Programme settings','settings'],['/settings/registration','Registration policy','file'],['/badges','Badges & printing','badge'],['/audit','Audit trail','chart']]);
  // Announcements work like notifications: count those published since the person last opened the page.
  $unreadAnnouncements=$user->canManage('announcements')?0:rescue(fn()=>\App\Models\Announcement::unreadCount($user,\App\Services\Access::programme()->id),0,false);
+ // Assessments that are open now and not yet submitted; people who manage assessments do not take them.
+ $pendingAssessments=$user->canManage('assessments')?0:rescue(fn()=>\App\Models\Activity::pendingAssessments($user,\App\Services\Access::programme()->id),0,false);
+ $navCounts=['/announcements'=>[$unreadAnnouncements,'unread'],'/activities?kind=quiz'=>[$pendingAssessments,'not yet submitted']];
  $initials=collect(explode(' ',$user->name))->filter()->take(2)->map(fn($part)=>mb_substr($part,0,1))->implode('');
 @endphp
 <div class="portal-frame">
@@ -18,7 +21,7 @@
  @if(count($items))<div class="portal-nav-label">{{ $group }}</div><nav aria-label="{{ $group }}">
  @foreach($items as [$href,$label,$icon])
  @php($active=request()->getPathInfo()===parse_url($href,PHP_URL_PATH) && (!str_contains($href,'?') || request('kind')===match($label){'Assessments'=>'quiz','Assignments'=>'assignment','Presentations'=>'presentation',default=>null}))
- <a href="{{ url($href) }}" @class(['portal-nav-link','selected'=>$active]) @if($active) aria-current="page" @endif><span class="portal-icon" data-icon="{{ $icon }}" aria-hidden="true"></span><span>{{ $label }}</span>@if($href==='/announcements'&&$unreadAnnouncements)<b class="portal-nav-count" aria-label="{{ $unreadAnnouncements }} unread">{{ $unreadAnnouncements>99?'99+':$unreadAnnouncements }}</b>@endif @if($active)<i aria-hidden="true"></i>@endif</a>
+ <a href="{{ url($href) }}" @class(['portal-nav-link','selected'=>$active]) @if($active) aria-current="page" @endif><span class="portal-icon" data-icon="{{ $icon }}" aria-hidden="true"></span><span>{{ $label }}</span>@if($navCounts[$href][0]??0)<b class="portal-nav-count" aria-label="{{ $navCounts[$href][0] }} {{ $navCounts[$href][1] }}">{{ $navCounts[$href][0]>99?'99+':$navCounts[$href][0] }}</b>@endif @if($active)<i aria-hidden="true"></i>@endif</a>
  @endforeach</nav>@endif
  @endforeach
  <a class="portal-nav-link" href="{{ url('/').'#contact' }}"><span class="portal-icon" data-icon="chat" aria-hidden="true"></span>Help & support</a>

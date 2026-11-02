@@ -83,7 +83,7 @@ return view('resources', ['items' => $q->latest()->get(), 'manager' => $manager]
         if (! $manager) {
             $q->visibleTo(auth()->user());
         }
-        $items = $q->latest()->get();
+        $items = $q->when(Announcement::linksActivities(), fn ($q) => $q->with('activity'))->latest()->get();
         // Opening the page clears the unread count on the Announcements link.
         \App\Models\User::whereKey(auth()->id())->toBase()->update(['announcements_seen_at' => now()]);
         auth()->user()->announcements_seen_at = now();

@@ -149,6 +149,7 @@ return view('activities', ['items' => $items, 'manager' => $manager, 'selectedKi
         $v = $r->validate(['title' => 'required|string|max:255', 'instructions' => 'required|string|max:20000', 'due_at' => 'required|date'.($activity->available_at ? '|after:'.$activity->available_at->toDateTimeString() : '')]);
         $before = $activity->only(array_keys($v));
         $activity->update($v);
+        if ($activity->published) app(\App\Services\ActivityEmails::class)->announce($activity);
         Access::audit('activity.update', (string) $activity->id, $before, $activity->only(array_keys($v)));
 
         return back()->with('success', ucfirst($activity->label()).' details saved.');
@@ -305,6 +306,7 @@ return view('activities', ['items' => $items, 'manager' => $manager, 'selectedKi
         abort_if(! $activity->published && $activity->kind === 'quiz' && ! $activity->questions()->exists(), 422, 'Add questions first.');
         $activity->update(['published' => ! $activity->published]);
         Access::audit('activity.publication', (string) $activity->id);
+        app(\App\Services\ActivityEmails::class)->announce($activity);
         $emailed = app(\App\Services\ActivityEmails::class)->notifyAssigned($activity);
 
         return back()->with('success', 'Publication updated.'.($emailed ? ' '.$emailed.' assigned staff '.($emailed === 1 ? 'was' : 'were').' emailed.' : ''));

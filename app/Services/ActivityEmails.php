@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Activity;
+use App\Models\Announcement;
 use App\Models\User;
 use App\Notifications\ProgrammeUpdate;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,26 @@ class ActivityEmails
         DB::table('activity_assignments')->where('activity_id', $activity->id)->whereIn('user_id', $people->modelKeys())->update(['notified_at' => now()]);
 
         return $people->count();
+    }
+
+    /**
+     * Keeps the activity's announcement in step with publication: published work gets one, seen only by
+     * the staff assigned to it, and unpublishing archives it. Does nothing before that migration has run.
+     */
+    public function announce(Activity $activity): void
+    {
+        if (! Announcement::linksActivities()) {
+            return;
+        }
+        $announcement = Announcement::where('activity_id', $activity->id)->first();
+        if (! $activity->published) {
+            $announcement?->update(['archived' => true]);
+
+            return;
+        }
+        [$title, $body] = $this->message($activity);
+        $announcement ??= new Announcement(['activity_id' => $activity->id, 'programme_id' => $activity->programme_id, 'published_at' => now()]);
+        $announcement->fill(['title' => $title, 'body' => $body, 'archived' => false])->save();
     }
 
     /** @return array{string, string, string, string} subject, body, link and button text */
