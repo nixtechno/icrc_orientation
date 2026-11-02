@@ -28,7 +28,6 @@
 <h2 id="attendance-title">Attendance</h2>
 <div class="report-tiles">
 <div class="report-tile"><span>Average daily attendance</span><strong>{{ $att['average'] === null ? '—' : $att['average'].'%' }}</strong></div>
-<div class="report-tile"><span>Attended today</span><strong>{{ $att['today']['attended'] ?? '—' }}</strong>@if($att['today'])<small>of {{ $att['today']['expected'] }} staff · scanned in or out</small>@else<small>No scans today</small>@endif</div>
 <div class="report-tile"><span>Signed in today</span><strong>{{ $att['today']['signed_in'] ?? '—' }}</strong></div>
 <div class="report-tile"><span>Signed out today</span><strong>{{ $att['today']['signed_out'] ?? '—' }}</strong></div>
 <div class="report-tile"><span>Days counted</span><strong>{{ count($att['days']) }}</strong></div>

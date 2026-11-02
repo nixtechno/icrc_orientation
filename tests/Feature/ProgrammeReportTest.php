@@ -86,7 +86,7 @@ class ProgrammeReportTest extends TestCase
         }
         $today = app(ProgrammeReport::class)->data()['attendance']['today'];
         $this->assertEquals(['expected' => 3, 'attended' => 2, 'signed_in' => 0, 'signed_out' => 2, 'rate' => 67], array_intersect_key($today, array_flip(['expected', 'attended', 'signed_in', 'signed_out', 'rate'])));
-        $this->actingAs($this->admin)->get('/reports')->assertSee('Attended today')->assertSee('scanned in or out');
+        $this->actingAs($this->admin)->get('/reports')->assertDontSee('Attended today')->assertSee('scanned in or out');
     }
 
     public function test_duplicate_profiles_merge_into_the_kept_one_and_combine_their_records(): void

@@ -140,7 +140,7 @@ thead { display: table-header-group; }
 <div class="section-head"><h2><span class="number">2</span>Attendance</h2></div>
 <table class="tiles"><tr>
 <td><div class="label">Average daily attendance</div><div class="value">{{ $dash($att['average'], '%') }}</div></td>
-<td><div class="label">Attended today</div><div class="value">{{ $att['today']['attended'] ?? '—' }}</div>@if($att['today'])<div class="note">of {{ $att['today']['expected'] }} staff</div>@endif</td>
+<td><div class="label">Days counted</div><div class="value">{{ count($att['days']) }}</div></td>
 <td><div class="label">Signed in today</div><div class="value">{{ $att['today']['signed_in'] ?? '—' }}</div></td>
 <td><div class="label">Signed out today</div><div class="value">{{ $att['today']['signed_out'] ?? '—' }}</div></td>
 </tr></table>
