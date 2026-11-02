@@ -19,11 +19,24 @@ class QuizAttemptService
         return $rules;
     }
 
+    /** The full score when every question is marked automatically; null while written answers need a facilitator. */
     public function score(Activity $activity, array $answers): ?float
+    {
+        return $this->writtenPoints($activity) ? null : $this->autoScore($activity, $answers);
+    }
+
+    /** Points available on written questions, which a facilitator marks. */
+    public function writtenPoints(Activity $activity): int
+    {
+        return (int) $activity->questions->whereIn('type', ['short_answer', 'long_answer'])->sum('points');
+    }
+
+    /** Marks earned on the automatically marked questions; written questions are left out. */
+    public function autoScore(Activity $activity, array $answers): float
     {
         $score = 0;
         foreach ($activity->questions as $question) {
-            if (in_array($question->type, ['short_answer','long_answer'])) return null;
+            if (in_array($question->type, ['short_answer','long_answer'])) continue;
             if ($question->type === 'multiple_answers') {
                 $selected = $answers[$question->id] ?? []; $correct = $question->correctAnswers();
                 sort($selected); sort($correct);

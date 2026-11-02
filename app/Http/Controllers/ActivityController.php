@@ -483,7 +483,17 @@ return view('activities', ['items' => $items, 'manager' => $manager, 'selectedKi
         Access::manage('assessments');
         $this->scope($submission->activity);
         abort_unless($submission->submitted_at, 422);
-        $v = $r->validate(['score' => 'required|numeric|min:0|max:100000', 'feedback' => 'nullable|string|max:20000']);
+        $activity = $submission->activity;
+        if ($activity->kind === 'quiz') {
+            // Automatically marked answers keep the system's marks; reviewers only award marks for written answers.
+            $quiz = app(\App\Services\QuizAttemptService::class);
+            $written = $quiz->writtenPoints($activity);
+            $v = $r->validate(['feedback' => 'nullable|string|max:20000', ...($written ? ['written_score' => 'required|numeric|min:0|max:'.$written] : [])]);
+            $v['score'] = $quiz->autoScore($activity, $submission->answers ?? []) + (float) ($v['written_score'] ?? 0);
+            unset($v['written_score']);
+        } else {
+            $v = $r->validate(['score' => 'required|numeric|min:0|max:100000', 'feedback' => 'nullable|string|max:20000']);
+        }
         $before = $submission->toArray();
         $submission->update([...$v, 'released_at' => $r->boolean('release') ? now() : null]);
         Access::audit('submission.review', (string) $submission->id, $before, $submission->toArray());

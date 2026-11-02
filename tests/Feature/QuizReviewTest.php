@@ -83,6 +83,28 @@ class QuizReviewTest extends TestCase
             ->assertDontSee('Correct answer')->assertDontSee('Hidden until release.')->assertDontSee('is-wrong', false);
     }
 
+    public function test_reviewers_cannot_change_automatic_marks_and_only_award_written_marks(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'active' => true]); $admin->programmes()->attach(Programme::first()->id);
+        $auto = $this->quiz([['type' => 'true_false', 'prompt' => 'Auto only', 'options' => ['True', 'False'], 'correct_answer' => 'True', 'points' => 2]], 'Auto');
+        $autoSubmission = $this->submit($auto, [$auto->questions[0]->id => 'False']);
+        $this->actingAs($admin)->get('/activities/'.$auto->slug)->assertSee('Marked automatically: 0 / 2')->assertDontSee('name="score"', false)->assertDontSee('name="written_score"', false);
+        $this->post('/submissions/'.$autoSubmission->slug.'/review', ['score' => 2, 'feedback' => 'Good effort', 'release' => 1])->assertSessionHasNoErrors();
+        $this->assertSame([0.0, 'Good effort'], [(float) $autoSubmission->fresh()->score, $autoSubmission->fresh()->feedback]);
+
+        $mixed = $this->quiz([
+            ['type' => 'true_false', 'prompt' => 'Auto part', 'options' => ['True', 'False'], 'correct_answer' => 'True', 'points' => 2],
+            ['type' => 'long_answer', 'prompt' => 'Written part', 'options' => [], 'correct_answer' => null, 'points' => 5],
+        ], 'Mixed');
+        $mixedSubmission = $this->submit($mixed, [$mixed->questions[0]->id => 'True', $mixed->questions[1]->id => 'An answer']);
+        $this->get('/activities/'.$mixed->slug)->assertSee('Marked automatically: 2 / 2')->assertSee('Marks for written answers (out of 5)');
+        $url = '/submissions/'.$mixedSubmission->slug.'/review';
+        $this->post($url, ['written_score' => 6, 'release' => 1])->assertSessionHasErrors('written_score');
+        $this->post($url, ['score' => 100, 'written_score' => 3.5, 'release' => 1])->assertSessionHasNoErrors();
+        $this->assertSame(5.5, (float) $mixedSubmission->fresh()->score);
+        $this->get('/activities/'.$mixed->slug)->assertSee('value="3.5"', false);
+    }
+
     public function test_explanations_are_optional_and_nothing_breaks_before_the_migration(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'active' => true]); $admin->programmes()->attach(Programme::first()->id);
