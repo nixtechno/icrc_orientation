@@ -223,6 +223,24 @@ class AttendanceSyncTest extends TestCase
         $this->assertSame('This person (amina@example.test) is not on the live site.', DailyAttendance::first()->sync_error);
     }
 
+    public function test_duplicates_merged_on_the_live_site_are_merged_at_the_venue_too(): void
+    {
+        $twin = $this->user('staff', ['name' => 'Amina Bello', 'email' => 'amina.twin@example.test']);
+        app(\App\Services\PersonMerge::class)->merge($this->staff, $twin);
+        $merges = $this->withToken(self::TOKEN)->getJson('/api/attendance-sync/snapshot')->assertOk()->json('merges');
+        $this->assertSame([['from_email' => 'amina.twin@example.test', 'into_email' => 'amina@example.test']], $merges);
+
+        // The venue still has its own copy of the duplicate, holding a scan; the next sync merges it there as well.
+        $this->asVenue();
+        $venueTwin = $this->user('staff', ['name' => 'Amina Bello', 'email' => 'amina.twin@example.test']);
+        DailyAttendance::create(['programme_id' => Programme::first()->id, 'programme_day_id' => $this->day->id, 'user_id' => $venueTwin->id, 'staff_name' => 'Amina Bello',
+            'attendance_date' => $this->day->date, 'checked_in_at' => now(), 'status' => 'present', 'signin_method' => 'scanner', 'recorded_by' => $this->admin->id]);
+        Http::fake(['*/ping' => Http::response(['time' => now()->toIso8601String()]), '*/upload' => Http::response(['records' => [], 'logs' => []]), '*/snapshot*' => Http::response($this->emptySnapshot(['merges' => $merges]))]);
+        $this->assertTrue(app(AttendanceSync::class)->run()['online']);
+        $this->assertModelMissing($venueTwin);
+        $this->assertSame($this->staff->id, DailyAttendance::sole()->user_id);
+    }
+
     public function test_venue_downloads_people_badges_and_phone_sign_ins_from_the_live_site(): void
     {
         $this->asVenue();

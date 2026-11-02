@@ -80,6 +80,9 @@ class AttendanceSync
                     'materials_collected_at' => $badge->materials_collected_at?->toIso8601String(),
                 ])->all(),
             'attendance' => $attendance->map(fn (DailyAttendance $record) => $this->export($record))->all(),
+            // Duplicate profiles merged here, so the venue removes its copy of the duplicate too.
+            'merges' => DB::table('audit_logs')->where('action', 'user.merge')->orderBy('id')->pluck('after')
+                ->map(fn ($after) => Arr::only(json_decode($after, true) ?: [], ['from_email', 'into_email']))->filter(fn ($m) => count($m) === 2)->values()->all(),
         ];
     }
 
@@ -256,6 +259,9 @@ class AttendanceSync
             foreach ($data['days'] as $day) {
                 app(AttendanceService::class)->days()->whereDate('date', $day['date'])->first()?->update(Arr::only($day, self::WINDOWS));
             }
+            foreach ($data['merges'] ?? [] as $merge) {
+                $this->applyMerge($merge);
+            }
             foreach ($data['people'] as $person) {
                 $this->savePerson($person, $programme->id);
             }
@@ -274,6 +280,17 @@ class AttendanceSync
         }
 
         return [$merged, $unplaced];
+    }
+
+    /** Repeats a merge made on the live site. Without the kept profile here yet, the duplicate simply becomes it. */
+    private function applyMerge(array $merge): void
+    {
+        $drop = User::where('email', $merge['from_email'])->first();
+        if (! $drop) {
+            return;
+        }
+        $keep = User::where('email', $merge['into_email'])->first();
+        $keep ? app(PersonMerge::class)->merge($keep, $drop) : $drop->forceFill(['email' => $merge['into_email']])->saveQuietly();
     }
 
     private function savePerson(array $person, int $programmeId): void

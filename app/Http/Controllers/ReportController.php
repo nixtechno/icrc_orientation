@@ -20,8 +20,60 @@ class ReportController extends Controller
     public function index(Request $r)
     {
         Access::manage('reports');
+        $tab = $r->query('tab') === 'exports' ? 'exports' : 'report';
+        if ($tab === 'exports') {
+            return view('reports', compact('tab'));
+        }
+        $merge = app(\App\Services\PersonMerge::class);
+        $duplicates = $merge->candidates()->map(fn ($group) => [
+            'signature' => $merge->signature($group),
+            'people' => $group->map(fn (\App\Models\User $u) => [
+                'user' => $u,
+                'badge' => \App\Models\Badge::where('user_id', $u->id)->first(['printed_at', 'collected_at']),
+                'attendance' => DailyAttendance::where('user_id', $u->id)->count(),
+                'submissions' => Submission::where('user_id', $u->id)->whereNotNull('submitted_at')->count(),
+                'enrolled' => $u->programmes()->where('programmes.id', Access::programme()->id)->exists(),
+            ])->sortByDesc(fn ($p) => [(int) $p['user']->active, $p['attendance'] + $p['submissions'], (int) (bool) $p['badge']?->printed_at])->values(),
+        ])->values();
 
-        return view('reports');
+        return view('reports', ['tab' => $tab, 'report' => app(\App\Services\ProgrammeReport::class)->data(), 'duplicates' => $duplicates,
+            'canMerge' => $r->user()->role === 'admin' && ! \App\Services\AttendanceSync::venue()]);
+    }
+
+    /** Merges every other profile in a duplicate group into the one chosen to keep. */
+    public function mergeDuplicates(Request $r, \App\Services\PersonMerge $merge)
+    {
+        $this->reconciler();
+        $v = $r->validate(['signature' => 'required|string|max:2000', 'keep' => 'required|integer', 'confirmed' => 'accepted'], ['confirmed.accepted' => 'Tick the box to confirm the merge.']);
+        $group = $merge->candidates()->first(fn ($group) => $merge->signature($group) === $v['signature']);
+        abort_unless($group && $group->contains('id', (int) $v['keep']), 422, 'These profiles have changed since the page loaded. Reload and try again.');
+        $keep = $group->firstWhere('id', (int) $v['keep']);
+        foreach ($group->reject(fn ($u) => $u->is($keep)) as $drop) {
+            $keep = $merge->merge($keep, $drop);
+        }
+
+        return redirect('/reports#duplicates')->with('success', 'Merged into '.$keep->name.' ('.$keep->email.'). The other '.($group->count() === 2 ? 'profile was' : 'profiles were').' removed.');
+    }
+
+    /** Records that a group of matching names are different people, so it stops being suggested. */
+    public function dismissDuplicates(Request $r, \App\Services\PersonMerge $merge)
+    {
+        $this->reconciler();
+        $signature = $r->validate(['signature' => 'required|string|max:2000'])['signature'];
+        abort_unless($merge->candidates()->contains(fn ($group) => $merge->signature($group) === $signature), 422, 'These profiles have changed since the page loaded. Reload and try again.');
+        $p = Access::programme();
+        $p->update(['settings' => [...($p->settings ?? []), 'distinct_people' => array_values(array_unique([...($p->settings['distinct_people'] ?? []), $signature]))]]);
+        Access::audit('user.duplicates_dismissed', $signature);
+
+        return redirect('/reports#duplicates')->with('success', 'Marked as different people. They will not be suggested again.');
+    }
+
+    /** Merging changes accounts, so only administrators can do it, and only on the live site that venues copy from. */
+    private function reconciler(): void
+    {
+        Access::manage('reports');
+        abort_unless(auth()->user()->role === 'admin', 403);
+        abort_if(\App\Services\AttendanceSync::venue(), 422, 'Reconcile duplicates on the live site. Merges reach this venue on the next sync.');
     }
 
     public function export(Request $r)
