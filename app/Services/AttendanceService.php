@@ -69,6 +69,30 @@ class AttendanceService
         return $counts;
     }
 
+    /** Staff records on a day with a sign-out scan but no sign-in, such as people whose badge print was never recorded. */
+    public function signedOutOnly(ProgrammeDay $day): \Illuminate\Support\Collection
+    {
+        return DailyAttendance::where('programme_id', Access::programme()->id)->where('programme_day_id', $day->id)->whereNull('checked_in_at')->whereNotNull('checked_out_at')
+            ->whereIn('user_id', Access::staff()->select('users.id'))->orderBy('staff_name')->get();
+    }
+
+    /** Gives the chosen sign-out-only records a sign-in at the time an administrator confirms, never after their sign-out. */
+    public function signInSignedOutOnly(ProgrammeDay $day, array $ids, Carbon $at): int
+    {
+        $late = $this->time($day, 'late_after');
+        $records = $this->signedOutOnly($day)->whereIn('id', $ids);
+        foreach ($records as $record) {
+            $in = $at->min($record->checked_out_at);
+            $record->fill(['checked_in_at' => $in, 'signin_method' => 'manual', 'signin_scanned_by' => auth()->id(), 'signin_device_verified' => false, 'signin_location_verified' => false,
+                'status' => in_array($record->status, [null, 'pending', 'present', 'late'], true) ? ($late && $in->gt($late) ? 'late' : 'present') : $record->status,
+                'punctuality_status' => $late ? ($in->gt($late) ? 'Late' : 'On Time') : null,
+                'duration_seconds' => max(0, (int) $in->diffInSeconds($record->checked_out_at))])->save();
+            Access::audit('attendance.signin_added', (string) $record->id, null, ['user_id' => $record->user_id, 'checked_in_at' => $in->toIso8601String()]);
+        }
+
+        return $records->count();
+    }
+
     public function assertDay(ProgrammeDay $d): void
     {
         abort_unless($d->week->programme_id === Access::programme()->id, 404);

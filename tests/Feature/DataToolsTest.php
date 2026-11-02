@@ -81,6 +81,26 @@ class DataToolsTest extends TestCase
         $this->get('/settings?tab=tools')->assertSee('Every badge is recorded as printed.');
     }
 
+    public function test_staff_who_only_signed_out_get_the_sign_in_an_admin_confirms(): void
+    {
+        $day = ProgrammeDay::where('number', 1)->firstOrFail();
+        // Valerie's badge was printed the day before, so the badge print job has no sign-in to give her.
+        [$valerie, $kemi] = [$this->person('staff', ['name' => 'Valerie Enejoh']), $this->person('staff', ['name' => 'Kemi Bello'])];
+        Badge::create(['programme_id' => $this->programme->id, 'subject_key' => 'u:'.$valerie->id, 'user_id' => $valerie->id, 'category' => 'staff', 'snapshot' => ['name' => $valerie->name],
+            'generated_at' => now()->subDay(), 'printed_at' => now()->subDay(), 'generated_by' => $this->admin->id]);
+        $out = fn (User $u, string $at) => DailyAttendance::create(['programme_id' => $this->programme->id, 'programme_day_id' => $day->id, 'user_id' => $u->id, 'staff_name' => $u->name,
+            'attendance_date' => $day->date, 'checked_out_at' => Carbon::parse("2026-11-02 $at", 'Africa/Lagos'), 'status' => 'pending']);
+        [$valerieRecord, $kemiRecord] = [$out($valerie, '16:30'), $out($kemi, '07:30')];
+
+        $this->actingAs($this->admin)->get('/settings?tab=tools&signin_date=2026-11-02')->assertSee('Sign in staff who only signed out')->assertSee('Valerie Enejoh')->assertSee('signed out 16:30');
+        $this->post('/settings/tools/signed-out-only', ['date' => '2026-11-02', 'time' => '08:00', 'records' => [$valerieRecord->id, $kemiRecord->id]])
+            ->assertSessionHas('success', 'Monday 2 November: 2 people who only signed out now have a sign-in.');
+        $this->assertSame(['08:00', 'manual', 'present'], [$valerieRecord->fresh()->checked_in_at->timezone('Africa/Lagos')->format('H:i'), $valerieRecord->fresh()->signin_method, $valerieRecord->fresh()->status]);
+        // Kemi left before 08:00, so her sign-in is her sign-out time.
+        $this->assertSame('07:30', $kemiRecord->fresh()->checked_in_at->timezone('Africa/Lagos')->format('H:i'));
+        $this->get('/settings?tab=tools&signin_date=2026-11-02')->assertSee('Nobody signed out without signing in on Monday 2 November.');
+    }
+
     public function test_admins_can_point_an_account_at_the_badge_qr_id_the_person_is_wearing(): void
     {
         $staff = $this->person('facilitator', ['name' => 'Rahinah Sirika', 'email' => 'rahinah@example.test']);

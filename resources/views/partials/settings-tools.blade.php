@@ -43,6 +43,19 @@
 @endif
 </section>
 
+@if($t['signinDay'])
+<section class="card settings-tool" aria-labelledby="tool-signed-out">
+<h2 id="tool-signed-out">Sign in staff who only signed out</h2>
+<p class="muted">Staff who scanned out on {{ $t['signinDay']->date->format('l j F') }} but have no sign-in, for example because their badge was printed before that day. Tick the people who were there and enter when they arrived. A sign-in is never later than the person's sign-out. Change the day in the card above.</p>
+@if($t['signedOutOnly']->isNotEmpty())
+@if($t['venue'])<p>{{ $t['signedOutOnly']->count() }} {{ $t['signedOutOnly']->count() === 1 ? 'person' : 'people' }} signed out without signing in.</p>
+@else<form method="post" action="/settings/tools/signed-out-only">@csrf<input type="hidden" name="date" value="{{ $t['signinDay']->date->toDateString() }}">
+<ul class="settings-tool-list">@foreach($t['signedOutOnly'] as $record)<li><label><input type="checkbox" name="records[]" value="{{ $record->id }}"> {{ $record->staff_name }} <span class="muted">· signed out {{ $record->checked_out_at->timezone('Africa/Lagos')->format('H:i') }}</span></label></li>@endforeach</ul>
+<div class="settings-tool-row"><label>Sign-in time<input type="time" name="time" value="08:00" required></label><button>Sign in the ticked staff</button></div></form>@endif
+@else<p class="muted">Nobody signed out without signing in on {{ $t['signinDay']->date->format('l j F') }}.</p>@endif
+</section>
+@endif
+
 <section class="card settings-tool" aria-labelledby="tool-badges">
 <h2 id="tool-badges">Mark printed badges as collected</h2>
 <p class="muted">For badges handed out as they were printed. Each printed badge is marked collected at its print time. Badges printed at the self-service print station are marked collected automatically.</p>
