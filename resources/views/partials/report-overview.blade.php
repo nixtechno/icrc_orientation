@@ -79,7 +79,7 @@
 <section class="card report-section" id="badges" aria-labelledby="badges-title">
 <h2 id="badges-title">Badges</h2>
 <div class="report-tiles">
-<div class="report-tile"><span>People in the programme</span><strong>{{ $bad['people'] }}</strong><small>staff and facilitators</small></div>
+<div class="report-tile"><span>People in the programme</span><strong>{{ $bad['people'] }}</strong><small>staff, facilitators and admins</small></div>
 <div class="report-tile"><span>Without a badge</span><strong>{{ $bad['without'] }}</strong></div>
 <div class="report-tile"><span>Printed</span><strong>{{ $printed }}</strong><small>{{ $pct($printed, $bad['stages'][0]['value']) }}% of badges</small></div>
 <div class="report-tile"><span>Collected</span><strong>{{ $collected }}</strong><small>{{ $pct($collected, $bad['stages'][0]['value']) }}% of badges</small></div>

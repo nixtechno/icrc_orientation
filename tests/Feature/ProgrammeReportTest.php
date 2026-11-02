@@ -94,10 +94,9 @@ class ProgrammeReportTest extends TestCase
         $report = app(ProgrammeReport::class)->data();
         $this->assertSame(['assigned' => 2, 'submitted' => 1, 'outstanding' => 1, 'released' => 1, 'average' => 100], array_intersect_key($report['assessments']['rows'][0], array_flip(['assigned', 'submitted', 'outstanding', 'released', 'average'])));
         $this->assertSame(2, $report['registration']['staff']);
-        // The admin needs no badge, so is left out of the badge figures.
-        $this->assertSame([3, 1, 2, 1], [$report['badges']['people'], $report['badges']['without'], $report['badges']['stages'][0]['value'], $report['badges']['stages'][1]['value']]);
-        $this->assertSame([['Staff', 2, 1, 1], ['Facilitator', 1, 1, 0]], array_map(fn ($row) => [$row['label'], $row['people'], $row['generated'], $row['without']], $report['badges']['types']));
-        $this->assertSame([['Grace Okafor'], ['Tunde Facilitator'], ['Amina Bello']], array_map(fn ($list) => array_column($list, 'name'), array_values($report['badges']['gaps'])));
+        $this->assertSame([4, 2, 2, 1], [$report['badges']['people'], $report['badges']['without'], $report['badges']['stages'][0]['value'], $report['badges']['stages'][1]['value']]);
+        $this->assertSame([['Staff', 2, 1, 1], ['Facilitator', 1, 1, 0], ['Admin', 1, 0, 1]], array_map(fn ($row) => [$row['label'], $row['people'], $row['generated'], $row['without']], $report['badges']['types']));
+        $this->assertSame([['Ada Admin', 'Grace Okafor'], ['Tunde Facilitator'], ['Amina Bello']], array_map(fn ($list) => array_column($list, 'name'), array_values($report['badges']['gaps'])));
     }
 
     public function test_the_people_behind_each_gap_are_listed_on_the_page_and_in_the_pdf(): void
@@ -110,11 +109,10 @@ class ProgrammeReportTest extends TestCase
         $report = app(ProgrammeReport::class)->data();
         $this->assertSame([['name' => 'Grace Okafor', 'type' => 'staff', 'detail' => 'Legal']], $report['registration']['awaiting_people']);
         $this->assertSame([['Bola Ade'], [], ['Grace Okafor']], [array_column($report['attendance']['gaps']['in_only'], 'name'), $report['attendance']['gaps']['out_only'], array_column($report['attendance']['gaps']['absent'], 'name')]);
-        $this->assertSame(['Bola Ade', 'Grace Okafor'], array_column($report['badges']['gaps']['without'], 'name'));
-        $this->assertNotContains('Ada Admin', array_column($report['badges']['gaps']['without'], 'name'));
+        $this->assertSame(['Ada Admin', 'Bola Ade', 'Grace Okafor'], array_column($report['badges']['gaps']['without'], 'name'));
 
         $this->actingAs($this->admin)->get('/reports')->assertOk()->assertSee('Staff awaiting activation (1)')->assertSee('Signed in but not out (1)')
-            ->assertSee('Printed but not collected (1)')->assertSeeInOrder(['No badge generated (2)', 'Bola Ade', 'Grace Okafor']);
+            ->assertSee('Printed but not collected (1)')->assertSeeInOrder(['No badge generated (3)', 'Ada Admin', 'Bola Ade', 'Grace Okafor']);
         $this->get('/reports/pdf')->assertOk()->assertHeader('Content-Type', 'application/pdf');
     }
 

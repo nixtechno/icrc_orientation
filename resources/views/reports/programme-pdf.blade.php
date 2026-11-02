@@ -198,7 +198,7 @@ thead { display: table-header-group; }
 <div class="section keep">
 <div class="section-head"><h2><span class="number">5</span>Badges</h2></div>
 <table class="tiles"><tr>
-<td><div class="label">People in the programme</div><div class="value">{{ $bad['people'] }}</div><div class="note">staff and facilitators</div></td>
+<td><div class="label">People in the programme</div><div class="value">{{ $bad['people'] }}</div><div class="note">staff, facilitators and admins</div></td>
 <td><div class="label">Without a badge</div><div class="value">{{ $bad['without'] }}</div></td>
 <td><div class="label">Printed</div><div class="value">{{ $printed }}</div><div class="note">{{ $pct($printed, $badgeTotal) }}% of badges</div></td>
 <td><div class="label">Collected</div><div class="value">{{ $bad['stages'][2]['value'] }}</div><div class="note">{{ $pct($bad['stages'][2]['value'], $badgeTotal) }}% of badges</div></td>

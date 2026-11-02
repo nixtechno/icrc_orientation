@@ -130,7 +130,7 @@ class ProgrammeReport
     }
 
     /**
-     * Badges for staff and facilitators, by type. Badges left from people no longer in the programme are not counted,
+     * Badges for staff, facilitators and admins, by type. Badges left from people no longer in the programme are not counted,
      * so for each type the people with a badge plus those without add up to its people.
      */
     private function badges(): array
@@ -138,7 +138,7 @@ class ProgrammeReport
         $badges = Badge::where('programme_id', Access::programme()->id)->get(['subject_key', 'printed_at', 'collected_at'])->keyBy('subject_key');
         $people = $this->people();
         $byType = $people->groupBy('type');
-        $types = collect(['staff', 'facilitator'])->filter(fn ($type) => $byType->has($type))->map(function ($type) use ($byType, $badges) {
+        $types = collect(['staff', 'facilitator', 'admin'])->filter(fn ($type) => $byType->has($type))->map(function ($type) use ($byType, $badges) {
             $people = $byType[$type];
             $held = $people->map(fn ($person) => $badges->get($person['key']))->filter();
 
@@ -164,11 +164,11 @@ class ProgrammeReport
         ];
     }
 
-    /** Everyone in the programme who needs a badge: enrolled staff and facilitators, and facilitator profiles without an account. Admins are left out. */
+    /** Everyone in the programme who can hold a badge: enrolled accounts, and facilitator profiles without one. */
     private function people(): Collection
     {
         $p = Access::programme();
-        $users = User::whereIn('role', ['staff', 'facilitator'])->whereHas('programmes', fn ($q) => $q->where('programmes.id', $p->id))->get(['id', 'name', 'role', 'staff_number', 'department'])
+        $users = User::whereIn('role', User::ROLES)->whereHas('programmes', fn ($q) => $q->where('programmes.id', $p->id))->get(['id', 'name', 'role', 'staff_number', 'department'])
             ->map(fn ($u) => $this->person($u, $u->role) + ['key' => 'u:'.$u->id]);
         $profiles = Facilitator::where('programme_id', $p->id)->whereNull('user_id')->get(['id', 'name', 'department', 'organisation'])
             ->map(fn ($f) => $this->person($f, 'facilitator') + ['key' => 'f:'.$f->id]);
