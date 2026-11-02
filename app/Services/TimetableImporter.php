@@ -16,7 +16,7 @@ class TimetableImporter
     public function run(): Programme
     {
         return DB::transaction(function () {
-            $p = Programme::firstOrCreate(['code' => 'ICRC-2026'], ['title' => 'ORIENTATION PROGRAMME FOR THE 2026 RECRUITED STAFF', 'starts_on' => '2026-11-02', 'ends_on' => '2026-12-11', 'timezone' => 'Africa/Lagos', 'settings' => ['lateness_minutes' => 15, 'window_minutes' => 60, 'excused_in_denominator' => false, 'about' => 'Equipping newly recruited staff with the knowledge, skills, and institutional understanding to contribute effectively to Nigeria’s infrastructure development.']]);
+            $p = Programme::firstOrCreate(['code' => 'ICRC-2026'], ['title' => 'ICRC SCODEX 2026', 'starts_on' => '2026-11-02', 'ends_on' => '2026-12-11', 'timezone' => 'Africa/Lagos', 'settings' => ['lateness_minutes' => 15, 'window_minutes' => 60, 'excused_in_denominator' => false, 'about' => 'Equipping newly recruited staff with the knowledge, skills, and institutional understanding to contribute effectively to Nigeria’s infrastructure development.']]);
             $tables = json_decode(ltrim(file_get_contents(database_path('data/source-tables.json')), "\xEF\xBB\xBF"), true, 512, JSON_THROW_ON_ERROR);
             $dayNumber = 0;
             foreach ($tables as $wi => $rows) {

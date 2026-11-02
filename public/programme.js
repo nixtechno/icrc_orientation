@@ -81,7 +81,7 @@
         const tick = () => {
             const now = Date.now();
             if (now >= start) {
-                const message = now <= end ? 'The orientation programme is in progress.' : 'The 2026 orientation has concluded.';
+                const message = now <= end ? 'ICRC SCODEX 2026 is in progress.' : 'ICRC SCODEX 2026 has concluded.';
                 if (status) status.textContent = message;
                 countdown.textContent = now <= end ? 'Learning in progress' : 'A foundation for the future';
                 countdown.setAttribute('aria-label', message);

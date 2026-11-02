@@ -75,9 +75,9 @@ test('countdown respects the Lagos offset and transitions through programme stat
     assert.equal(before.units.hours.textContent, '01');
     assert.equal(before.units.days.textContent, '00');
     const during = mount({now: '2026-11-02T00:00:00+01:00'});
-    assert.equal(during.status.textContent, 'The orientation programme is in progress.');
+    assert.equal(during.status.textContent, 'ICRC SCODEX 2026 is in progress.');
     const after = mount({now: '2026-12-12T00:00:00+01:00'});
-    assert.equal(after.status.textContent, 'The 2026 orientation has concluded.');
+    assert.equal(after.status.textContent, 'ICRC SCODEX 2026 has concluded.');
     assert.equal(after.clears, 1);
 });
 

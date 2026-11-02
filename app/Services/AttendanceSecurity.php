@@ -43,7 +43,7 @@ class AttendanceSecurity
         $url = parse_url($origin);
         abort_unless($url && ($url['host'] ?? '') === config('attendance.rp_id') && ! isset($url['path']) && ! isset($url['query']) && ! isset($url['user']) && ! isset($url['fragment']) && (($url['scheme'] ?? '') === 'https' || (($url['scheme'] ?? '') === 'http' && ($url['host'] ?? '') === 'localhost')), 422, 'Attendance requires a configured HTTPS origin and matching RP ID (localhost is permitted for development).');
 
-        return new WebAuthn('ICRC Orientation attendance', config('attendance.rp_id'), null, true);
+        return new WebAuthn('ICRC SCODEX 2026 attendance', config('attendance.rp_id'), null, true);
     }
 
     public function staff(User $user): void

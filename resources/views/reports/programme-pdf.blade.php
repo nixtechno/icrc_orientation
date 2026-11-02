@@ -14,7 +14,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Programme report · {{ $p->title }}</title>
+<title>Programme report · ICRC SCODEX 2026</title>
 <style>
 @page { margin: 22mm 16mm 20mm 16mm; }
 * { box-sizing: border-box; }
@@ -88,7 +88,7 @@ thead { display: table-header-group; }
 </style>
 </head>
 <body>
-<div class="running top"><table><tr><td>ICRC · {{ $p->title }}</td><td class="right">Programme report</td></tr></table></div>
+<div class="running top"><table><tr><td>ICRC SCODEX 2026</td><td class="right">Programme report</td></tr></table></div>
 <div class="running bottom"><table><tr><td>Generated {{ $generated->format('j F Y, H:i') }} ({{ $p->timezoneLabel() }} time) from live records</td><td class="right page-number"></td></tr></table></div>
 
 <div class="cover">
@@ -97,7 +97,7 @@ thead { display: table-header-group; }
 <td>
 <div class="eyebrow">INFRASTRUCTURE CONCESSION REGULATORY COMMISSION</div>
 <h1>Programme report</h1>
-<div class="meta">{{ $p->title }} · {{ $p->starts_on->format('j M') }} – {{ $p->ends_on->format('j M Y') }}@if(filled($p->settings['venue'] ?? null)) · {{ $p->settings['venue'] }}@endif</div>
+<div class="meta">ICRC SCODEX 2026 · {{ $p->starts_on->format('j M') }} – {{ $p->ends_on->format('j M Y') }}@if(filled($p->settings['venue'] ?? null)) · {{ $p->settings['venue'] }}@endif</div>
 </td>
 <td class="generated"><strong>{{ $generated->format('j F Y') }}</strong>Generated at {{ $generated->format('H:i') }}</td>
 </tr></table>
