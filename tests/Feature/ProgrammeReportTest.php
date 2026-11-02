@@ -126,6 +126,29 @@ class ProgrammeReportTest extends TestCase
         $this->assertCount(0, app(PersonMerge::class)->candidates());
     }
 
+    public function test_when_both_badges_are_printed_the_one_being_worn_moves_to_the_kept_account(): void
+    {
+        // Both accounts had a badge printed; she wears the one printed for the account being removed.
+        $keep = $this->person('Rahinah Sirika', 'facilitator', ['email' => 'rahinahsirika@example.test']);
+        $drop = $this->person('Rahinah Sirika', 'facilitator', ['email' => 'rahinahsirika+1@example.test', 'active' => false]);
+        $this->badge($keep, true);
+        $worn = $this->badge($drop, true);
+        $wornQr = $drop->qr_code;
+        $signature = app(PersonMerge::class)->signature(app(PersonMerge::class)->candidates()->first());
+        $this->actingAs($this->admin)->get('/reports')->assertSee('Which one is this person wearing?')->assertSee('The badge printed for rahinahsirika+1@example.test');
+
+        $this->post('/reports/duplicates/merge', ['signature' => $signature, 'keep' => $keep->id, 'confirmed' => 1])->assertSessionHasErrors('wearing');
+        $this->assertModelExists($drop);
+        $this->post('/reports/duplicates/merge', ['signature' => $signature, 'keep' => $keep->id, 'wearing' => $drop->id, 'confirmed' => 1])->assertRedirect('/reports#duplicates');
+
+        $this->assertModelMissing($drop);
+        $keep->refresh();
+        $this->assertSame(['rahinahsirika@example.test', true, $wornQr], [$keep->email, (bool) $keep->active, $keep->qr_code]);
+        $this->assertSame($worn->id, Badge::where('user_id', $keep->id)->sole()->id);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'user.merge', 'subject' => (string) $keep->id]);
+        $this->assertSame('rahinahsirika+1@example.test', json_decode(DB::table('audit_logs')->where('action', 'user.merge')->value('after'), true)['badge_from_email']);
+    }
+
     public function test_groups_can_be_marked_as_different_people_and_only_admins_reconcile(): void
     {
         $this->person('Komommo Okoi', 'facilitator'); $other = $this->person('Komommo Okoi', 'facilitator');

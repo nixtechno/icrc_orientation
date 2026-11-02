@@ -82,7 +82,8 @@ class AttendanceSync
             'attendance' => $attendance->map(fn (DailyAttendance $record) => $this->export($record))->all(),
             // Duplicate profiles merged here, so the venue removes its copy of the duplicate too.
             'merges' => DB::table('audit_logs')->where('action', 'user.merge')->orderBy('id')->pluck('after')
-                ->map(fn ($after) => Arr::only(json_decode($after, true) ?: [], ['from_email', 'into_email']))->filter(fn ($m) => count($m) === 2)->values()->all(),
+                ->map(fn ($after) => Arr::only(json_decode($after, true) ?: [], ['from_email', 'into_email', 'badge_from_email']))
+                ->filter(fn ($m) => isset($m['from_email'], $m['into_email']))->values()->all(),
         ];
     }
 
@@ -290,7 +291,9 @@ class AttendanceSync
             return;
         }
         $keep = User::where('email', $merge['into_email'])->first();
-        $keep ? app(PersonMerge::class)->merge($keep, $drop) : $drop->forceFill(['email' => $merge['into_email']])->saveQuietly();
+        // The badge kept on the live site is the one the person wears, so the venue keeps the same one.
+        $wearing = ($merge['badge_from_email'] ?? null) === $merge['from_email'] ? $drop : null;
+        $keep ? app(PersonMerge::class)->merge($keep, $drop, $wearing) : $drop->forceFill(['email' => $merge['into_email']])->saveQuietly();
     }
 
     private function savePerson(array $person, int $programmeId): void

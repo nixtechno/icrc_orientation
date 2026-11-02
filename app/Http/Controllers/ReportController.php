@@ -44,12 +44,18 @@ class ReportController extends Controller
     public function mergeDuplicates(Request $r, \App\Services\PersonMerge $merge)
     {
         $this->reconciler();
-        $v = $r->validate(['signature' => 'required|string|max:2000', 'keep' => 'required|integer', 'confirmed' => 'accepted'], ['confirmed.accepted' => 'Tick the box to confirm the merge.']);
+        $v = $r->validate(['signature' => 'required|string|max:2000', 'keep' => 'required|integer', 'wearing' => 'nullable|integer', 'confirmed' => 'accepted'], ['confirmed.accepted' => 'Tick the box to confirm the merge.']);
         $group = $merge->candidates()->first(fn ($group) => $merge->signature($group) === $v['signature']);
         abort_unless($group && $group->contains('id', (int) $v['keep']), 422, 'These profiles have changed since the page loaded. Reload and try again.');
         $keep = $group->firstWhere('id', (int) $v['keep']);
+        // With more than one printed badge, only the one the person wears can keep scanning, so it must be chosen.
+        $printed = \App\Models\Badge::whereIn('user_id', $group->modelKeys())->whereNotNull('printed_at')->pluck('user_id')->unique();
+        if ($printed->count() > 1) {
+            $r->validate(['wearing' => ['required', \Illuminate\Validation\Rule::in($printed->all())]], ['wearing.required' => 'Choose the badge this person is wearing.']);
+        }
+        $wearing = $printed->count() > 1 ? $group->firstWhere('id', (int) $v['wearing']) : null;
         foreach ($group->reject(fn ($u) => $u->is($keep)) as $drop) {
-            $keep = $merge->merge($keep, $drop);
+            $keep = $merge->merge($keep, $drop, $wearing);
         }
 
         return redirect('/reports#duplicates')->with('success', 'Merged into '.$keep->name.' ('.$keep->email.'). The other '.($group->count() === 2 ? 'profile was' : 'profiles were').' removed.');

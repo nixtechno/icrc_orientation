@@ -228,7 +228,7 @@ class AttendanceSyncTest extends TestCase
         $twin = $this->user('staff', ['name' => 'Amina Bello', 'email' => 'amina.twin@example.test']);
         app(\App\Services\PersonMerge::class)->merge($this->staff, $twin);
         $merges = $this->withToken(self::TOKEN)->getJson('/api/attendance-sync/snapshot')->assertOk()->json('merges');
-        $this->assertSame([['from_email' => 'amina.twin@example.test', 'into_email' => 'amina@example.test']], $merges);
+        $this->assertSame([['from_email' => 'amina.twin@example.test', 'into_email' => 'amina@example.test', 'badge_from_email' => null]], $merges);
 
         // The venue still has its own copy of the duplicate, holding a scan; the next sync merges it there as well.
         $this->asVenue();

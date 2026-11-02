@@ -49,15 +49,16 @@ class PersonMerge
         return $group->pluck('id')->sort()->implode('-');
     }
 
-    public function merge(User $keep, User $drop): User
+    /** $wearing is the profile whose printed badge the person wears, when both profiles have one printed. */
+    public function merge(User $keep, User $drop, ?User $wearing = null): User
     {
         abort_if($keep->is($drop), 422, 'Choose two different profiles.');
 
-        return DB::transaction(function () use ($keep, $drop) {
+        return DB::transaction(function () use ($keep, $drop, $wearing) {
             [$keep, $drop] = [User::whereKey($keep->id)->lockForUpdate()->firstOrFail(), User::whereKey($drop->id)->lockForUpdate()->firstOrFail()];
             $before = ['kept' => $keep->toArray(), 'removed' => $drop->toArray()];
 
-            $this->badges($keep, $drop);
+            $this->badges($keep, $drop, $wearing);
             $this->attendance($keep, $drop);
             $this->submissions($keep, $drop);
             $this->unique('enrolments', 'programme_id', $keep, $drop);
@@ -80,18 +81,22 @@ class PersonMerge
             $drop->forceFill(['staff_number' => null])->saveQuietly();
             $drop->delete();
             $keep->forceFill([...$fill, 'profile' => $profile ?: $keep->profile])->save();
-            Access::audit('user.merge', (string) $keep->id, $before, ['from_email' => $email, 'into_email' => $keep->email, 'from_id' => $drop->id, 'into_id' => $keep->id]);
+            Access::audit('user.merge', (string) $keep->id, $before, ['from_email' => $email, 'into_email' => $keep->email, 'from_id' => $drop->id, 'into_id' => $keep->id, 'badge_from_email' => $wearing?->is($drop) ? $email : null]);
 
             return $keep;
         });
     }
 
-    /** Keeps one badge, preferring one already printed; a printed badge carries its QR ID so it still scans. */
-    private function badges(User $keep, User $drop): void
+    /**
+     * Keeps one badge: the one the person wears when that is known, otherwise the kept profile's unless only the
+     * duplicate's was printed. A printed badge brings its QR ID across so the badge being worn still scans.
+     */
+    private function badges(User $keep, User $drop, ?User $wearing): void
     {
         foreach (Badge::where('user_id', $drop->id)->get() as $theirs) {
             $mine = Badge::where('programme_id', $theirs->programme_id)->where('user_id', $keep->id)->first();
-            if ($mine && ($mine->printed_at || ! $theirs->printed_at)) {
+            $keepMine = $wearing ? ! $wearing->is($drop) : ($mine?->printed_at || ! $theirs->printed_at);
+            if ($mine && $keepMine) {
                 foreach (['printed_at', 'collected_at', 'materials_collected_at'] as $field) $mine->$field ??= $theirs->$field;
                 $mine->save();
                 $theirs->delete();

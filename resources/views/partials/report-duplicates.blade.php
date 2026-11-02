@@ -15,6 +15,13 @@
 <td>{{ $p['badge'] ? ($p['badge']->collected_at ? 'Collected' : ($p['badge']->printed_at ? 'Printed' : 'Generated')) : 'None' }}</td><td>{{ $p['attendance'] }}</td><td>{{ $p['submissions'] }}</td></tr>
 @endforeach
 </tbody></table></div>
+@php($printedBadges = collect($group['people'])->filter(fn ($p) => $p['badge']?->printed_at))
+@if($canMerge && $printedBadges->count() > 1)
+<fieldset class="report-wearing"><legend>More than one of these badges is printed. Which one is this person wearing?</legend>
+<p class="muted">Only that badge keeps scanning after the merge. It moves to the profile you keep.</p>
+@foreach($printedBadges as $p)<label><input type="radio" name="wearing" value="{{ $p['user']->id }}" required>The badge printed for {{ $p['user']->email }}</label>@endforeach
+</fieldset>
+@endif
 @if($canMerge)
 <label class="report-confirm"><input type="checkbox" name="confirmed" value="1" required>I understand the profiles I don't keep will be removed, with their records moved to the one I keep. This cannot be undone.</label>
 <div class="buttons"><button>Merge into the selected profile</button></div>

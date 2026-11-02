@@ -1,6 +1,6 @@
 @extends('layout')
 @section('content')
-<link rel="stylesheet" href="{{ asset('activity-manage.css') }}?v=20261102b"><link rel="stylesheet" href="{{ asset('reports.css') }}?v=20261102b">
+<link rel="stylesheet" href="{{ asset('activity-manage.css') }}?v=20261102b"><link rel="stylesheet" href="{{ asset('reports.css') }}?v=20261102c">
 <div class="page-heading"><div><div class="eyebrow">PROGRAMME INSIGHT</div><h1>Reports</h1><p class="muted">{{ $tab==='exports'?'Exports use live records and include generation time and filter criteria.':'Registration, attendance, learning materials, assessments and badges, from live records.' }}</p></div></div>
 <nav class="view-tabs" aria-label="Report views"><a href="/reports" @if($tab==='report') aria-current="page" @endif><strong>Programme report</strong></a><a href="/reports?tab=exports" @if($tab==='exports') aria-current="page" @endif><strong>Exports</strong></a></nav>
 @if($tab==='exports')
