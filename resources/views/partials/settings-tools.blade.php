@@ -1,6 +1,12 @@
 {{-- Maintenance jobs administrators run here instead of on the server. Each card says what it will change before it runs. --}}
 @php($t = $tools)
-@if($t['venue'])<p class="notice">This is the venue copy. Attendance days, sign-ins and badges are changed on the live site and reach this venue on the next sync. Only database updates run here.</p>@endif
+@if($t['venue'])<p class="notice">This is the venue copy. Attendance days, sign-ins and badges are changed on the live site and reach this venue on the next sync. Only database updates and clearing the cache run here.</p>@endif
+
+<section class="card settings-tool" aria-labelledby="tool-cache">
+<h2 id="tool-cache">Clear the cache</h2>
+<p class="muted">Run this after uploading new code to the server. It clears cached settings, routes, pages and data so the site uses the latest version. Nothing people have entered is removed.</p>
+<form method="post" action="/settings/tools/cache">@csrf<button>Clear the cache</button></form>
+</section>
 
 <section class="card settings-tool" aria-labelledby="tool-database">
 <h2 id="tool-database">Database updates</h2>

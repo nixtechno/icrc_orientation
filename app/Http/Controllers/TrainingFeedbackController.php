@@ -34,7 +34,7 @@ class TrainingFeedbackController extends Controller
         return back()->with('success', 'Thank you. Your feedback on today\'s training has been recorded.');
     }
 
-    /** Averages and comments for each programme day; who gave each response is not shown. */
+    /** One programme day per page: the averages, then everyone who responded with their ratings and suggestions. */
     public function index(Request $r)
     {
         Access::manage('reports');
@@ -43,7 +43,7 @@ class TrainingFeedbackController extends Controller
         $days = ProgrammeDay::whereHas('week', fn ($q) => $q->where('programme_id', $programme->id))->whereHas('feedback')->orderByDesc('date')->get();
         $day = $days->firstWhere('id', (int) $r->query('day')) ?? $days->first();
 
-        return view('training-feedback', ['days' => $days, 'day' => $day, 'feedback' => $day ? TrainingFeedback::where('programme_day_id', $day->id)->latest()->get() : collect(),
+        return view('training-feedback', ['days' => $days, 'day' => $day, 'feedback' => $day ? TrainingFeedback::where('programme_day_id', $day->id)->with('user')->get()->sortBy(fn ($f) => mb_strtolower($f->user?->name ?? ''))->values() : collect(),
             'time' => TrainingFeedback::time($programme), 'staff' => Access::staff()->count()]);
     }
 }

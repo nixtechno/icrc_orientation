@@ -47,7 +47,7 @@ class TrainingFeedbackTest extends TestCase
         $page = $this->actingAs($this->staff)->get('/dashboard')->assertOk()->assertSee('data-feedback-dialog', false)
             ->assertSee('data-opens-at="'.Carbon::parse('2026-11-03 16:30', Programme::first()->timezone)->toIso8601String().'"', false)
             ->assertDontSee('data-feedback-close', false)->assertDontSee('data-feedback-later', false)->assertDontSee('data-feedback-reopen', false)
-            ->assertSeeInOrder(['Daily training feedback', 'Tuesday 3 November 2026', 'Estimated completion time: 2 minutes', 'Overall session', 'Instructor', 'Dr Ada Obi', 'Relevance to your job', 'Understanding', 'ICT and facilities', 'Food and refreshments', 'What can we do to improve your training experience?']);
+            ->assertSeeInOrder(['Daily training feedback', 'Tuesday 3 November 2026', 'Your feedback is very important to us.', 'Estimated completion time: 2 minutes', 'Overall session', 'Instructor', 'Dr Ada Obi', 'Relevance to your job', 'Understanding', 'ICT and facilities', 'Food and refreshments', 'What can we do to improve your training experience?']);
 
         // Too early: nothing is accepted yet.
         $this->post('/training-feedback', $this->ratings())->assertStatus(422);
@@ -104,7 +104,15 @@ class TrainingFeedbackTest extends TestCase
         $this->post('/training-feedback', $this->ratings())->assertSessionHasNoErrors();
     }
 
-    public function test_managers_see_each_days_averages_and_suggestions_without_names(): void
+    public function test_admins_can_clear_the_cache_from_data_tools(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'active' => true]); $admin->programmes()->attach(Programme::first()->id);
+        $this->actingAs($this->staff)->post('/settings/tools/cache')->assertForbidden();
+        $this->actingAs($admin)->get('/settings?tab=tools')->assertSee('Clear the cache');
+        $this->post('/settings/tools/cache')->assertRedirect('/settings?tab=tools')->assertSessionHas('success');
+    }
+
+    public function test_managers_see_everyone_with_their_ratings_and_suggestions_one_day_per_page(): void
     {
         $other = User::factory()->create(['role' => 'staff', 'active' => true, 'name' => 'Grace Okafor']); $other->programmes()->attach(Programme::first()->id);
         TrainingFeedback::create(['programme_id' => Programme::first()->id, 'programme_day_id' => $this->day->id, 'user_id' => $this->staff->id, ...$this->ratings(), 'comment' => 'Slides were clear.']);
@@ -115,6 +123,14 @@ class TrainingFeedbackTest extends TestCase
         $this->actingAs($admin)->get('/reports')->assertSee('href="/training-feedback"', false);
         $page = $this->get('/training-feedback')->assertOk()->assertSee('Tuesday 3 November 2026')->assertSee('2 responses')
             ->assertSeeInOrder(['Overall session', '4.0', 'Instructor', '4.5', 'Food and refreshments', '3.0'])->assertSee('Slides were clear.')->getContent();
-        $this->assertStringNotContainsString('Grace Okafor', $page);
+        // Everyone is listed by name, with each rating and their suggestion.
+        $this->assertMatchesRegularExpression('/Grace Okafor.*?is-4">4<.*?—.*?'.preg_quote($this->staff->name, '/').'.*?is-5">5<.*?Slides were clear\./s', substr($page, strpos($page, 'feedback-table')));
+
+        // Each programme day is its own page.
+        $later = ProgrammeDay::whereHas('week', fn ($q) => $q->where('programme_id', Programme::first()->id))->whereKeyNot($this->day->id)->orderBy('date')->firstOrFail();
+        $later->update(['date' => '2026-11-04']);
+        TrainingFeedback::create(['programme_id' => Programme::first()->id, 'programme_day_id' => $later->id, 'user_id' => $other->id, ...$this->ratings(), 'comment' => 'Lunch was late.']);
+        $this->get('/training-feedback')->assertSee('Wednesday 4 November 2026')->assertSee('Lunch was late.')->assertDontSee('Slides were clear.')->assertSee('/training-feedback?day='.$this->day->id, false);
+        $this->get('/training-feedback?day='.$this->day->id)->assertSee('Slides were clear.')->assertDontSee('Lunch was late.');
     }
 }

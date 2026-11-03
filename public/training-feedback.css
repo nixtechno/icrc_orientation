@@ -71,3 +71,11 @@
 .feedback-summary-days{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
 .feedback-summary-days a{padding:6px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;text-decoration:none}
 .feedback-summary-days a[aria-current]{border-color:#176b45;background:#e3f2e8;font-weight:800}
+.feedback-summary-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+.feedback-summary-head h2{margin:0}
+.feedback-summary-pager{display:flex;gap:8px}
+.feedback-table th.feedback-rating-col,.feedback-table td.feedback-rating-col{text-align:center;white-space:normal;min-width:70px}
+.feedback-rating{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;font-weight:800;background:#f3f6f1;color:#3d4b43}
+.feedback-rating.is-1{background:#fbe4e0;color:#8f382a}.feedback-rating.is-2{background:#fdeedd;color:#8a5212}.feedback-rating.is-3{background:#fdf6e7;color:#7a5d10}.feedback-rating.is-4{background:#e8f4ec;color:#185538}.feedback-rating.is-5{background:#d4ecdc;color:#0f4a2c}
+.feedback-suggestion{min-width:220px;max-width:420px;font-size:13px}
+.feedback-important{margin:12px auto 0!important;font-size:16px;font-weight:800;color:#185538}

@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Artisan;
 
 /**
  * One-off maintenance jobs administrators run from Programme settings instead of the server command line:
- * attendance days, sign-ins from badge print times, badges printed without being recorded, collected badges, the daily feedback time and database updates.
+ * attendance days, sign-ins from badge print times, badges printed without being recorded, collected badges, the daily feedback time, clearing the cache and database updates.
  */
 class DataToolsController extends Controller
 {
@@ -51,7 +51,7 @@ class DataToolsController extends Controller
         abort_unless($r->user()->role === 'admin', 403);
         Access::enrolled();
         // Day settings, attendance and badge state belong to the live site; venues copy them on the next sync.
-        abort_if($job !== 'database' && AttendanceSync::venue(), 422, 'Run this on the live site. The venue copies the result on its next sync.');
+        abort_if(! in_array($job, ['database', 'cache'], true) && AttendanceSync::venue(), 422, 'Run this on the live site. The venue copies the result on its next sync.');
         $back = redirect('/settings?tab=tools');
 
         return match ($job) {
@@ -62,6 +62,7 @@ class DataToolsController extends Controller
             'badges-collected' =>$back->with('success', app(BadgeService::class)->markPrintedCollected().' printed badges are now marked as collected at their print time.'),
             'feedback-time' => $this->feedbackTime($r, $back),
             'database' => $this->database($back),
+            'cache' => $this->clearCache($back),
             default => abort(404),
         };
     }
@@ -97,6 +98,15 @@ class DataToolsController extends Controller
         $count = app(AttendanceService::class)->signInSignedOutOnly($day, array_map('intval', $v['records']), Carbon::parse($v['date'].' '.$v['time'], 'Africa/Lagos'));
 
         return redirect('/settings?tab=tools&signin_date='.$v['date'])->with('success', $day->date->format('l j F').': '.$count.' '.($count === 1 ? 'person who only signed out now has' : 'people who only signed out now have').' a sign-in.');
+    }
+
+    /** Clears cached configuration, routes, views and data, as needed after new code is uploaded. */
+    private function clearCache($back)
+    {
+        Artisan::call('optimize:clear');
+        Access::audit('cache.clear', 'cache');
+
+        return $back->with('success', 'The cache has been cleared. Pages, routes and settings now use the latest uploaded code.');
     }
 
     private function database($back)
