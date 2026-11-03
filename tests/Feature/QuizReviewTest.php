@@ -67,6 +67,51 @@ class QuizReviewTest extends TestCase
         $this->assertStringNotContainsString('<h2>Instructions</h2>', $page);
     }
 
+    public function test_each_attempt_gets_its_own_question_order_that_stays_the_same(): void
+    {
+        $quiz = $this->quiz(array_map(fn ($n) => ['type' => 'true_false', 'prompt' => 'Question '.$n, 'options' => ['True', 'False'], 'correct_answer' => 'True'], range(1, 10)));
+        $other = User::factory()->create(['role' => 'staff', 'active' => true]);
+        [$a, $b] = [Submission::create(['activity_id' => $quiz->id, 'user_id' => $this->staff->id, 'attempt' => 1, 'started_at' => now()]), Submission::create(['activity_id' => $quiz->id, 'user_id' => $other->id, 'attempt' => 1, 'started_at' => now()])];
+        $order = fn ($s) => $s->shuffled($quiz->questions)->pluck('id')->all();
+
+        $this->assertNotSame($order($a), $order($b));
+        $this->assertSame($order($a), $order($a->fresh()));
+        $this->assertEqualsCanonicalizing($quiz->questions->pluck('id')->all(), $order($a));
+        $this->assertSame($order($a), array_map(fn ($item) => $item['question']->id, app(QuizAttemptService::class)->review($quiz, $a)));
+
+        $choice = Question::create(['activity_id' => $quiz->id, 'type' => 'multiple_choice', 'prompt' => 'Pick one', 'options' => range('A', 'H'), 'correct_answer' => 'A', 'points' => 1]);
+        $this->assertNotSame($a->shuffledOptions($choice), $b->shuffledOptions($choice));
+        $this->assertSame($a->shuffledOptions($choice), $a->fresh()->shuffledOptions($choice));
+        $this->assertEqualsCanonicalizing(range('A', 'H'), $a->shuffledOptions($choice));
+        $this->assertSame(['True', 'False'], $a->shuffledOptions($quiz->questions[0]));
+    }
+
+    public function test_releasing_answers_shows_them_with_explanations_and_tells_staff(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+        $admin = User::factory()->create(['role' => 'admin', 'active' => true]); $admin->programmes()->attach(Programme::first()->id);
+        $quiz = $this->quiz([['type' => 'multiple_choice', 'prompt' => 'Which body regulates concessions?', 'options' => ['ICRC', 'CBN'], 'correct_answer' => 'ICRC', 'explanation' => 'ICRC regulates concessions.']]);
+        $submission = Submission::create(['activity_id' => $quiz->id, 'user_id' => $this->staff->id, 'attempt' => 1, 'started_at' => now()]);
+        app(QuizAttemptService::class)->finalize($submission, 'manual', [$quiz->questions[0]->id => 'CBN']);
+        $submission->update(['released_at' => null]);
+        $page = '/activities/'.$quiz->slug;
+
+        $this->actingAs($this->staff)->get($page)->assertDontSee('ICRC regulates concessions.')->assertDontSee('Correct answer');
+        $this->post($page.'/release-answers')->assertForbidden();
+
+        $this->actingAs($admin)->get($page)->assertSee('Release answers');
+        $this->post($page.'/release-answers')->assertSessionHas('success');
+        $this->assertNotNull($quiz->fresh()->answers_released_at);
+        $this->assertNotNull($submission->fresh()->released_at);
+        \Illuminate\Support\Facades\Notification::assertSentTo($this->staff, \App\Notifications\ProgrammeUpdate::class, fn ($n) => str_starts_with($n->title, 'Answers released'));
+        $this->assertSame('Answers released: '.$quiz->title, \App\Models\Announcement::where('activity_id', $quiz->id)->value('title'));
+
+        $this->actingAs($this->staff)->get($page)->assertSee('ICRC regulates concessions.')->assertSee('Correct answer')->assertSee('Your answer · Incorrect');
+
+        $this->actingAs($admin)->post($page.'/release-answers')->assertSessionHas('success');
+        $this->actingAs($this->staff)->get($page)->assertDontSee('ICRC regulates concessions.');
+    }
+
     public function test_managers_can_reset_a_persons_attempts_so_they_can_take_it_again(): void
     {
         $admin = User::factory()->create(['role' => 'admin', 'active' => true]); $admin->programmes()->attach(Programme::first()->id);

@@ -54,7 +54,7 @@ class QuizAttemptService
      */
     public function review(Activity $activity, Submission $submission): array
     {
-        return $activity->questions->map(function ($question) use ($submission) {
+        return $submission->shuffled($activity->questions)->map(function ($question) use ($submission) {
             $answer = $submission->answers[$question->id] ?? null;
             if (in_array($question->type, ['short_answer', 'long_answer'], true)) {
                 $response = trim((string) $answer);

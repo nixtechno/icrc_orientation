@@ -11,7 +11,21 @@ class Activity extends Model
 
     protected function casts(): array
     {
-        return ['due_at' => 'datetime', 'available_at' => 'datetime', 'published' => 'boolean'];
+        return ['due_at' => 'datetime', 'available_at' => 'datetime', 'published' => 'boolean', 'answers_released_at' => 'datetime'];
+    }
+
+    public static ?bool $answerRelease = null;
+
+    /** Whether answers can be released yet, so the app keeps working before that migration has run. */
+    public static function canReleaseAnswers(): bool
+    {
+        return self::$answerRelease ??= \Illuminate\Support\Facades\Schema::hasColumn('activities', 'answers_released_at');
+    }
+
+    /** Staff see correct answers and explanations only after managers release them. */
+    public function answersReleased(): bool
+    {
+        return self::canReleaseAnswers() && $this->answers_released_at !== null;
     }
 
     public function questions()
@@ -32,6 +46,21 @@ class Activity extends Model
     public function submissions()
     {
         return $this->hasMany(Submission::class);
+    }
+
+    public function feedback()
+    {
+        return $this->hasMany(AssessmentFeedback::class);
+    }
+
+    /** Facilitators of the timetable session this activity belongs to, named in the feedback dialog. */
+    public function facilitatorNames(): array
+    {
+        if (! $this->session_id) {
+            return [];
+        }
+
+        return Facilitator::whereHas('sessions', fn ($q) => $q->where('programme_sessions.id', $this->session_id))->orderBy('name')->pluck('name')->all();
     }
 
     // Activities created before assignment_mode was recorded are inferred from their group and participants.

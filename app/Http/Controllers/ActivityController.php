@@ -209,9 +209,13 @@ return view('activities', ['items' => $items, 'manager' => $manager, 'selectedKi
             }
         }$activity->load('questions');
         $submissions = $manager ? $activity->submissions()->with('user')->get() : $activity->submissions()->where('user_id', auth()->id())->get();
+        $collectsFeedback = $activity->kind === 'quiz' && \App\Models\AssessmentFeedback::ready();
 
         return view('activity', [...compact('activity', 'manager', 'submissions'), ...($manager ? $this->audienceOptions() : []),
-            'presentationTable' => $manager && $activity->kind === 'presentation' ? app(\App\Services\PresentationSubmissionTable::class)->data($r, $activity) : null]);
+            'presentationTable' => $manager && $activity->kind === 'presentation' ? app(\App\Services\PresentationSubmissionTable::class)->data($r, $activity) : null,
+            // Staff are asked once per assessment, after they submit; managers see everyone's answers.
+            'feedbackDue' => $collectsFeedback && ! $manager && auth()->user()->role === 'staff' && $submissions->whereNotNull('submitted_at')->isNotEmpty() && ! $activity->feedback()->where('user_id', auth()->id())->exists(),
+            'feedback' => $collectsFeedback && $manager ? $activity->feedback()->latest()->get() : null]);
     }
 
     public function question(Request $r, Activity $activity)
@@ -501,6 +505,37 @@ return view('activities', ['items' => $items, 'manager' => $manager, 'selectedKi
         Access::audit('submission.review', (string) $submission->id, $before, $submission->toArray());
 
         return back()->with('success', 'Review saved.');
+    }
+
+    /**
+     * Releases an assessment's correct answers and explanations, together with every marked score not yet released,
+     * then tells assigned staff by email and announcement. Releasing again hides the answers; nobody is emailed.
+     */
+    public function releaseAnswers(Activity $activity)
+    {
+        Access::manage('assessments');
+        $this->scope($activity);
+        abort_unless($activity->kind === 'quiz' && $activity->published && Activity::canReleaseAnswers(), 422);
+        if ($activity->answers_released_at) {
+            $activity->update(['answers_released_at' => null]);
+            Access::audit('activity.answers_hidden', (string) $activity->id);
+            app(\App\Services\ActivityEmails::class)->announce($activity);
+
+            return back()->with('success', 'Answers are hidden from staff again. Released scores stay visible.');
+        }
+        $scores = DB::transaction(function () use ($activity) {
+            $activity->update(['answers_released_at' => now()]);
+            $scores = $activity->submissions()->whereNotNull('submitted_at')->whereNotNull('score')->whereNull('released_at')->update(['released_at' => now()]);
+            Access::audit('activity.answers_released', (string) $activity->id, null, ['scores_released' => $scores]);
+
+            return $scores;
+        });
+        $emails = app(\App\Services\ActivityEmails::class);
+        $emails->announce($activity);
+        $sent = $emails->notifyAnswersReleased($activity);
+        $unmarked = $activity->submissions()->whereNotNull('submitted_at')->whereNull('score')->count();
+
+        return back()->with('success', 'Answers released.'.($scores ? ' '.$scores.' '.($scores === 1 ? 'score was' : 'scores were').' released too.' : '').' '.$sent.' assigned staff '.($sent === 1 ? 'was' : 'were').' emailed.'.($unmarked ? ' '.$unmarked.' '.($unmarked === 1 ? 'attempt still needs' : 'attempts still need').' marking before its score shows.' : ''));
     }
 
     /** Removes every attempt one person made at this activity so they can take it again. */

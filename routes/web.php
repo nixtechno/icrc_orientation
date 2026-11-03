@@ -64,9 +64,11 @@ Route::middleware(['auth', ActiveAccount::class])->group(function () {
     Route::post('/activities/{activity}', [ActivityController::class, 'update']);
     Route::post('/activities/{activity}/assignment', [ActivityController::class, 'assign']);
     Route::delete('/activities/{activity}', [ActivityController::class, 'destroy']);
-    Route::post('/activities/{activity}/reset/{user}', [ActivityController::class, 'resetAttempts']);
+    Route::post('/activities/{activity}/release-answers', [ActivityController::class, 'releaseAnswers']);
+    Route::post('/activities/{activity}/reset/{user}',[ActivityController::class, 'resetAttempts']);
     Route::post('/activities/{activity}/start', [ActivityController::class, 'start']);
     Route::post('/activities/{activity}/presentation', [ActivityController::class, 'present']);
+    Route::post('/activities/{activity}/feedback', [\App\Http\Controllers\AssessmentFeedbackController::class, 'store']);
     Route::get('/submissions/{submission}/complete', [ActivityController::class, 'complete']);
     Route::post('/submissions/{submission}/complete', [ActivityController::class, 'submit']);
     Route::post('/submissions/{submission}/draft', [\App\Http\Controllers\QuizAttemptController::class, 'draft']);

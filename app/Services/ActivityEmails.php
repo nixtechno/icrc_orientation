@@ -48,12 +48,33 @@ class ActivityEmails
         }
         [$title, $body] = $this->message($activity);
         $announcement ??= new Announcement(['activity_id' => $activity->id, 'programme_id' => $activity->programme_id, 'published_at' => now()]);
+        // Releasing answers re-dates the announcement so it shows as new again.
+        if ($announcement->exists && $announcement->title !== $title && $activity->answersReleased()) {
+            $announcement->published_at = now();
+        }
         $announcement->fill(['title' => $title, 'body' => $body, 'archived' => false])->save();
+    }
+
+    /** Emails everyone assigned who submitted the assessment that its answers are out. */
+    public function notifyAnswersReleased(Activity $activity): int
+    {
+        $people = User::whereIn('id', $activity->submissions()->whereNotNull('submitted_at')->select('user_id'))
+            ->whereIn('id', DB::table('activity_assignments')->where('activity_id', $activity->id)->select('user_id'))
+            ->where('active', true)->get();
+        $notification = new ProgrammeUpdate(...$this->message($activity));
+        foreach ($people as $person) {
+            $person->notify($notification);
+        }
+
+        return $people->count();
     }
 
     /** @return array{string, string, string, string} subject, body, link and button text */
     private function message(Activity $activity): array
     {
+        if ($activity->answersReleased()) {
+            return ['Answers released: '.$activity->title, 'The correct answers and explanations for "'.$activity->title.'" are now available.'."\n\n".'Open the assessment to see your answers beside the correct ones, with an explanation for each question.', url('/activities/'.$activity->getRouteKey()), 'See the answers'];
+        }
         $p = Access::programme();
         $when = fn ($date) => $date->timezone($p->timezone)->format('l j F Y, H:i');
         $label = $activity->label();

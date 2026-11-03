@@ -8,12 +8,12 @@
 @if($activity->time_limit) Time limit: {{ $activity->time_limit }} minutes from the start of this attempt.
 @endif</div><p class="preline">{{ $activity->instructions }}</p><form class="card" method="post" enctype="multipart/form-data" data-final-submission>@csrf
 @if($activity->kind==='quiz')
-@foreach($activity->questions as $q)<fieldset><legend>{{ $loop->iteration }}. {{ $q->prompt }} ({{ $q->points }} points)</legend>
+@foreach($submission->shuffled($activity->questions) as $q)<fieldset><legend>{{ $loop->iteration }}. {{ $q->prompt }} ({{ $q->points }} points)</legend>
 @if($q->type==='multiple_answers')<p class="muted">Select all correct answers. Full points require every correct option and no incorrect options.</p>
-@foreach($q->options as $option)<label><input type="checkbox" name="answers[{{ $q->id }}][]" value="{{ $option }}" @checked(in_array($option,(array)old('answers.'.$q->id,[]),true))>{{ $option }}</label>
+@foreach($submission->shuffledOptions($q) as $option)<label><input type="checkbox" name="answers[{{ $q->id }}][]" value="{{ $option }}" @checked(in_array($option,(array)old('answers.'.$q->id,[]),true))>{{ $option }}</label>
 @endforeach
 @elseif(in_array($q->type,['multiple_choice','true_false']))
-@foreach($q->options as $option)<label><input type="radio" name="answers[{{ $q->id }}]" value="{{ $option }}" @checked(old('answers.'.$q->id)===$option)>{{ $option }}</label>
+@foreach($submission->shuffledOptions($q) as $option)<label><input type="radio" name="answers[{{ $q->id }}]" value="{{ $option }}" @checked(old('answers.'.$q->id)===$option)>{{ $option }}</label>
 @endforeach
 @else<label>Your response<textarea name="answers[{{ $q->id }}]">{{ old('answers.'.$q->id) }}</textarea></label>
 @endif</fieldset>
