@@ -46,6 +46,8 @@ Route::middleware(['auth', ActiveAccount::class])->group(function () {
     Route::post('/announcements/{announcement}/archive', [ManagementController::class, 'archiveAnnouncement']);
     Route::get('/settings', [ManagementController::class, 'settings']);
     Route::post('/settings', [ManagementController::class, 'saveSettings']);
+    Route::post('/training-feedback', [\App\Http\Controllers\TrainingFeedbackController::class, 'store']);
+    Route::get('/training-feedback', [\App\Http\Controllers\TrainingFeedbackController::class, 'index']);
     Route::post('/settings/tools/{job}', [\App\Http\Controllers\DataToolsController::class, 'run']);
     Route::get('/audit', [ManagementController::class, 'audit']);
     Route::get('/activities', [ActivityController::class, 'index']);
@@ -68,7 +70,6 @@ Route::middleware(['auth', ActiveAccount::class])->group(function () {
     Route::post('/activities/{activity}/reset/{user}',[ActivityController::class, 'resetAttempts']);
     Route::post('/activities/{activity}/start', [ActivityController::class, 'start']);
     Route::post('/activities/{activity}/presentation', [ActivityController::class, 'present']);
-    Route::post('/activities/{activity}/feedback', [\App\Http\Controllers\AssessmentFeedbackController::class, 'store']);
     Route::get('/submissions/{submission}/complete', [ActivityController::class, 'complete']);
     Route::post('/submissions/{submission}/complete', [ActivityController::class, 'submit']);
     Route::post('/submissions/{submission}/draft', [\App\Http\Controllers\QuizAttemptController::class, 'draft']);

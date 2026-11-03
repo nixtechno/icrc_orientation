@@ -56,7 +56,7 @@ class DailyAttendanceController extends Controller
         $expected = $day?->attendance_required && ! $day->cancelled && $date >= Access::programme()->starts_on->toDateString() && $date <= Access::programme()->ends_on->toDateString() ? (int) $totals->staff_count : 0;
         $present = (int) $totals->signed_in;
         $out = (int) $totals->signed_out;
-        $counts = ['Expected' => $expected, 'Present' => $present, 'Not yet signed in' => max(0, $expected - $present), 'On time' => (int) $totals->on_time, 'Late' => (int) $totals->late, 'Currently signed in' => $present - $out, 'Signed out' => $out, 'Attendance %' => $expected ? round(100 * $present / $expected, 1).'%' : 'N/A'];
+        $counts = ['Expected' => $expected, 'Present' => $present, 'Not yet signed in' => max(0, $expected - $present), 'On time' => (int) $totals->on_time, 'Late' => (int) $totals->late, 'Did not sign out' => $present - $out, 'Signed out' => $out, 'Attendance %' => $expected ? round(100 * $present / $expected, 1).'%' : 'N/A'];
         if ($r->filled('status')) {
             match ($r->status) {
                 'pending' => $q->where(fn ($query) => $query->whereNull('live_record.status')->orWhere('live_record.status', 'pending')),

@@ -209,13 +209,9 @@ return view('activities', ['items' => $items, 'manager' => $manager, 'selectedKi
             }
         }$activity->load('questions');
         $submissions = $manager ? $activity->submissions()->with('user')->get() : $activity->submissions()->where('user_id', auth()->id())->get();
-        $collectsFeedback = $activity->kind === 'quiz' && \App\Models\AssessmentFeedback::ready();
 
         return view('activity', [...compact('activity', 'manager', 'submissions'), ...($manager ? $this->audienceOptions() : []),
-            'presentationTable' => $manager && $activity->kind === 'presentation' ? app(\App\Services\PresentationSubmissionTable::class)->data($r, $activity) : null,
-            // Staff are asked once per assessment, after they submit; managers see everyone's answers.
-            'feedbackDue' => $collectsFeedback && ! $manager && auth()->user()->role === 'staff' && $submissions->whereNotNull('submitted_at')->isNotEmpty() && ! $activity->feedback()->where('user_id', auth()->id())->exists(),
-            'feedback' => $collectsFeedback && $manager ? $activity->feedback()->latest()->get() : null]);
+            'presentationTable' => $manager && $activity->kind === 'presentation' ? app(\App\Services\PresentationSubmissionTable::class)->data($r, $activity) : null]);
     }
 
     public function question(Request $r, Activity $activity)
@@ -320,13 +316,14 @@ return view('activities', ['items' => $items, 'manager' => $manager, 'selectedKi
     {
         $this->participant($activity);
         abort_unless(auth()->user()->role === 'staff', 403);
-        $r->validate(['fullscreen'=>'sometimes|boolean']);
+        $r->validate(['fullscreen'=>'sometimes|boolean','device'=>'sometimes|nullable|string|max:3000']);
+        $device = \App\Models\Submission::deviceFrom($r);
         if ($r->boolean('fullscreen')) {
             abort_unless($activity->kind === 'quiz', 422);
             $r->validate(['policy_acknowledged'=>'accepted','launch_token'=>'required|string|between:16,100']);
         }
         abort_if(($activity->due_at && now()->gt($activity->due_at)) || ($activity->available_at && now()->lt($activity->available_at)), 422, 'Activity is outside its availability window.');
-        $submission = DB::transaction(function () use ($activity, $r) {
+        $submission = DB::transaction(function () use ($activity, $r, $device) {
             User::whereKey(auth()->id())->lockForUpdate()->firstOrFail();
             $q = $activity->submissions()->where('user_id', auth()->id());
             abort_if($activity->kind === 'quiz' && (clone $q)->whereNotNull('submitted_at')->exists(), 422, 'This assessment has already been submitted. You cannot take it again.');
@@ -336,11 +333,11 @@ return view('activities', ['items' => $items, 'manager' => $manager, 'selectedKi
                     if ($r->boolean('fullscreen') && $open->launch_token_hash && hash_equals($open->launch_token_hash,hash('sha256',$r->input('launch_token')))) return $open;
                     return app(\App\Services\QuizAttemptService::class)->finalize($open,'reopened');
                 }
-                if ($r->boolean('fullscreen')) $open->forceFill(['fullscreen_started_at'=>now(),'launch_token_hash'=>hash('sha256',$r->input('launch_token'))])->save();
+                if ($r->boolean('fullscreen')) $open->forceFill(['fullscreen_started_at'=>now(),'launch_token_hash'=>hash('sha256',$r->input('launch_token')),...($device?['device'=>$device]:[])])->save();
                 return $open;
             }abort_if($q->count() >= $activity->attempts, 422, 'No attempts remaining.');
 
-            return Submission::create(['activity_id' => $activity->id, 'user_id' => auth()->id(), 'attempt' => $q->count() + 1, 'started_at' => now(),'fullscreen_started_at'=>$r->boolean('fullscreen')?now():null,'launch_token_hash'=>$r->boolean('fullscreen')?hash('sha256',$r->input('launch_token')):null]);
+            return Submission::create(['activity_id' => $activity->id, 'user_id' => auth()->id(), 'attempt' => $q->count() + 1, 'started_at' => now(),'fullscreen_started_at'=>$r->boolean('fullscreen')?now():null,'launch_token_hash'=>$r->boolean('fullscreen')?hash('sha256',$r->input('launch_token')):null,...($device?['device'=>$device]:[])]);
         });
 
         if ($r->expectsJson()) return response()->json(['submitted'=>(bool)$submission->submitted_at,'url'=>url('/submissions/'.$submission->getRouteKey().'/complete'),'return_url'=>url('/activities/'.$activity->getRouteKey())])->header('Cache-Control','private, no-store');

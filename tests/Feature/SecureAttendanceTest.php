@@ -232,7 +232,7 @@ class SecureAttendanceTest extends TestCase
         $this->travelTo(now()->addMinutes(6));
         $this->assertSame($qr, $this->get('/attendance/qr')->getContent());
         $this->get('/attendance/qr/in.svg')->assertOk()->assertHeader('Content-Type', 'image/svg+xml');
-        $this->get('/attendance/live?name='.urlencode($this->staff->name))->assertOk()->assertSee('Currently signed in')->assertSee('Verified');
+        $this->get('/attendance/live?name='.urlencode($this->staff->name))->assertOk()->assertSee('Did not sign out')->assertSee('Verified');
         $this->get('/attendance/security/audit')->assertOk();
         foreach (['daily', 'individual', 'department', 'late', 'incomplete', 'summary'] as $mode) {
             $this->get('/reports/export?report=attendance&attendance_mode='.$mode.'&format=csv')->assertOk();

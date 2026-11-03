@@ -1,4 +1,4 @@
-/* Post-assessment feedback dialog and the managers' summary of it. */
+/* Daily training feedback dialog and the managers' summary of it. */
 .feedback-dialog{width:min(540px,calc(100vw - 24px));max-height:calc(100dvh - 32px);padding:0;border:0;border-radius:20px;box-shadow:0 30px 80px #0b2a1a4d;color:var(--ink);overflow:hidden;background:#fff}
 .feedback-dialog[open]{animation:feedback-in .22s ease-out}
 @keyframes feedback-in{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
@@ -10,7 +10,7 @@
 .feedback-progress{margin-top:14px}
 .feedback-progress[hidden]{display:none}
 .feedback-count{display:block;margin-bottom:7px;font-size:12px;font-weight:700;color:#d8efe0}
-.feedback-progress ol{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin:0;padding:0;list-style:none}
+.feedback-progress ol{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:5px;margin:0;padding:0;list-style:none}
 .feedback-progress li{height:5px;border-radius:999px;background:#ffffff38;transition:background .2s}
 .feedback-progress li.is-done{background:#9fd8b4}
 .feedback-progress li.is-current{background:#fff}
@@ -27,6 +27,8 @@
 .feedback-score span{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--muted)}
 .feedback-score strong{font-size:30px;line-height:1.1;color:#185538}
 .feedback-score small{font-size:16px;color:var(--muted)}
+.feedback-meta{margin:12px 0 0!important;font-size:12px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#185538}
+.feedback-scale{display:inline-block;margin:10px auto 0!important;padding:6px 12px;border-radius:999px;background:#f3f6f1;font-size:12px;color:var(--muted)}
 .feedback-intro{max-width:400px;margin:16px auto 0!important;font-size:14px;line-height:1.5;color:var(--muted)}
 .feedback-step legend,.feedback-step-title{margin:0;padding:0;font-size:20px;font-weight:800}
 .feedback-question{margin:6px 0 0;font-size:15px;line-height:1.45;color:#3d4b43}
@@ -66,3 +68,6 @@
 .feedback-comments li{padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
 .feedback-comments li:last-child{border-bottom:0}
 .feedback-comments small{display:block;color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.feedback-summary-days{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.feedback-summary-days a{padding:6px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;text-decoration:none}
+.feedback-summary-days a[aria-current]{border-color:#176b45;background:#e3f2e8;font-weight:800}

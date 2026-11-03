@@ -11,7 +11,13 @@
 @else<p class="muted">The database is up to date.</p>@endif
 </section>
 
-<section class="card settings-tool" aria-labelledby="tool-days">
+@if($t['feedbackTime'])<section class="card settings-tool" aria-labelledby="tool-feedback">
+<h2 id="tool-feedback">Daily training feedback time</h2>
+<p class="muted">On each programme day the feedback form pops up on the portal for staff at this time ({{ \App\Services\Access::programme()->timezoneLabel() }} time). It is compulsory: it stays open until they send it. <a href="/training-feedback">See the feedback</a>.</p>
+@unless($t['venue'])<form method="post" action="/settings/tools/feedback-time" class="settings-tool-inline">@csrf<label>Opens at<input type="time" name="time" value="{{ $t['feedbackTime'] }}" required></label><button>Save time</button></form>@else<p>Opens at {{ $t['feedbackTime'] }}.</p>@endunless
+</section>
+
+@endif<section class="card settings-tool" aria-labelledby="tool-days">
 <h2 id="tool-days">Take attendance all day</h2>
 <p class="muted">Every programme day records every scan, from 00:00 to 23:59, with no late time. Cancelled days are left alone.</p>
 @if($t['notAllDay'])<p>{{ $t['notAllDay'] }} programme {{ $t['notAllDay'] === 1 ? 'day is' : 'days are' }} not set up this way yet.</p>

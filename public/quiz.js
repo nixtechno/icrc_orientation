@@ -16,6 +16,13 @@
   const inside=()=>state.focus?document.visibilityState==='visible':fullscreenElement()===stage;
   const exitReason=()=>state.focus?'page_exit':'fullscreen_exit';
   const setFocus=on=>document.documentElement.classList.toggle('quiz-focus-mode',on);
+  // Recorded with the attempt so automatic submissions can be traced to a device type or brand. Chrome on Android
+  // reports the model (e.g. SM-T505); touch support tells an iPad apart from a Mac.
+  const deviceDetails=async()=>{
+   let model='';
+   try{model=(await navigator.userAgentData?.getHighEntropyValues?.(['model']))?.model||'';}catch{}
+   return JSON.stringify({model,touch:navigator.maxTouchPoints||0,screen:`${screen.width}x${screen.height}`,standalone:installed()});
+  };
   const stopTimers=()=>{clearTimeout(saveTimer);clearInterval(saveInterval);clearInterval(clockInterval);};
   const capture=reason=>{
    const data=state.form?new FormData(state.form):new FormData();
@@ -125,7 +132,7 @@
    }
    try{
     state.launchToken??=window.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}-quiz`;
-    const data=await json(entry.dataset.startUrl,new URLSearchParams({_token:token,fullscreen:'1',policy_acknowledged:'1',launch_token:state.launchToken}));
+    const data=await json(entry.dataset.startUrl,new URLSearchParams({_token:token,fullscreen:'1',policy_acknowledged:'1',launch_token:state.launchToken,device:await deviceDetails()}));
     if(data.submitted){returnToActivity(data);return;}
     state.finishUrl=data.url.replace(/\/complete(?:\?.*)?$/,'/auto-submit');state.returnUrl=data.return_url;
     if(state.exitRequested||!inside()){finish(exitReason());return;}

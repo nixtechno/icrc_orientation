@@ -17,4 +17,5 @@
 <link rel="stylesheet" href="{{ asset('form-ui.css') }}?v=20261030b">
 <main id="main" class="{{ $portal?'workspace':'public-main' }}">@if($programme?->settings['demo_mode']??false)<div class="notice" role="note"><strong>DEMO ENVIRONMENT</strong> &middot; Synthetic test data in a separate database. Attendance records are simulated.</div>@endif {{-- Pages with their own narrow container can place the alerts and back link inside it. --}}@unless(View::hasSection('inline-alerts'))@include('partials.alerts') @include('partials.back-link')@endunless @yield('content')</main></div>
 @if($portal)</div></div>@else @include('partials.footer') @endif
+@if($portal&&$programme&&($feedbackOpens=\App\Models\TrainingFeedback::opensFor(auth()->user())))@include('partials.training-feedback-dialog',['opens'=>$feedbackOpens])@endif
 </body></html>

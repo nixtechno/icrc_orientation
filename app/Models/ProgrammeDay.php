@@ -14,6 +14,11 @@ class ProgrammeDay extends Model
         return ['date' => 'date', 'attendance_required' => 'boolean', 'cancelled' => 'boolean'];
     }
 
+    public function feedback()
+    {
+        return $this->hasMany(TrainingFeedback::class);
+    }
+
     public function week()
     {
         return $this->belongsTo(ProgrammeWeek::class, 'programme_week_id');

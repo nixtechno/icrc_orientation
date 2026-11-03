@@ -12,7 +12,7 @@
 @if($quizLaunchUnavailable)
 <p class="notice" role="status"><strong>{{ $quizLaunchUnavailable }}</strong></p>
 @else
-<script src="{{ asset('quiz.js') }}?v=20261102b" defer></script>
+<script src="{{ asset('quiz.js') }}?v=20261103a" defer></script>
 <link rel="stylesheet" href="{{ asset('quiz.css') }}?v=20261102b">
 <div data-quiz-entry data-start-url="/activities/{{ $activity->getRouteKey() }}/start">
 @csrf

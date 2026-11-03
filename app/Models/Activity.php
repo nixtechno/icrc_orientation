@@ -48,12 +48,7 @@ class Activity extends Model
         return $this->hasMany(Submission::class);
     }
 
-    public function feedback()
-    {
-        return $this->hasMany(AssessmentFeedback::class);
-    }
-
-    /** Facilitators of the timetable session this activity belongs to, named in the feedback dialog. */
+    /** Facilitators of the timetable session this activity belongs to. */
     public function facilitatorNames(): array
     {
         if (! $this->session_id) {

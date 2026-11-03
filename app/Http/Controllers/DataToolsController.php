@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Artisan;
 
 /**
  * One-off maintenance jobs administrators run from Programme settings instead of the server command line:
- * attendance days, sign-ins from badge print times, badges printed without being recorded, collected badges and database updates.
+ * attendance days, sign-ins from badge print times, badges printed without being recorded, collected badges, the daily feedback time and database updates.
  */
 class DataToolsController extends Controller
 {
@@ -31,6 +31,7 @@ class DataToolsController extends Controller
             'uncollected' => app(BadgeService::class)->markPrintedCollected(false),
             'unrecorded' => app(BadgeService::class)->unrecordedPrints(),
             'pending' => self::pendingMigrations(),
+            'feedbackTime' => \App\Models\TrainingFeedback::ready() ? \App\Models\TrainingFeedback::time(Access::programme()) : null,
         ];
     }
 
@@ -59,9 +60,22 @@ class DataToolsController extends Controller
             'signed-out-only' => $this->signedOutOnly($r),
             'badges-printed' => $back->with('success', app(BadgeService::class)->recordPrints(array_map('intval', $r->validate(['badges' => 'required|array|min:1', 'badges.*' => 'integer'])['badges'])).' badges are now marked printed and collected.'),
             'badges-collected' =>$back->with('success', app(BadgeService::class)->markPrintedCollected().' printed badges are now marked as collected at their print time.'),
+            'feedback-time' => $this->feedbackTime($r, $back),
             'database' => $this->database($back),
             default => abort(404),
         };
+    }
+
+    /** When the daily training feedback opens on the portal, in programme time. */
+    private function feedbackTime(Request $r, $back)
+    {
+        $time = $r->validate(['time' => 'required|date_format:H:i'])['time'];
+        $programme = Access::programme();
+        $before = \App\Models\TrainingFeedback::time($programme);
+        $programme->update(['settings' => [...($programme->settings ?? []), 'feedback_time' => $time]]);
+        Access::audit('training.feedback_time', (string) $programme->id, ['time' => $before], ['time' => $time]);
+
+        return $back->with('success', 'Daily training feedback now opens at '.$time.'.');
     }
 
     private function signIns(Request $r, $back)
