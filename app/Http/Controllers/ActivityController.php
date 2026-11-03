@@ -503,6 +503,24 @@ return view('activities', ['items' => $items, 'manager' => $manager, 'selectedKi
         return back()->with('success', 'Review saved.');
     }
 
+    /** Removes every attempt one person made at this activity so they can take it again. */
+    public function resetAttempts(Activity $activity, User $user)
+    {
+        Access::manage('assessments');
+        $this->scope($activity);
+        $q = $activity->submissions()->where('user_id', $user->id);
+        $paths = (clone $q)->whereNotNull('path')->pluck('path');
+        $count = DB::transaction(function () use ($activity, $user, $q) {
+            Access::audit('submission.reset', (string) $activity->id, null, ['user_id' => $user->id, 'attempts' => (clone $q)->count()]);
+
+            return $q->delete();
+        });
+        Storage::disk('local')->delete($paths->all());
+        abort_unless($count, 404);
+
+        return back()->with('success', $user->name.' can now take “'.$activity->title.'” again.');
+    }
+
     public function download(Submission $submission)
     {
         $this->scope($submission->activity);

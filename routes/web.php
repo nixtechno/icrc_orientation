@@ -64,6 +64,7 @@ Route::middleware(['auth', ActiveAccount::class])->group(function () {
     Route::post('/activities/{activity}', [ActivityController::class, 'update']);
     Route::post('/activities/{activity}/assignment', [ActivityController::class, 'assign']);
     Route::delete('/activities/{activity}', [ActivityController::class, 'destroy']);
+    Route::post('/activities/{activity}/reset/{user}', [ActivityController::class, 'resetAttempts']);
     Route::post('/activities/{activity}/start', [ActivityController::class, 'start']);
     Route::post('/activities/{activity}/presentation', [ActivityController::class, 'present']);
     Route::get('/submissions/{submission}/complete', [ActivityController::class, 'complete']);

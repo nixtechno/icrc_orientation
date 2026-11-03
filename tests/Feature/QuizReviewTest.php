@@ -44,7 +44,7 @@ class QuizReviewTest extends TestCase
         return app(QuizAttemptService::class)->finalize($submission, 'manual', $answers);
     }
 
-    public function test_released_results_show_the_score_on_the_card_and_mark_each_question(): void
+    public function test_released_results_show_the_score_but_only_the_staff_members_own_answers(): void
     {
         $quiz = $this->quiz([
             ['type' => 'multiple_choice', 'prompt' => 'Which body regulates concessions?', 'options' => ['ICRC', 'CBN', 'NCC'], 'correct_answer' => 'ICRC', 'points' => 2, 'explanation' => 'ICRC was set up to regulate concessions.'],
@@ -58,15 +58,29 @@ class QuizReviewTest extends TestCase
         $this->actingAs($this->staff)->get('/activities?kind=quiz')->assertOk()->assertSeeInOrder(['class="activity-card-score"', '3', '/5', '60%'], false);
 
         $page = $this->get('/activities/'.$quiz->slug)->assertOk()->getContent();
-        $this->assertStringContainsString('quiz-review-tile is-correct', $page);
-        $this->assertSame(2, substr_count($page, 'quiz-review-tile is-correct'));
-        $this->assertSame(1, substr_count($page, 'quiz-review-tile is-wrong'));
+        $this->assertSame(3, substr_count($page, 'quiz-review-tile is-answered'));
         $this->assertSame(1, substr_count($page, 'quiz-review-tile is-unanswered'));
-        $this->assertStringContainsString('Your answer · Incorrect', $page);
-        $this->assertStringContainsString('Correct answer', $page);
-        $this->assertStringContainsString('ICRC was set up to regulate concessions.', $page);
-        $this->assertSame(1, substr_count($page, 'class="quiz-review-explanation"'));
+        $this->assertStringContainsString('Your answer', $page);
+        foreach (['is-correct', 'is-wrong', 'Correct answer', 'Incorrect', 'ICRC was set up to regulate concessions.', 'quiz-review-explanation'] as $hidden) {
+            $this->assertStringNotContainsString($hidden, $page);
+        }
         $this->assertStringNotContainsString('<h2>Instructions</h2>', $page);
+    }
+
+    public function test_managers_can_reset_a_persons_attempts_so_they_can_take_it_again(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'active' => true]); $admin->programmes()->attach(Programme::first()->id);
+        $quiz = $this->quiz([['type' => 'true_false', 'prompt' => 'Retake me', 'options' => ['True', 'False'], 'correct_answer' => 'True']]);
+        $this->submit($quiz, [$quiz->questions[0]->id => 'False']);
+        $reset = '/activities/'.$quiz->slug.'/reset/'.$this->staff->getRouteKey();
+
+        $this->actingAs($this->staff)->post($reset)->assertForbidden();
+        $this->actingAs($admin)->get('/activities/'.$quiz->slug)->assertSee($reset, false);
+        $this->post($reset)->assertSessionHas('success');
+        $this->assertSame(0, $quiz->submissions()->count());
+
+        $this->actingAs($this->staff)->post('/activities/'.$quiz->slug.'/start')->assertRedirect();
+        $this->assertSame(1, $quiz->submissions()->count());
     }
 
     public function test_results_awaiting_marking_hide_correct_answers_and_explanations(): void
