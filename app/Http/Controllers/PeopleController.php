@@ -361,6 +361,16 @@ return redirect('/manage/staff')->with('success', "Import complete: {$summary['c
         return redirect('/manage/staff')->with('success', $user->name.' ('.$user->email.') was deleted. A backup was saved to storage/app/private/'.$backup.'.');
     }
 
+    /** A printable report card of one person's attendance, assessments and assignments, opened in its own tab. */
+    public function reportCard(User $user, \App\Services\ReportCard $cards)
+    {
+        Access::manage('staff');
+        $this->allowed($user);
+        abort_unless($user->role === 'staff', 404);
+
+        return view('people.report-card', $cards->for($user));
+    }
+
     public function photo(User $user)
     {
         Access::enrolled();

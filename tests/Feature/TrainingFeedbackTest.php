@@ -112,8 +112,21 @@ class TrainingFeedbackTest extends TestCase
         $this->post('/settings/tools/cache')->assertRedirect('/settings?tab=tools')->assertSessionHas('success');
     }
 
+    public function test_today_shows_before_anyone_has_responded(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'active' => true]); $admin->programmes()->attach(Programme::first()->id);
+        $yesterday = ProgrammeDay::whereHas('week', fn ($q) => $q->where('programme_id', Programme::first()->id))->whereKeyNot($this->day->id)->orderBy('date')->firstOrFail();
+        $yesterday->update(['date' => '2026-11-02']);
+        TrainingFeedback::create(['programme_id' => Programme::first()->id, 'programme_day_id' => $yesterday->id, 'user_id' => $this->staff->id, ...$this->ratings(), 'comment' => 'Yesterday was good.']);
+
+        $this->actingAs($admin)->get('/training-feedback')->assertOk()
+            ->assertSee('Tuesday 3 November 2026')->assertSee('No responses yet today.')->assertDontSee('Yesterday was good.')
+            ->assertSee('/training-feedback?day='.$yesterday->id, false);
+    }
+
     public function test_managers_see_everyone_with_their_ratings_and_suggestions_one_day_per_page(): void
     {
+        $this->staff->update(['name' => 'Zara Musa']);
         $other = User::factory()->create(['role' => 'staff', 'active' => true, 'name' => 'Grace Okafor']); $other->programmes()->attach(Programme::first()->id);
         TrainingFeedback::create(['programme_id' => Programme::first()->id, 'programme_day_id' => $this->day->id, 'user_id' => $this->staff->id, ...$this->ratings(), 'comment' => 'Slides were clear.']);
         TrainingFeedback::create(['programme_id' => Programme::first()->id, 'programme_day_id' => $this->day->id, 'user_id' => $other->id, ...$this->ratings(['facilitator_rating' => 4])]);
@@ -124,7 +137,7 @@ class TrainingFeedbackTest extends TestCase
         $page = $this->get('/training-feedback')->assertOk()->assertSee('Tuesday 3 November 2026')->assertSee('2 responses')
             ->assertSeeInOrder(['Overall session', '4.0', 'Instructor', '4.5', 'Food and refreshments', '3.0'])->assertSee('Slides were clear.')->getContent();
         // Everyone is listed by name, with each rating and their suggestion.
-        $this->assertMatchesRegularExpression('/Grace Okafor.*?is-4">4<.*?—.*?'.preg_quote($this->staff->name, '/').'.*?is-5">5<.*?Slides were clear\./s', substr($page, strpos($page, 'feedback-table')));
+        $this->assertMatchesRegularExpression('/Grace Okafor.*?is-4"[^>]*>4<.*?—.*?'.preg_quote($this->staff->name, '/').'.*?is-5"[^>]*>5<.*?Slides were clear\./s', substr($page, strpos($page, 'feedback-table')));
 
         // Each programme day is its own page.
         $later = ProgrammeDay::whereHas('week', fn ($q) => $q->where('programme_id', Programme::first()->id))->whereKeyNot($this->day->id)->orderBy('date')->firstOrFail();

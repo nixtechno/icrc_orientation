@@ -40,10 +40,13 @@ class TrainingFeedbackController extends Controller
         Access::manage('reports');
         abort_unless(TrainingFeedback::ready(), 404);
         $programme = Access::programme();
-        $days = ProgrammeDay::whereHas('week', fn ($q) => $q->where('programme_id', $programme->id))->whereHas('feedback')->orderByDesc('date')->get();
+        // Days with responses, plus today on a training day so it shows even before the first response arrives.
+        $today = TrainingFeedback::today($programme);
+        $days = ProgrammeDay::whereHas('week', fn ($q) => $q->where('programme_id', $programme->id))
+            ->where(fn ($q) => $q->whereHas('feedback')->when($today, fn ($q) => $q->orWhere('id', $today->id)))->orderByDesc('date')->get();
         $day = $days->firstWhere('id', (int) $r->query('day')) ?? $days->first();
 
         return view('training-feedback', ['days' => $days, 'day' => $day, 'feedback' => $day ? TrainingFeedback::where('programme_day_id', $day->id)->with('user')->get()->sortBy(fn ($f) => mb_strtolower($f->user?->name ?? ''))->values() : collect(),
-            'time' => TrainingFeedback::time($programme), 'staff' => Access::staff()->count()]);
+            'time' => TrainingFeedback::time($programme), 'staff' => Access::staff()->count(), 'today' => $today]);
     }
 }

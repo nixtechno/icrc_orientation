@@ -90,6 +90,7 @@ Route::middleware(['auth', ActiveAccount::class])->group(function () {
     Route::post('/manage/staff/invitations/preview', [PeopleController::class, 'invitationPreview']);
     Route::post('/manage/staff/invitations/send', [PeopleController::class, 'sendInvitations']);
     Route::post('/manage/staff/invitations/template', [PeopleController::class, 'invitationTemplate']);
+    Route::get('/manage/staff/{user}/report-card', [PeopleController::class, 'reportCard']);
     Route::get('/manage/staff/{user}',[PeopleController::class, 'form']);
     Route::post('/manage/staff/{user}', [PeopleController::class, 'save']);
     Route::delete('/manage/staff/{user}', [PeopleController::class, 'destroy']);
