@@ -54,6 +54,19 @@ class ReportController extends Controller
             'Content-Disposition' => 'inline; filename="icrc-scodex-programme-report-'.now($p->timezone)->format('Y-m-d').'.pdf"', 'Cache-Control' => 'private, no-store']);
     }
 
+    /** Every staff member's attendance for each day so far and their assessment results, as one Excel sheet. */
+    public function register()
+    {
+        Access::manage('reports');
+        $p = Access::programme();
+        $book = app(\App\Services\StaffRegister::class)->build();
+        Access::audit('report.staff_register', (string) $p->id);
+
+        return response()->streamDownload(fn () => (new Xlsx($book))->save('php://output'),
+            'icrc-staff-attendance-assessments-'.now($p->timezone ?: 'Africa/Lagos')->format('Y-m-d').'.xlsx',
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Cache-Control' => 'private, no-store']);
+    }
+
     /** Merges every other profile in a duplicate group into the one chosen to keep. */
     public function mergeDuplicates(Request $r, \App\Services\PersonMerge $merge)
     {

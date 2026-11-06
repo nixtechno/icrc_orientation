@@ -79,6 +79,7 @@ Route::middleware(['auth', ActiveAccount::class])->group(function () {
     Route::get('/reports', [ReportController::class, 'index']);
     Route::get('/reports/export', [ReportController::class, 'export']);
     Route::get('/reports/pdf', [ReportController::class, 'pdf']);
+    Route::get('/reports/register', [ReportController::class, 'register']);
     Route::post('/reports/duplicates/merge', [ReportController::class, 'mergeDuplicates']);
     Route::post('/reports/duplicates/dismiss', [ReportController::class, 'dismissDuplicates']);
     Route::get('/manage/staff', [PeopleController::class, 'index']);

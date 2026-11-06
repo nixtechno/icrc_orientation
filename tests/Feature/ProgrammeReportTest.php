@@ -116,6 +116,33 @@ class ProgrammeReportTest extends TestCase
         $this->get('/reports/pdf')->assertOk()->assertHeader('Content-Type', 'application/pdf');
     }
 
+    public function test_the_excel_lists_each_staff_members_days_and_assessment_results(): void
+    {
+        [$amina, $grace, $tunde] = [$this->person('Amina Bello'), $this->person('Grace Okafor'), $this->person('Tunde Ade')];
+        $this->signIn($amina, '08:10', '16:05');
+        $this->signIn($grace, '08:20');
+        $quiz = Activity::create(['programme_id' => $this->programme->id, 'kind' => 'quiz', 'title' => 'Day 1', 'instructions' => 'Go', 'due_at' => now()->addDay(), 'attempts' => 2, 'published' => true]);
+        $quiz->participants()->attach([$amina->id, $grace->id]);
+        Question::create(['activity_id' => $quiz->id, 'type' => 'true_false', 'prompt' => 'True?', 'options' => ['True', 'False'], 'correct_answer' => 'True', 'points' => 4]);
+        foreach ([[1, 0], [2, 3]] as [$attempt, $score]) {
+            Submission::create(['activity_id' => $quiz->id, 'user_id' => $amina->id, 'attempt' => $attempt, 'started_at' => now(), 'submitted_at' => now(), 'released_at' => now(), 'score' => $score]);
+        }
+
+        $this->actingAs($this->admin)->get('/reports')->assertSee('/reports/register', false);
+        $response = $this->get('/reports/register')->assertOk()->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $path = tempnam(sys_get_temp_dir(), 'register');
+        file_put_contents($path, $response->streamedContent());
+        $sheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($path)->getActiveSheet();
+        unlink($path);
+
+        $this->assertSame(['Name', 'Mon 2 Nov', 'Day 1 (Assessment)'], [$sheet->getCell('B4')->getValue(), $sheet->getCell('F4')->getValue(), $sheet->getCell('G4')->getValue()]);
+        $rows = collect(range(5, 7))->mapWithKeys(fn ($r) => [$sheet->getCell("B$r")->getValue() => [$sheet->getCell("F$r")->getValue(), $sheet->getCell("G$r")->getValue()]]);
+        $this->assertEquals(['Amina Bello' => ['P', 0.75], 'Grace Okafor' => ['In only', 'Not submitted'], 'Tunde Ade' => ['A', 'Not assigned']], $rows->all());
+        $this->assertSame(['Attended', 2], [$sheet->getCell('B8')->getValue(), $sheet->getCell('F8')->getCalculatedValue()]);
+        $this->assertNull($sheet->getCell('H4')->getValue());
+        $this->actingAs($amina)->get('/reports/register')->assertForbidden();
+    }
+
     public function test_any_scan_counts_as_attended_even_on_a_day_not_set_to_take_attendance(): void
     {
         [$amina, $grace, $tunde] = [$this->person('Amina Bello'), $this->person('Grace Okafor'), $this->person('Tunde Ade')];
