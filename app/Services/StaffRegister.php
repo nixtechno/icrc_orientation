@@ -49,12 +49,12 @@ class StaffRegister
 
         $ws->setCellValue('A1', $p->title.' — Staff attendance and assessments (as of '.now($p->timezone ?: 'Africa/Lagos')->format('j M Y, H:i').')');
         $ws->getStyle('A1')->getFont()->setBold(true)->setSize(13);
-        $ws->setCellValue('A2', 'Days: P = signed in and out · In only / Out only = one scan · A = absent · '.self::NOT_ENROLLED.' = not yet enrolled. '
-            .'Assessments: % = released score on the latest attempt · Submitted = awaiting release · Not submitted · Not assigned.');
+        $ws->setCellValue('A2', 'Days: Present = signed in or out that day · Absent = no scan · '.self::NOT_ENROLLED.' = not yet enrolled. '
+            .'Assessments: the score on the latest attempt, out of the points in the heading · Awaiting marking · Not submitted · Not assigned.');
         $ws->getStyle('A2')->getFont()->setItalic(true)->setSize(9);
 
         $heads = ['S/N', 'Name', 'Staff No.', 'Email', 'Account', ...$days->map(fn ($d) => $d->date->format('D j M'))->all(),
-            ...$activities->map(fn ($a) => $a->title.' ('.ucfirst($a->label()).')')->all()];
+            ...$activities->map(fn ($a) => $a->title.' ('.ucfirst($a->label()).((float) $a->total_points > 0 ? ', out of '.(float) $a->total_points : '').')')->all()];
         $first = 6;
         $lastDay = $first + $days->count() - 1;
         $last = count($heads);
@@ -67,21 +67,18 @@ class StaffRegister
             foreach ($days as $day) {
                 $r = $records->get($u->id.':'.$day->id);
                 $cells[] = match (true) {
-                    $r && $r->checked_in_at && $r->checked_out_at => 'P',
-                    $r && $r->checked_in_at => 'In only',
-                    $r && $r->checked_out_at => 'Out only',
+                    $r && ($r->checked_in_at || $r->checked_out_at) => 'Present',
                     $since && $since > $day->date->toDateString() => self::NOT_ENROLLED,
-                    default => 'A',
+                    default => 'Absent',
                 };
             }
             foreach ($activities as $a) {
                 $s = $latest->get($a->id.':'.$u->id);
-                $total = (float) $a->total_points;
                 $cells[] = match (true) {
                     ! $assigned->has($a->id.':'.$u->id) => 'Not assigned',
                     ! $s || ! $s->submitted_at => 'Not submitted',
-                    $a->kind === 'quiz' && $s->released_at && $s->score !== null && $total > 0 => round($s->score / $total, 4),
-                    default => 'Submitted',
+                    $s->score !== null => (float) $s->score,
+                    default => 'Awaiting marking',
                 };
             }
             $ws->fromArray($cells, null, 'A'.$row, true);
@@ -90,9 +87,9 @@ class StaffRegister
         $end = max(5, $row - 1);
 
         if ($days->isNotEmpty() && $staff->isNotEmpty()) {
-            $any = 'COUNTIF(%1$s,"P")+COUNTIF(%1$s,"In only")+COUNTIF(%1$s,"Out only")';
+            $any = 'COUNTIF(%1$s,"Present")';
             $due = 'COUNTA(%1$s)-COUNTIF(%1$s,"'.self::NOT_ENROLLED.'")';
-            foreach (['Attended' => '='.$any, 'Absent' => '=COUNTIF(%1$s,"A")', 'Attendance %' => '=IF('.$due.'=0,"",('.$any.')/('.$due.'))'] as $label => $formula) {
+            foreach (['Present' => '='.$any, 'Absent' => '=COUNTIF(%1$s,"Absent")', 'Attendance %' => '=IF('.$due.'=0,"",('.$any.')/('.$due.'))'] as $label => $formula) {
                 $ws->setCellValue('B'.$row, $label);
                 for ($c = $first; $c <= $lastDay; $c++) {
                     $ws->setCellValue($col($c).$row, sprintf($formula, $col($c).'5:'.$col($c).$end));
@@ -114,7 +111,7 @@ class StaffRegister
         }
         if ($days->isNotEmpty()) {
             $marks = [];
-            foreach (['P' => 'C6EFCE', 'In only' => 'FFEB9C', 'Out only' => 'FFEB9C', 'A' => 'FFC7CE'] as $value => $rgb) {
+            foreach (['Present' => 'C6EFCE', 'Absent' => 'FFC7CE'] as $value => $rgb) {
                 $mark = (new Conditional)->setConditionType(Conditional::CONDITION_CELLIS)->setOperatorType(Conditional::OPERATOR_EQUAL)->addCondition('"'.$value.'"');
                 $mark->getStyle()->getFill()->setFillType(Fill::FILL_SOLID)->getEndColor()->setRGB($rgb);
                 $marks[] = $mark;
@@ -122,7 +119,7 @@ class StaffRegister
             $ws->getStyle($col($first).'5:'.$col($lastDay).$end)->setConditionalStyles($marks);
         }
         if ($activities->isNotEmpty()) {
-            $ws->getStyle($col($lastDay + 1).'5:'.$col($last).$end)->getNumberFormat()->setFormatCode('0%');
+            $ws->getStyle($col($lastDay + 1).'5:'.$col($last).$end)->getNumberFormat()->setFormatCode('General');
         }
 
         foreach ([1 => 6, 2 => 34, 3 => 24, 4 => 32, 5 => 13] as $c => $width) {

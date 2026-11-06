@@ -135,10 +135,10 @@ class ProgrammeReportTest extends TestCase
         $sheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($path)->getActiveSheet();
         unlink($path);
 
-        $this->assertSame(['Name', 'Mon 2 Nov', 'Day 1 (Assessment)'], [$sheet->getCell('B4')->getValue(), $sheet->getCell('F4')->getValue(), $sheet->getCell('G4')->getValue()]);
+        $this->assertSame(['Name', 'Mon 2 Nov', 'Day 1 (Assessment, out of 4)'], [$sheet->getCell('B4')->getValue(), $sheet->getCell('F4')->getValue(), $sheet->getCell('G4')->getValue()]);
         $rows = collect(range(5, 7))->mapWithKeys(fn ($r) => [$sheet->getCell("B$r")->getValue() => [$sheet->getCell("F$r")->getValue(), $sheet->getCell("G$r")->getValue()]]);
-        $this->assertEquals(['Amina Bello' => ['P', 0.75], 'Grace Okafor' => ['In only', 'Not submitted'], 'Tunde Ade' => ['A', 'Not assigned']], $rows->all());
-        $this->assertSame(['Attended', 2], [$sheet->getCell('B8')->getValue(), $sheet->getCell('F8')->getCalculatedValue()]);
+        $this->assertEquals(['Amina Bello' => ['Present', 3], 'Grace Okafor' => ['Present', 'Not submitted'], 'Tunde Ade' => ['Absent', 'Not assigned']], $rows->all());
+        $this->assertSame(['Present', 2], [$sheet->getCell('B8')->getValue(), $sheet->getCell('F8')->getCalculatedValue()]);
         $this->assertNull($sheet->getCell('H4')->getValue());
         $this->actingAs($amina)->get('/reports/register')->assertForbidden();
     }
