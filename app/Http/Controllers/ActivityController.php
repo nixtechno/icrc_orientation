@@ -449,6 +449,12 @@ return view('activities', ['items' => $items, 'manager' => $manager, 'selectedKi
         if ($a->kind !== 'quiz' && ! $r->filled('body') && ! $r->hasFile('file')) {
             return back()->withErrors(['body' => 'Submit text or a permitted file.']);
         }$answers = $v['answers'] ?? [];
+        if ($a->kind === 'quiz' && $submission->fullscreen_started_at) {
+            // Questions already moved past keep their saved answers, whatever this request sends.
+            $current = $submission->fresh();
+            app(\App\Services\QuizAttemptService::class)->accept($current, $answers);
+            $answers = $current->answers;
+        }
         $score = 0;
         $written = false;
         foreach ($a->questions as $q) {

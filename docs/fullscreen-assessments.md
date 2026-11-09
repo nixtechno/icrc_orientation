@@ -6,11 +6,13 @@ The button requests browser fullscreen first. If fullscreen is unavailable or de
 
 ## Submission behaviour
 
-- Leaving fullscreen ends the attempt and submits the answers currently in the form. The ended screen blocks further editing and offers a retry if submission cannot be confirmed.
-- Clicking **Submit final answers** follows the normal final submission flow. A subsequent fullscreen-exit event cannot overwrite the submitted result.
+- Questions are shown one at a time. **Next question** moves on and there is no way back: the earlier question leaves the page, and the server keeps the saved answer for every question before the attempt's stored position (`submissions.question_position`), whatever later requests send. Moving on from an unanswered question asks for confirmation first.
+- Every answer change is also kept on the device (browser storage, per attempt and person), so a poor connection does not lose work. Saves that fail tell the person to carry on.
+- Leaving fullscreen, clicking **Submit final answers** or the timer reaching zero freezes the device copy and sends one final submission. A subsequent fullscreen-exit event cannot overwrite the submitted result.
+- If that final submission does not get through, the attempt ends (fullscreen closes) and the assessment page shows **Submission pending**. It retries every 10 seconds, when the connection returns and on **Try again now**, then loads the results once the server confirms. If the page is closed, the pending copy is sent the next time that person opens the assessment on that device.
 - Refreshing, navigating away or closing the page queues a CSRF-protected submission beacon. Saved drafts also remain on the server.
-- Reopening the activity or complete page after a fullscreen attempt has begun finalizes the last saved draft if the close notification was lost. It cannot resume that attempt.
-- Existing due dates and time limits are enforced. Answers arriving after expiry cannot replace the last valid saved draft. Written questions still require manual grading; scores remain private until released.
+- Reopening the activity or complete page after a fullscreen attempt has begun finalizes the last saved draft if the close notification was lost. It cannot resume that attempt. If the device's pending copy arrives afterwards and is newer, it replaces that partial copy (audited as `submission.late_delivery`) — but only for attempts the server closed by itself (reopened or deadline), and never after answers are released or a facilitator has marked the attempt.
+- Due dates and time limits are enforced on drafts: a draft after expiry closes the attempt from the last saved draft. The device's frozen final copy is accepted even when the connection delays it past the deadline. Written questions still require manual grading; scores remain private until released.
 
 Drafts are saved after input and periodically while active. Revision numbers reject stale saves. Row locks and duplicate checks keep final submission idempotent. A per-launch token makes retrying the same start request safe without opening another attempt.
 

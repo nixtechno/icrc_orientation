@@ -12,7 +12,15 @@ class Submission extends Model
 
     protected function casts(): array
     {
-        return ['device' => 'array', 'answers' => 'array','started_at' => 'datetime', 'submitted_at' => 'datetime', 'released_at' => 'datetime', 'fullscreen_started_at' => 'datetime', 'draft_version' => 'integer'];
+        return ['device' => 'array', 'answers' => 'array','started_at' => 'datetime', 'submitted_at' => 'datetime', 'released_at' => 'datetime', 'fullscreen_started_at' => 'datetime', 'draft_version' => 'integer', 'question_position' => 'integer'];
+    }
+
+    public static ?bool $positions = null;
+
+    /** Whether the question position can be stored yet, so the app keeps working before that migration has run. */
+    public static function tracksPosition(): bool
+    {
+        return self::$positions ??= \Illuminate\Support\Facades\Schema::hasColumn('submissions', 'question_position');
     }
 
     public static ?bool $devices = null;

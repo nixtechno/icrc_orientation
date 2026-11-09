@@ -2,8 +2,9 @@
 
 @section('content')<div class="page-heading"><div><span class="eyebrow">{{ $activity->label() }}@if($manager) · {{ $activity->published?'PUBLISHED':'DRAFT' }}@endif</span><h1>{{ $activity->title }}</h1><p class="muted">{{ $activity->due_at?'Due '.$activity->due_at->format('j F Y · H:i'):'No deadline' }}{{ $activity->kind==='presentation'?'':' · '.$activity->attempts.' attempt(s)' }}{{ $activity->time_limit?' · '.$activity->time_limit.' minute limit':'' }}</p></div><div class="buttons">@if($manager)<form method="post" action="/activities/{{ $activity->getRouteKey() }}/publish">@csrf<button class="{{ $activity->published?'secondary':'' }}">{{ $activity->published?'Unpublish':'Publish' }} {{ $activity->label() }}</button></form>@if($activity->kind==='quiz'&&$activity->published&&\App\Models\Activity::canReleaseAnswers())<form method="post" action="/activities/{{ $activity->getRouteKey() }}/release-answers" onsubmit="return confirm('{{ $activity->answers_released_at?'Hide the correct answers and explanations from staff again? Nobody is emailed.':'Release the correct answers and explanations to staff? Marked scores are released too, and everyone who submitted is emailed and sees an announcement.' }}')">@csrf<button class="{{ $activity->answers_released_at?'secondary':'' }}">{{ $activity->answers_released_at?'Hide answers':'Release answers' }}</button></form>@endif @endif</div></div>@if($manager&&$activity->answersReleased())<p class="notice">Answers released {{ $activity->answers_released_at->timezone(\App\Services\Access::programme()->timezone)->format('j M Y · H:i') }}. Staff who submitted can see the correct answers and explanations.</p>@endif
 @if(!$manager)
+@if($activity->kind==='quiz')@include('partials.quiz-pending')@endif
 {{-- Once an assessment is submitted and marked there is nothing left to start, so only the result is shown. --}}
-@unless($activity->kind==='quiz'&&$submissions->whereNotNull('released_at')->isNotEmpty())<section class="card"><h2>Instructions</h2><p class="preline">{{ $activity->instructions }}</p>
+@unless($activity->kind==='quiz'&&$submissions->whereNotNull('released_at')->isNotEmpty())<section class="card" data-quiz-pending-hide><h2>Instructions</h2><p class="preline">{{ $activity->instructions }}</p>
 @if($activity->kind==='quiz')
 @include('partials.quiz-launch')
 @elseif($activity->kind==='presentation')
@@ -51,7 +52,7 @@
 @foreach($submissions as $s)@include('partials.review-dialog')@endforeach
 @else
 @if($activity->kind==='quiz')<link rel="stylesheet" href="{{ asset('quiz-review.css') }}?v=20261102b"><script src="{{ asset('quiz-review.js') }}?v=20261102a" defer></script>@endif
-<h2>My submissions</h2>
+<div data-quiz-pending-hide><h2>My submissions</h2>
 @forelse($submissions as $s)<section class="card" id="submission-{{ $s->getRouteKey() }}"><h3>{{ $activity->kind==='presentation'?'My presentation':'My attempt' }}@unless($activity->kind==='presentation') · Attempt {{ $s->attempt }}@endunless</h3><p class="muted">{{ $s->submitted_at?'Submitted '.$s->submitted_at->format('j M H:i'):'Started; not submitted' }}{{ ($activity->due_at&&$s->submitted_at?->gt($activity->due_at))?' · Late':'' }}</p>
 @if($s->submitted_at)
 @if($s->submission_reason&&$s->submission_reason!=='manual')<p class="badge warning">Automatically submitted &middot; {{ ucwords(str_replace('_',' ',$s->submission_reason)) }}</p>
@@ -68,7 +69,7 @@
 @endif
 @endif</section>
 @empty<div class="empty">{{ $activity->kind==='presentation'?'No submissions yet.':'No attempts yet.' }}</div>
-@endforelse
+@endforelse</div>
 @endif
 {{-- Deleting assessments is hidden for now; assignments and presentations can still be deleted here. --}}@if($manager&&$activity->kind!=='quiz')<section class="card danger-zone"><h2>Delete {{ $activity->label() }}</h2><p class="muted">Removes it, its assignments and all its submissions and uploaded files. This cannot be undone.</p>@include('partials.delete-activity-button',['buttonClass'=>'danger','buttonText'=>'Delete this '.$activity->label()])</section>
 @include('partials.delete-activity-dialog')@endif

@@ -10,13 +10,38 @@ class QuizAttemptService
 {
     public function rules(Activity $activity): array
     {
-        $rules = ['answers' => 'nullable|array', 'draft_version' => 'sometimes|integer|min:0|max:2147483647', 'answers_present' => 'sometimes|boolean'];
+        $rules = ['answers' => 'nullable|array', 'draft_version' => 'sometimes|integer|min:0|max:2147483647', 'answers_present' => 'sometimes|boolean', 'position' => 'sometimes|integer|min:0|max:65535'];
         foreach ($activity->questions as $question) {
             $key = 'answers.'.$question->id;
             $rules[$key] = $question->type === 'multiple_answers' ? 'nullable|array|max:100' : 'nullable|string|max:10000';
             if ($question->type === 'multiple_answers') $rules[$key.'.*'] = ['required','string','distinct',Rule::in($question->options ?? [])];
         }
         return $rules;
+    }
+
+    /** Questions the person has moved past in this attempt. Questions are shown one at a time and cannot be revisited. */
+    public function lockedIds(Submission $submission): array
+    {
+        return $submission->shuffled($submission->activity->questions)->take((int) $submission->question_position)->pluck('id')->all();
+    }
+
+    /**
+     * Takes new answers while keeping the saved answer for every locked question, then moves the attempt forward to
+     * $position. The position never moves back, so an earlier question cannot be reopened or changed.
+     */
+    public function accept(Submission $submission, array $answers, ?int $position = null): void
+    {
+        $questions = $submission->activity->questions;
+        $locked = $this->lockedIds($submission);
+        $stored = $submission->answers ?? [];
+        $merged = collect($answers)->only($questions->modelKeys())->except($locked)->all();
+        foreach ($locked as $id) {
+            if (array_key_exists($id, $stored)) $merged[$id] = $stored[$id];
+        }
+        $submission->answers = $merged;
+        if ($position !== null && Submission::tracksPosition()) {
+            $submission->question_position = min(max((int) $submission->question_position, $position), max(0, $questions->count() - 1));
+        }
     }
 
     /** The full score when every question is marked automatically; null while written answers need a facilitator. */
@@ -89,11 +114,13 @@ class QuizAttemptService
     {
         return DB::transaction(function () use ($submission, $reason, $answers, $revision) {
             $locked = Submission::whereKey($submission->id)->lockForUpdate()->firstOrFail();
-            if ($locked->submitted_at) return $locked;
-            $expires = $this->expiresAt($locked);
-            // Answers arriving after the deadline cannot replace the last valid saved draft.
-            if ($answers !== null && $revision >= $locked->draft_version && (! $expires || now()->lte($expires))) {
-                $locked->answers = collect($answers)->only($locked->activity->questions->modelKeys())->all();
+            if ($locked->submitted_at) {
+                return $answers !== null ? $this->deliverLate($locked, $reason, $answers, $revision) : $locked;
+            }
+            // The device freezes its copy when the attempt ends, so a final copy is accepted even when a poor
+            // connection delays it past the deadline. Drafts sent after the deadline are still refused.
+            if ($answers !== null && $revision >= $locked->draft_version) {
+                $this->accept($locked, $answers);
                 $locked->draft_version = $revision;
             }
             $locked->score = $this->score($locked->activity, $locked->answers ?? []);
@@ -102,8 +129,36 @@ class QuizAttemptService
             $locked->submitted_at = now();
             $locked->submission_reason = $reason;
             $locked->save();
-            Access::audit('submission.submit', (string) $locked->id, null, ['reason'=>$reason,'automatic'=>true]);
+            Access::audit('submission.submit', (string) $locked->id, null, ['reason'=>$reason,'automatic'=>$reason !== 'manual']);
             return $locked;
         });
+    }
+
+    /**
+     * A device's final copy that arrives after the server has already closed the attempt from its last saved draft,
+     * for example when the page was reopened before a poor connection let the final submission through. The newer
+     * copy replaces the partial one, unless the answers have been released or a facilitator has already marked it.
+     * The device's final copy is frozen when the attempt ends, so it carries nothing written after the attempt ended.
+     */
+    private function deliverLate(Submission $locked, string $reason, array $answers, int $revision): Submission
+    {
+        $activity = $locked->activity;
+        $marked = filled($locked->feedback) || ($this->writtenPoints($activity) && ($locked->score !== null || $locked->released_at));
+        // Only attempts the server closed by itself (page reopened, or the deadline passed) are waiting for the device's
+        // copy. When the device's own final submission arrived, that copy is final and nothing replaces it.
+        $closedByServer = in_array($locked->submission_reason, ['reopened', 'deadline'], true);
+        if (! $closedByServer || $revision <= $locked->draft_version || $activity->answersReleased() || $marked) {
+            return $locked;
+        }
+        $previous = $locked->submission_reason;
+        $this->accept($locked, $answers);
+        $locked->draft_version = $revision;
+        $locked->score = $this->score($activity, $locked->answers ?? []);
+        $locked->released_at = $locked->score !== null ? ($locked->released_at ?? now()) : null;
+        $locked->submission_reason = $reason;
+        $locked->save();
+        Access::audit('submission.late_delivery', (string) $locked->id, null, ['reason'=>$reason,'replaced'=>$previous,'submitted_at'=>$locked->submitted_at?->toIso8601String()]);
+
+        return $locked;
     }
 }

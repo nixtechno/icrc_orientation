@@ -32,7 +32,7 @@ class QuizAttemptController extends Controller
             $expires = $quizzes->expiresAt($locked);
             if ($expires && now()->gt($expires)) return $quizzes->finalize($locked, 'deadline');
             if (($data['draft_version'] ?? 0) > $locked->draft_version) {
-                $locked->answers = collect($data['answers'] ?? [])->only($locked->activity->questions->modelKeys())->all();
+                $quizzes->accept($locked, $data['answers'] ?? [], isset($data['position']) ? (int) $data['position'] : null);
                 $locked->draft_version = $data['draft_version'];
                 $locked->save();
             }
@@ -44,8 +44,9 @@ class QuizAttemptController extends Controller
     public function finish(Request $request, Submission $submission, QuizAttemptService $quizzes)
     {
         $this->authorizeAttempt($submission);
-        if ($submission->submitted_at) return $this->status($submission);
-        $data = $request->validate([...$quizzes->rules($submission->activity),'reason'=>'required|in:fullscreen_exit,page_exit,deadline,load_failed']);
+        // A device's final copy can still arrive after the attempt was closed; finalize() decides whether it is taken.
+        if ($submission->submitted_at && ! $request->boolean('answers_present')) return $this->status($submission);
+        $data = $request->validate([...$quizzes->rules($submission->activity),'reason'=>'required|in:manual,fullscreen_exit,page_exit,deadline,load_failed,reopened']);
         $submission = $quizzes->finalize($submission, $data['reason'], $request->boolean('answers_present') ? ($data['answers'] ?? []) : null, $data['draft_version'] ?? 0);
         return $this->status($submission);
     }

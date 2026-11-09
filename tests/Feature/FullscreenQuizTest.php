@@ -119,13 +119,44 @@ class FullscreenQuizTest extends TestCase
         $this->getJson($base.'/complete')->assertOk()->assertJson(['submitted'=>true]);
     }
 
-    public function test_automatic_deadline_submission_uses_only_the_last_valid_saved_draft(): void
+    public function test_a_final_copy_delayed_past_the_deadline_is_accepted_but_late_drafts_are_not(): void
     {
         $this->quiz->update(['time_limit'=>1]);$submission=$this->start();$base='/submissions/'.$submission->slug;
         $this->postJson($base.'/draft',['answers'=>[$this->question->id=>'A'],'draft_version'=>1])->assertOk();
         $this->travel(2)->minutes();
-        $this->postJson($base.'/auto-submit',['reason'=>'deadline','answers_present'=>1,'answers'=>[$this->question->id=>'B'],'draft_version'=>2])->assertOk()->assertJson(['submitted'=>true]);
-        $this->assertEquals(0,$submission->fresh()->score);$this->assertSame('A',$submission->fresh()->answers[$this->question->id]);
+        // A draft after the deadline closes the attempt from the saved copy and is not taken itself.
+        $this->postJson($base.'/draft',['answers'=>[$this->question->id=>'B'],'draft_version'=>2])->assertOk()->assertJson(['submitted'=>true]);
+        $this->assertSame('A',$submission->fresh()->answers[$this->question->id]);$this->assertSame('deadline',$submission->fresh()->submission_reason);
+        // The device's frozen final copy, held up by the connection, then replaces it.
+        $this->postJson($base.'/auto-submit',['reason'=>'deadline','answers_present'=>1,'answers'=>[$this->question->id=>'B'],'draft_version'=>3])->assertOk()->assertJson(['submitted'=>true]);
+        $this->assertEquals(5,$submission->fresh()->score);$this->assertSame('B',$submission->fresh()->answers[$this->question->id]);
+        $this->assertSame(1,DB::table('audit_logs')->where('action','submission.late_delivery')->count());
+    }
+
+    public function test_a_pending_copy_replaces_a_reopened_attempt_until_answers_are_released(): void
+    {
+        $submission=$this->start();$base='/submissions/'.$submission->slug;
+        $this->postJson($base.'/draft',['answers'=>[$this->question->id=>'A'],'draft_version'=>1])->assertOk();
+        // Opening the assessment page closes the attempt from the server's partial copy.
+        $this->get('/activities/'.$this->quiz->slug)->assertOk()->assertSee('data-quiz-pending',false);
+        $this->assertSame('reopened',$submission->fresh()->submission_reason);$this->assertEquals(0,$submission->fresh()->score);
+        // An older copy changes nothing; the device's newer pending copy replaces the partial one.
+        $this->postJson($base.'/auto-submit',['reason'=>'manual','answers_present'=>1,'answers'=>[$this->question->id=>'B'],'draft_version'=>1])->assertOk();
+        $this->assertEquals(0,$submission->fresh()->score);
+        $this->postJson($base.'/auto-submit',['reason'=>'manual','answers_present'=>1,'answers'=>[$this->question->id=>'B'],'draft_version'=>4])->assertOk()->assertJson(['submitted'=>true]);
+        $this->assertEquals(5,$submission->fresh()->score);$this->assertSame('manual',$submission->fresh()->submission_reason);
+        // Once the device's own copy has arrived, nothing replaces it.
+        $this->postJson($base.'/auto-submit',['reason'=>'manual','answers_present'=>1,'answers'=>[$this->question->id=>'A'],'draft_version'=>9])->assertOk();
+        $this->assertEquals(5,$submission->fresh()->score);
+    }
+
+    public function test_a_pending_copy_is_refused_after_answers_are_released(): void
+    {
+        $submission=$this->start();$base='/submissions/'.$submission->slug;
+        app(\App\Services\QuizAttemptService::class)->finalize($submission,'reopened');
+        $this->quiz->update(['answers_released_at'=>now()]);
+        $this->postJson($base.'/auto-submit',['reason'=>'fullscreen_exit','answers_present'=>1,'answers'=>[$this->question->id=>'B'],'draft_version'=>3])->assertOk()->assertJson(['submitted'=>true]);
+        $this->assertEquals(0,$submission->fresh()->score);$this->assertSame('reopened',$submission->fresh()->submission_reason);
     }
 
     public function test_manual_submission_is_not_replaced_by_a_following_fullscreen_exit_and_written_work_remains_for_review(): void
@@ -147,5 +178,28 @@ class FullscreenQuizTest extends TestCase
         $this->postJson($base.'/auto-submit',['reason'=>'fullscreen_exit'])->assertForbidden();
         $this->getJson($base.'/complete')->assertForbidden();
         $this->assertNull($submission->fresh()->submitted_at);
+    }
+
+    public function test_questions_are_shown_one_at_a_time_and_earlier_answers_cannot_be_changed(): void
+    {
+        $second=Question::create(['activity_id'=>$this->quiz->id,'type'=>'multiple_choice','prompt'=>'Choose D','options'=>['C','D'],'correct_answer'=>'D','points'=>5]);
+        $submission=$this->start();$base='/submissions/'.$submission->slug;
+        [$first,$last]=$submission->shuffled($this->quiz->fresh()->questions)->all();
+        $right=fn($q)=>$q->correct_answer;$wrong=fn($q)=>collect($q->options)->first(fn($o)=>$o!==$q->correct_answer);
+        $html=$this->getJson($base.'/complete')->assertOk()->json('html');
+        $this->assertStringContainsString('Question 1 of 2',$html);
+        $this->assertMatchesRegularExpression('/data-quiz-question="1"\s+hidden/',$html);
+        // Moving to the second question locks the first one's answer.
+        $this->postJson($base.'/draft',['answers'=>[$first->id=>$wrong($first)],'position'=>1,'draft_version'=>1])->assertOk();
+        $this->assertSame(1,$submission->fresh()->question_position);
+        $this->postJson($base.'/draft',['answers'=>[$first->id=>$right($first),$last->id=>$right($last)],'position'=>0,'draft_version'=>2])->assertOk();
+        $fresh=$submission->fresh();
+        $this->assertSame(1,$fresh->question_position);$this->assertSame($wrong($first),$fresh->answers[$first->id]);$this->assertSame($right($last),$fresh->answers[$last->id]);
+        // The rendered attempt no longer contains the first question at all.
+        $html=$this->getJson($base.'/complete')->assertOk()->json('html');
+        $this->assertStringNotContainsString('answers['.$first->id.']',$html);$this->assertStringContainsString('Question 2 of 2',$html);
+        // A manual submission cannot change it either.
+        $this->postJson($base.'/complete',['answers'=>[$first->id=>$right($first),$last->id=>$right($last)],'draft_version'=>3])->assertOk()->assertJson(['submitted'=>true]);
+        $this->assertSame($wrong($first),$submission->fresh()->answers[$first->id]);$this->assertEquals(5,$submission->fresh()->score);
     }
 }
